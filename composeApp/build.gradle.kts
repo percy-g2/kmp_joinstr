@@ -60,7 +60,7 @@ kotlin {
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material)
+            implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
@@ -119,6 +119,15 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "invincible.privacy.joinstr"
             packageVersion = "1.0.0"
+            macOS {
+                iconFile.set(project.file("src/macosMain/resources/AppIcon.icns"))
+            }
+            windows {
+                iconFile.set(project.file("src/windowsMain/resources/AppIcon.ico"))
+            }
+            linux {
+                iconFile.set(project.file("src/linuxMain/resources/AppIcon.png"))
+            }
         }
     }
 }
