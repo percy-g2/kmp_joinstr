@@ -27,21 +27,21 @@ import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.theme.Settings
+import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
-import invincible.privacy.joinstr.theme.ThemeManager
-import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.ui.HomeScreen
+import invincible.privacy.joinstr.ui.SettingsScreen
 import io.github.xxfast.kstore.KStore
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
 fun App() {
-    val themeState by ThemeManager.themeState.collectAsState()
+    val themeState by SettingsManager.themeState.collectAsState()
 
     LaunchedEffect(Unit) {
-        ThemeManager.store.get()?.let { settings ->
-            ThemeManager.themeState.value = settings.selectedTheme
+        SettingsManager.store.get()?.let { settings ->
+            SettingsManager.themeState.value = settings.selectedTheme
         }
     }
 
@@ -100,11 +100,11 @@ fun App() {
             }
         ) { innerPadding ->
             NavHost(
-                navController = navController,
-                startDestination = NavItem.Home.path,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(innerPadding),
+                navController = navController,
+                startDestination = NavItem.Home.path
             ) {
                 composable(route = NavItem.Home.path) {
                     HomeScreen()

@@ -2,7 +2,9 @@ package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.model.BlockChainInfo
 import invincible.privacy.joinstr.model.RpcRequestBody
-import io.ktor.client.*
+import invincible.privacy.joinstr.theme.NodeConfig
+import invincible.privacy.joinstr.theme.SettingsManager
+import io.ktor.client.HttpClient
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
@@ -20,38 +22,47 @@ val json = Json {
 }
 
 class HttpClient {
-    private val client = HttpClient {
-        install(Logging) {
-            logger = Logger.SIMPLE
-            level = LogLevel.ALL
-        }
-        install(ContentNegotiation) {
-            json(json)
-        }
-        install(Auth) {
-            basic {
-                credentials {
-                    BasicAuthCredentials(username = "user", password = "pass")
+    private suspend fun getNodeConfig(): NodeConfig? {
+        return SettingsManager.store.get()?.nodeConfig
+    }
+
+    private suspend fun createHttpClient(): HttpClient {
+        val nodeConfig = getNodeConfig()
+
+        return HttpClient {
+            install(Logging) {
+                logger = Logger.SIMPLE
+                level = LogLevel.ALL
+            }
+            install(ContentNegotiation) {
+                json(json)
+            }
+            install(Auth) {
+                basic {
+                    credentials {
+                        BasicAuthCredentials(
+                            username = "${nodeConfig?.userName}",
+                            password = "${nodeConfig?.password}"
+                        )
+                    }
                 }
             }
-        }
-        defaultRequest {
-            url("http://127.0.0.1:38332/")
-            contentType(ContentType.Application.Json)
+            defaultRequest {
+                url("${nodeConfig?.url}:${nodeConfig?.port}/")
+                contentType(ContentType.Application.Json)
+            }
         }
     }
 
-    suspend fun fetchBlockChainInfo(body: RpcRequestBody): BlockChainInfo? {
-        return try {
-            val response: HttpResponse = client.post {
-                setBody(body)
-            }
-            if (response.status == HttpStatusCode.OK) {
-                return json.decodeFromString<BlockChainInfo>(response.bodyAsText())
-            } else null
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
+    suspend fun fetchBlockChainInfo(body: RpcRequestBody): BlockChainInfo? = try {
+        val response: HttpResponse = createHttpClient().post {
+            setBody(body)
         }
+        if (response.status == HttpStatusCode.OK) {
+            json.decodeFromString<BlockChainInfo>(response.bodyAsText())
+        } else null
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

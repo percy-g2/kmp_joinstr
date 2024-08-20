@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr
 
+import invincible.privacy.joinstr.theme.NodeConfig
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
 import io.github.xxfast.kstore.KStore
@@ -14,7 +15,8 @@ actual fun getKStore(): KStore<Settings> {
     return storeOf<Settings>(
         file = "${paths.firstOrNull() as? String}/settings.json".toPath(),
         default = Settings(
-            selectedTheme = Theme.SYSTEM.id
+            selectedTheme = Theme.SYSTEM.id,
+            nodeConfig = NodeConfig()
         )
     )
 }

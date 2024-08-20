@@ -72,6 +72,9 @@ kotlin {
             implementation(libs.ktor.client.cio)
 
             implementation(libs.kstore.file)
+
+            implementation(libs.koin.android)
+            implementation(libs.koin.androidx.compose)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -89,6 +92,9 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.serialization.kotlinx.json)
+
+            implementation(libs.koin.core)
+            implementation(libs.koin.test)
 
             implementation(libs.kotlinx.datetime)
 

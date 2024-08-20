@@ -52,19 +52,32 @@ fun JoinstrTheme(
     )
 }
 
-object ThemeManager {
+object SettingsManager {
     val themeState = MutableStateFlow(Theme.SYSTEM.id)
     val store = getKStore()
 
     suspend fun updateTheme(newTheme: Int) {
         themeState.value = newTheme
-        store.update { it?.copy(selectedTheme = newTheme) ?: Settings(selectedTheme = newTheme) }
+        store.update { it?.copy(selectedTheme = newTheme) ?: Settings(selectedTheme = newTheme, nodeConfig = NodeConfig()) }
+    }
+
+    suspend fun updateNodeConfig(nodeConfig: NodeConfig) {
+        store.update { it?.copy(nodeConfig = nodeConfig) ?: Settings(selectedTheme = themeState.value, nodeConfig = NodeConfig()) }
     }
 }
 
 @Serializable
 data class Settings(
-    val selectedTheme: Int = 0
+    val selectedTheme: Int = Theme.SYSTEM.id,
+    val nodeConfig: NodeConfig = NodeConfig()
+)
+
+@Serializable
+data class NodeConfig(
+    val url: String = "http://127.0.0.1",
+    val userName: String = "user",
+    val password: String = "pass",
+    val port: Int = 38332
 )
 
 enum class Theme(val id: Int, val title: String, val description: String? = null) {
