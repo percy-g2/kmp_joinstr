@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 kotlin {
@@ -52,10 +53,25 @@ kotlin {
     
     sourceSets {
         val desktopMain by getting
-        
+
+        val wasmJsMain by getting
+
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+
+            implementation(libs.kstore.file)
+        }
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+
+            implementation(libs.androidx.startup.runtime)
+
+            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.cio)
+
+            implementation(libs.kstore.file)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -66,10 +82,34 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+
+            implementation(libs.ktor.client.auth)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.logging)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.websockets)
+            implementation(libs.ktor.serialization.kotlinx.json)
+
+            implementation(libs.kotlinx.datetime)
+
+            implementation(libs.navigation.compose)
+
+            implementation(libs.kstore)
+
+            implementation(libs.kotlinx.coroutines.core)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.kstore.file)
+            implementation(libs.harawata.appdirs)
             implementation(libs.kotlinx.coroutines.swing)
+        }
+
+        wasmJsMain.dependencies {
+            implementation(libs.kstore.storage)
+
+            implementation(libs.ktor.client.js)
         }
     }
 }
