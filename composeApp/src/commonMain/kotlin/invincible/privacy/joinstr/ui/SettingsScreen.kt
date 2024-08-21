@@ -4,11 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -92,10 +97,6 @@ fun SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                ),
                 title = {
                     Text("Settings")
                 },
@@ -106,18 +107,26 @@ fun SettingsScreen(
                             contentDescription = "Localized description"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                windowInsets = WindowInsets(
+                    top = 0.dp,
+                    bottom = 0.dp
+                )
             )
         }
     ) { innerPadding ->
-        if (isLoading) {
-            ProgressDialog()
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-            ) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+        ) {
+            if (isLoading) {
+                ProgressDialog()
+            } else {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()

@@ -11,3 +11,6 @@ val Blue40 = Color(0xFF3F72AF)
 val BlueLighter40 = Color(0xFF1F52AF)
 val BlueGrey40 = Color(0xFFABC2DF)
 val DarkBlue40 = Color(0xFF0A1B2E)
+
+val redForLoss = Color(0xFFF44336)
+val greenForGain = Color(0xFF4CAF50)

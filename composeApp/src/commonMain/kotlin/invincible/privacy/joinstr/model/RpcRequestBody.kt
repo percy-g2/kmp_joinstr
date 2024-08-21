@@ -4,8 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class RpcRequestBody(
-    val id: String,
-    val jsonrpc: String,
+    val id: String = "curltest",
+    val jsonrpc: String = "1.0",
     val method: String,
     val params: List<String> = emptyList()
 )

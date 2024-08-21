@@ -40,8 +40,6 @@ fun HomeScreen() {
 
     LaunchedEffect(Unit) {
         val rpcRequestBody = RpcRequestBody(
-            id = "curltest",
-            jsonrpc =  "1.0",
             method = "getblockchaininfo"
         )
         blockChainInfo = httpClient.fetchBlockChainInfo(rpcRequestBody)
