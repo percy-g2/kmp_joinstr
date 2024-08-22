@@ -104,92 +104,98 @@ fun ListUnspentCloudsScreen() {
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            SelectSpendableOutputsScreen(
-                totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
-                totalUsdt = listUnspent.sumOf { it.amount * usdPerBtc },
-                selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
-                selectedUsdt = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
-            )
-
-            if (listUnspent.isNotEmpty()) {
-                var autoRotation by remember { mutableStateOf(true) }
-
-                val state = rememberTagCloudState(
-                    onStartGesture = { autoRotation = false },
-                    onEndGesture = { autoRotation = true },
+        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                SelectSpendableOutputsScreen(
+                    totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
+                    totalUsdt = listUnspent.sumOf { it.amount * usdPerBtc },
+                    selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
+                    selectedUsdt = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
                 )
 
-                LaunchedEffect(state, autoRotation) {
-                    while (isActive && autoRotation) {
-                        delay(10)
-                        state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
-                    }
-                }
-                TagCloud(
-                    modifier = Modifier
-                        .width((listUnspent.size * 70).dp)
-                        .height((listUnspent.size * 80).dp)
-                        .padding(all = 32.dp),
-                    state = state
-                ) {
-                    items(listUnspent) { item ->
-                        Box {
-                            val color = if (item.txid == selectedTxId) {
-                                red
-                            } else Color.Transparent
+                if (listUnspent.isNotEmpty()) {
+                    var autoRotation by remember { mutableStateOf(true) }
 
-                            CustomOutlinedButton(
-                                text = item.amount.toString(),
-                                color = color,
-                                onClick = {
-                                    selectedTxId = if (selectedTxId == item.txid) {
-                                        ""
-                                    } else item.txid
-                                },
-                                onLongClick = {
-                                    isHovered = !isHovered
-                                    selectedTxId = item.txid
-                                }
+                    val state = rememberTagCloudState(
+                        onStartGesture = { autoRotation = false },
+                        onEndGesture = { autoRotation = true },
+                    )
+
+                    LaunchedEffect(state, autoRotation) {
+                        while (isActive && autoRotation) {
+                            delay(10)
+                            state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
+                        }
+                    }
+                    TagCloud(
+                        modifier = Modifier
+                            .width((listUnspent.size * 70).dp)
+                            .height((listUnspent.size * 80).dp)
+                            .padding(all = 32.dp),
+                        state = state
+                    ) {
+                        items(listUnspent) { item ->
+                            Box {
+                                val color = if (item.txid == selectedTxId) {
+                                    red
+                                } else Color.Transparent
+
+                                CustomOutlinedButton(
+                                    text = item.amount.toString(),
+                                    color = color,
+                                    onClick = {
+                                        selectedTxId = if (selectedTxId == item.txid) {
+                                            ""
+                                        } else item.txid
+                                    },
+                                    onLongClick = {
+                                        isHovered = !isHovered
+                                        selectedTxId = item.txid
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    if (isLoading.not()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "No amount found to spend",
+                                fontSize = 18.sp,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
                 }
+            }
 
-                Button(
-                    modifier = Modifier.padding(4.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    enabled = selectedTxId.isNotEmpty(),
-                    onClick = {
-                        // TODO
-                    }
-                ) {
-                    Text(
-                        modifier = Modifier.padding(4.dp),
-                        text = "Confirm",
-                        fontSize = 16.sp
-                    )
+            Button(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .align(Alignment.BottomCenter),
+                shape = RoundedCornerShape(8.dp),
+                enabled = selectedTxId.isNotEmpty(),
+                onClick = {
+                    // TODO
                 }
-            } else {
-                if (isLoading.not()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "No amount found to spend",
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+            ) {
+                Text(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .align(Alignment.Bottom),
+                    text = "Confirm",
+                    fontSize = 16.sp
+                )
             }
         }
     }

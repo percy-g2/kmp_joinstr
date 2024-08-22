@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.Transaction
 import invincible.privacy.joinstr.network.HttpClient
-import invincible.privacy.joinstr.theme.greenForGain
+import invincible.privacy.joinstr.theme.green
 import invincible.privacy.joinstr.theme.red
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 import kotlinx.coroutines.launch
@@ -151,7 +151,7 @@ fun TransactionsScreen() {
                             style = MaterialTheme.typography.labelMedium.copy(
                                 textAlign = TextAlign.Center,
                                 color = if (row.category == "receive") {
-                                    greenForGain
+                                    green
                                 } else red
                             ),
                             maxLines = 1,
