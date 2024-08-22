@@ -9,3 +9,8 @@ data class RpcRequestBody(
     val method: String,
     val params: List<String> = emptyList()
 )
+
+enum class Methods(val value: String) {
+    LIST_UNSPENT("listunspent"),
+    BLOCK_CHAIN_INFO("getblockchaininfo");
+}

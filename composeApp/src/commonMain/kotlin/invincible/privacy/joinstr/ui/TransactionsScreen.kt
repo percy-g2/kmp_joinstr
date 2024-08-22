@@ -42,7 +42,7 @@ import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.Transaction
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.theme.greenForGain
-import invincible.privacy.joinstr.theme.redForLoss
+import invincible.privacy.joinstr.theme.red
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 import kotlinx.coroutines.launch
 
@@ -152,7 +152,7 @@ fun TransactionsScreen() {
                                 textAlign = TextAlign.Center,
                                 color = if (row.category == "receive") {
                                     greenForGain
-                                } else redForLoss
+                                } else red
                             ),
                             maxLines = 1,
                             modifier = Modifier

@@ -1,9 +1,12 @@
 package invincible.privacy.joinstr.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -11,9 +14,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,16 +33,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
+import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.network.HttpClient
-import invincible.privacy.joinstr.theme.redForLoss
+import invincible.privacy.joinstr.theme.red
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
 import invincible.privacy.joinstr.ui.components.tagcloud.math.Vector3
@@ -44,15 +53,154 @@ import invincible.privacy.joinstr.ui.components.tagcloud.rememberTagCloudState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.log10
-import kotlin.math.pow
+import kotlinx.datetime.Clock
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun ListUnspentCloudsScreen() {
+    var isLoading by remember { mutableStateOf(true) }
+    var usdPerBtc by remember { mutableStateOf(0.0) }
+    val httpClient = remember { HttpClient() }
+    var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
+    val coroutineScope = rememberCoroutineScope()
+    var isHovered by remember { mutableStateOf(false) }
+    var selectedTxId by remember { mutableStateOf("") }
+
+
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            usdPerBtc = httpClient.fetchUsdtPrice()
+            val rpcRequestBody = RpcRequestBody(
+                method = Methods.LIST_UNSPENT.value
+            )
+            listUnspent = httpClient.fetchUnspentList(rpcRequestBody)
+            isLoading = false
+        }
+    }
+
+    Surface {
+
+        if (isLoading) {
+            ProgressDialog()
+        }
+
+        if (isHovered) {
+            AlertDialog(
+                properties = DialogProperties(),
+                onDismissRequest = {
+                    isHovered = false
+                },
+                text = {
+                    val unspent = listUnspent.find { it.txid == selectedTxId }
+                    Text(
+                        modifier = Modifier.padding(8.dp),
+                        text = "${unspent?.vout} | ${unspent?.txid}",
+                        textAlign = TextAlign.Center
+                    )
+                },
+                confirmButton = {
+
+                }
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            SelectSpendableOutputsScreen(
+                totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
+                totalUsdt = listUnspent.sumOf { it.amount * usdPerBtc },
+                selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
+                selectedUsdt = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
+            )
+
+            if (listUnspent.isNotEmpty()) {
+                var autoRotation by remember { mutableStateOf(true) }
+
+                val state = rememberTagCloudState(
+                    onStartGesture = { autoRotation = false },
+                    onEndGesture = { autoRotation = true },
+                )
+
+                LaunchedEffect(state, autoRotation) {
+                    while (isActive && autoRotation) {
+                        delay(10)
+                        state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
+                    }
+                }
+                TagCloud(
+                    modifier = Modifier
+                        .width((listUnspent.size * 70).dp)
+                        .height((listUnspent.size * 80).dp)
+                        .padding(all = 32.dp),
+                    state = state
+                ) {
+                    items(listUnspent) { item ->
+                        Box {
+                            val color = if (item.txid == selectedTxId) {
+                                red
+                            } else Color.Transparent
+
+                            CustomOutlinedButton(
+                                text = item.amount.toString(),
+                                color = color,
+                                onClick = {
+                                    selectedTxId = if (selectedTxId == item.txid) {
+                                        ""
+                                    } else item.txid
+                                },
+                                onLongClick = {
+                                    isHovered = !isHovered
+                                    selectedTxId = item.txid
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Button(
+                    modifier = Modifier.padding(4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = selectedTxId.isNotEmpty(),
+                    onClick = {
+                        // TODO
+                    }
+                ) {
+                    Text(
+                        modifier = Modifier.padding(4.dp),
+                        text = "Confirm",
+                        fontSize = 16.sp
+                    )
+                }
+            } else {
+                if (isLoading.not()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "No amount found to spend",
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun SelectSpendableOutputsScreen(
     totalSats: Long,
-    totalUsd: Double,
+    totalUsdt: Double,
     selectedSats: Long,
-    selectedUsd: Double
+    selectedUsdt: Double
 ) {
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -74,11 +222,11 @@ fun SelectSpendableOutputsScreen(
 
             // Total sats and USD
             Text(
-                text = "Total: $totalSats sats = $totalUsd USD",
+                text = "Total: $totalSats sats = $totalUsdt USDT",
                 fontSize = 16.sp,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 18.dp)
             )
 
             // Selected sats
@@ -90,9 +238,9 @@ fun SelectSpendableOutputsScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // Selected USD
+            // Selected USDT
             Text(
-                text = "$selectedUsd USD",
+                text = "$selectedUsdt USDT",
                 fontSize = 20.sp,
                 color = Color.Gray,
                 textAlign = TextAlign.Center
@@ -101,140 +249,52 @@ fun SelectSpendableOutputsScreen(
     }
 }
 
-
 @Composable
-fun ListUnspentCloudsScreen() {
-    var isLoading by remember { mutableStateOf(true) }
-    var usdPerBtc by remember { mutableStateOf(0.0) }
-    val httpClient = remember { HttpClient() }
-    var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
+fun CustomOutlinedButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    longPressDuration: Long = 500L
+) {
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val fontSize = 16.sp
+    var textWidth by remember { mutableStateOf(0.dp) }
+    val buttonSize = textWidth + 32.dp
 
-    LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            usdPerBtc = httpClient.fetchUsdtPrice()
-            val rpcRequestBody = RpcRequestBody(
-                method = "listunspent"
-            )
-            listUnspent = httpClient.fetchUnspentList(rpcRequestBody)
-            isLoading = false
-        }
-    }
-
-    if (isLoading) {
-        ProgressDialog()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        var selectedTxId by remember { mutableStateOf("") }
-        SelectSpendableOutputsScreen(
-            totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
-            totalUsd = listUnspent.sumOf { it.amount * usdPerBtc },
-            selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
-            selectedUsd = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
-        )
-
-        if (listUnspent.isNotEmpty()) {
-            var autoRotation by remember { mutableStateOf(true) }
-
-            val state = rememberTagCloudState(
-                onStartGesture = { autoRotation = false },
-                onEndGesture = { autoRotation = true },
-            )
-
-            LaunchedEffect(state, autoRotation) {
-                while (isActive && autoRotation) {
-                    delay(10)
-                    state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
-                }
-            }
-            TagCloud(
-                modifier = Modifier
-                    .width((listUnspent.size * 70).dp)
-                    .height((listUnspent.size * 80).dp)
-                    .padding(all = 32.dp),
-                state = state
-            ) {
-                items(listUnspent) {
-                    Box {
-                        val density = LocalDensity.current
-                        val text = it.amount.toString()
-                        val fontSize = 16.sp
-                        var textWidth by remember { mutableStateOf(0.dp) }
-                        val buttonSize = textWidth + 32.dp
-
-                        val color = if (it.txid == selectedTxId) {
-                            redForLoss
-                        } else Color.Transparent
-
-                        OutlinedButton(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .size(buttonSize),
-                            onClick = {
-                                selectedTxId = if (it.txid == selectedTxId) {
-                                    ""
-                                } else it.txid
-                            },
-                            shape = CircleShape,
-                            contentPadding = PaddingValues(0.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = color)
-                        ) {
-                            Text(
-                                text = text,
-                                fontSize = fontSize,
-                                onTextLayout = { textLayoutResult: TextLayoutResult ->
-                                    textWidth = with(density) { textLayoutResult.size.width.toDp() }
-                                },
-                                modifier = Modifier.padding(8.dp)
-                            )
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .size(buttonSize)
+            .background(color, CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        val pressStartTime = Clock.System.now().toEpochMilliseconds()
+                        val job = coroutineScope.launch {
+                            delay(longPressDuration)
+                            onLongClick()
+                        }
+                        tryAwaitRelease()
+                        job.cancel()
+                        if (Clock.System.now().toEpochMilliseconds() - pressStartTime < longPressDuration) {
+                            onClick()
                         }
                     }
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "No amount found to spend",
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center
                 )
-            }
-        }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = fontSize,
+            onTextLayout = { textLayoutResult: TextLayoutResult ->
+                textWidth = with(density) { textLayoutResult.size.width.toDp() }
+            },
+            modifier = Modifier.padding(8.dp)
+        )
     }
-}
-
-/**
- * Normalizes the BTC amount to a circle radius.
- * Assumes a reasonable max radius for display purposes.
- */
-fun normalizeAmountToRadius(amount: Double): Float {
-    val minRadius = 100f    // Increased minimum circle radius for better visibility
-    val maxRadius = 300f   // Increased maximum circle radius for larger amounts
-
-    // Calculate logarithmic scaling
-    val logAmount = log10(amount + 1) // Adding 1 to avoid issues with log10(0)
-    val maxLogAmount = log10(21_000_000.0 + 1) // Log value for 21 million BTC
-    val minLogAmount = log10(0.00000001 + 1) // Log value for smallest unit (1 Satoshi)
-
-    // Normalize the log amount to a 0..1 range
-    val normalizedLog = (logAmount - minLogAmount) / (maxLogAmount - minLogAmount)
-
-    // Apply an additional scaling factor to make the radii more noticeable
-    val scalingFactor = 50f  // Adjust this factor to amplify the differences
-
-    // Scale to the radius range
-    val scaledRadius = normalizedLog.pow(scalingFactor.toDouble()) * (maxRadius - minRadius) + minRadius
-
-    return scaledRadius.toFloat().coerceIn(minRadius, maxRadius)
 }

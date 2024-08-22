@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.model.BlockChainInfo
+import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.ui.components.ProgressDialog
@@ -40,7 +41,7 @@ fun HomeScreen() {
 
     LaunchedEffect(Unit) {
         val rpcRequestBody = RpcRequestBody(
-            method = "getblockchaininfo"
+            method = Methods.BLOCK_CHAIN_INFO.value
         )
         blockChainInfo = httpClient.fetchBlockChainInfo(rpcRequestBody)
         isLoading = false

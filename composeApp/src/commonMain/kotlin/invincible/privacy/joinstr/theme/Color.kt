@@ -74,5 +74,5 @@ val surfaceContainerDark = Color(0xFF1D2023)
 val surfaceContainerHighDark = Color(0xFF272A2E)
 val surfaceContainerHighestDark = Color(0xFF323539)
 
-val redForLoss = Color(0xFFF44336)
-val greenForGain = Color(0xFF4CAF50)
+val red = Color(0xFFF44336)
+val green = Color(0xFF4CAF50)
