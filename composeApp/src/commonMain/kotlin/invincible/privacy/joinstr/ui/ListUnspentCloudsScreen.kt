@@ -1,6 +1,5 @@
 package invincible.privacy.joinstr.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -18,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +36,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
@@ -55,7 +54,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ListUnspentCloudsScreen() {
     var isLoading by remember { mutableStateOf(true) }
@@ -65,7 +63,7 @@ fun ListUnspentCloudsScreen() {
     val coroutineScope = rememberCoroutineScope()
     var isHovered by remember { mutableStateOf(false) }
     var selectedTxId by remember { mutableStateOf("") }
-
+    var autoRotation by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
@@ -85,9 +83,11 @@ fun ListUnspentCloudsScreen() {
         }
 
         if (isHovered) {
+            autoRotation = false
             AlertDialog(
                 properties = DialogProperties(),
                 onDismissRequest = {
+                    autoRotation = true
                     isHovered = false
                 },
                 text = {
@@ -104,98 +104,98 @@ fun ListUnspentCloudsScreen() {
             )
         }
 
-        Box {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                SelectSpendableOutputsScreen(
-                    totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
-                    totalUsdt = listUnspent.sumOf { it.amount * usdPerBtc },
-                    selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
-                    selectedUsdt = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            SelectSpendableOutputsScreen(
+                totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
+                totalUsdt = listUnspent.sumOf { it.amount * usdPerBtc },
+                selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
+                selectedUsdt = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
+            )
+
+            if (listUnspent.isNotEmpty()) {
+                val state = rememberTagCloudState(
+                    onStartGesture = { autoRotation = false },
+                    onEndGesture = { autoRotation = true },
                 )
 
-                if (listUnspent.isNotEmpty()) {
-                    var autoRotation by remember { mutableStateOf(true) }
-
-                    val state = rememberTagCloudState(
-                        onStartGesture = { autoRotation = false },
-                        onEndGesture = { autoRotation = true },
-                    )
-
-                    LaunchedEffect(state, autoRotation) {
-                        while (isActive && autoRotation) {
-                            delay(10)
-                            state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
-                        }
+                LaunchedEffect(state, autoRotation) {
+                    while (isActive && autoRotation) {
+                        delay(10)
+                        state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
                     }
-                    TagCloud(
-                        modifier = Modifier
-                            .width((listUnspent.size * 70).dp)
-                            .height((listUnspent.size * 80).dp)
-                            .padding(all = 32.dp),
-                        state = state
-                    ) {
-                        items(listUnspent) { item ->
-                            Box {
-                                val color = if (item.txid == selectedTxId) {
-                                    red
-                                } else Color.Transparent
-
-                                CustomOutlinedButton(
-                                    text = item.amount.toString(),
-                                    color = color,
-                                    onClick = {
-                                        selectedTxId = if (selectedTxId == item.txid) {
-                                            ""
-                                        } else item.txid
-                                    },
-                                    onLongClick = {
-                                        isHovered = !isHovered
-                                        selectedTxId = item.txid
-                                    }
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    if (isLoading.not()) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                }
+                TagCloud(
+                    modifier = Modifier
+                        .width((listUnspent.size * 70).dp)
+                        .height((listUnspent.size * 30).dp)
+                        .padding(all = 32.dp),
+                    state = state
+                ) {
+                    items(listUnspent) { item ->
+                        Box(
+                            modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
                         ) {
-                            Text(
-                                text = "No amount found to spend",
-                                fontSize = 18.sp,
-                                textAlign = TextAlign.Center
+                            val color = if (item.txid == selectedTxId) {
+                                red
+                            } else Color.Transparent
+
+                            CustomOutlinedButton(
+                                text = item.amount.toString(),
+                                color = color,
+                                onClick = {
+                                    selectedTxId = if (selectedTxId == item.txid) {
+                                        autoRotation = true
+                                        ""
+                                    } else {
+                                        autoRotation = false
+                                        item.txid
+                                    }
+                                },
+                                onLongClick = {
+                                    isHovered = !isHovered
+                                    selectedTxId = item.txid
+                                }
                             )
                         }
                     }
                 }
-            }
 
-            Button(
-                modifier = Modifier
-                    .padding(4.dp)
-                    .align(Alignment.BottomCenter),
-                shape = RoundedCornerShape(8.dp),
-                enabled = selectedTxId.isNotEmpty(),
-                onClick = {
-                    // TODO
+                Button(
+                    modifier = Modifier.padding(4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = selectedTxId.isNotEmpty(),
+                    onClick = {
+                        // TODO
+                    }
+                ) {
+                    Text(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .align(Alignment.Bottom),
+                        text = "Confirm",
+                        fontSize = 16.sp
+                    )
                 }
-            ) {
-                Text(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .align(Alignment.Bottom),
-                    text = "Confirm",
-                    fontSize = 16.sp
-                )
+            } else {
+                if (isLoading.not()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "No amount found to spend",
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
     }
@@ -241,7 +241,9 @@ fun SelectSpendableOutputsScreen(
                 fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             // Selected USDT

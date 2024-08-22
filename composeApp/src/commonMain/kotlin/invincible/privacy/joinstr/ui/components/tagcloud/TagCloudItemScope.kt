@@ -39,12 +39,12 @@ internal class TagCloudItemScopeImpl(
 
     override fun Modifier.tagCloudItemFade(toAlpha: Float): Modifier =
         graphicsLayer {
-            alpha = coordinates.z.rescale(toAlpha, 1f)
+            alpha = if (coordinates.z < 0.5f) toAlpha else 1f // Fade out if z < 0.5f
         }
 
     override fun Modifier.tagCloudItemScaleDown(toScale: Float): Modifier =
         graphicsLayer {
-            val scale = coordinates.z.rescale(toScale, 1f)
+            val scale = if (coordinates.z < 0.5f) coordinates.z.rescale(toScale, 1f) else 1f
             scaleX = scale
             scaleY = scale
         }
