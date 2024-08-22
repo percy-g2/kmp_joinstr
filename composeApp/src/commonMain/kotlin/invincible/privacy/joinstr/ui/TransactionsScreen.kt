@@ -26,6 +26,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.theme.greenForGain
 import invincible.privacy.joinstr.theme.redForLoss
 import invincible.privacy.joinstr.ui.components.ProgressDialog
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,13 +52,16 @@ fun TransactionsScreen() {
     var isLoading by remember { mutableStateOf(true) }
     val httpClient = remember { HttpClient() }
     var transactions by remember { mutableStateOf<List<Transaction>?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        val rpcRequestBody = RpcRequestBody(
-            method = "listtransactions"
-        )
-        transactions = httpClient.fetchTransactions(rpcRequestBody)
-        isLoading = false
+        coroutineScope.launch {
+            val rpcRequestBody = RpcRequestBody(
+                method = "listtransactions"
+            )
+            transactions = httpClient.fetchTransactions(rpcRequestBody)
+            isLoading = false
+        }
     }
 
     data class TableHeader(

@@ -29,9 +29,8 @@ import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
-import invincible.privacy.joinstr.ui.HomeScreen
+import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
-import invincible.privacy.joinstr.ui.TransactionsScreen
 import io.github.xxfast.kstore.KStore
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -108,7 +107,7 @@ fun App() {
                 startDestination = NavItem.Home.path
             ) {
                 composable(route = NavItem.Home.path) {
-                    TransactionsScreen()
+                    ListUnspentCloudsScreen()
                 }
                 composable(route = NavItem.Settings.path) {
                     SettingsScreen {
