@@ -1,6 +1,8 @@
 package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.model.NostrEvent
+import invincible.privacy.joinstr.theme.Settings
+import invincible.privacy.joinstr.theme.SettingsManager
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
@@ -21,6 +23,9 @@ import kotlin.time.Duration.Companion.seconds
 class NostrClient {
     private val _events = MutableStateFlow<List<NostrEvent>>(emptyList())
     val events: StateFlow<List<NostrEvent>> = _events
+    private val nostrRelay = suspend {
+        SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
+    }
 
     private val json = Json {
         isLenient = true
@@ -43,12 +48,12 @@ class NostrClient {
         }
 
     suspend fun connectAndListen(onReceived: () -> Unit) {
-        client.wss("wss://nos.lol") {
-            val subscribeMessage = """["REQ", "my-sub", {"kinds": [2022], "limit": 1000}]"""
-            send(Frame.Text(subscribeMessage))
-            for (frame in incoming) {
-                if (frame is Frame.Text) {
-                    runCatching {
+        runCatching {
+            client.wss(nostrRelay.invoke()) {
+                val subscribeMessage = """["REQ", "my-sub", {"kinds": [2022], "limit": 1000}]"""
+                send(Frame.Text(subscribeMessage))
+                for (frame in incoming) {
+                    if (frame is Frame.Text) {
                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                         if (elem[0].jsonPrimitive.content == "EVENT") {
                             _events.update {
@@ -58,16 +63,16 @@ class NostrClient {
                         if (elem[0].jsonPrimitive.content == "EOSE") {
                             onReceived.invoke()
                         }
-                    }.getOrElse {
-                        it.printStackTrace()
                     }
                 }
             }
+        }.getOrElse {
+            onReceived.invoke()
         }
     }
 
     suspend fun sendEvent(event: NostrEvent) {
-        client.wss("wss://nos.lol") {
+        client.wss(nostrRelay.invoke()) {
             val eventJson = json.encodeToString(event)
             val sendMessage = """["EVENT", $eventJson]"""
             send(Frame.Text(sendMessage))
