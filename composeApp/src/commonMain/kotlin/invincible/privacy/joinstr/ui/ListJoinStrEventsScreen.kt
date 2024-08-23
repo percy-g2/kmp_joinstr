@@ -1,6 +1,7 @@
 package invincible.privacy.joinstr.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.ui.components.ProgressDialog
@@ -37,7 +40,7 @@ import kotlinx.datetime.Instant
 @Composable
 fun ListJoinStrEventsScreen() {
     val nostrClient = remember { NostrClient() }
-    val events by nostrClient.events.collectAsState()
+    val events by nostrClient.events.collectAsState(initial = null)
     var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -64,16 +67,31 @@ fun ListJoinStrEventsScreen() {
             ProgressDialog()
         }
 
-        LazyColumn(
-            modifier = Modifier.wrapContentSize(),
-        ) {
-            items(events) { event ->
-                EventItem(event)
+        events?.let { list ->
+            LazyColumn(
+                modifier = Modifier.wrapContentSize(),
+            ) {
+                items(list) { event ->
+                    EventItem(event)
+                }
+            }
+        } ?: run {
+            if (isLoading.not()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Something went wrong!\nCheck your settings",
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
 }
-
 
 
 @Composable

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.ui.ListJoinStrEventsScreen
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -210,6 +211,8 @@ fun PoolScreen(
                     )
                 }
             }
+        } else if (selectedTab == 1) {
+            ListJoinStrEventsScreen()
         }
     }
 }

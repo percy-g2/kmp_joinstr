@@ -21,8 +21,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration.Companion.seconds
 
 class NostrClient {
-    private val _events = MutableStateFlow<List<NostrEvent>>(emptyList())
-    val events: StateFlow<List<NostrEvent>> = _events
+    private val _events = MutableStateFlow<List<NostrEvent>?>(null)
+    val events: StateFlow<List<NostrEvent>?> = _events
     private val nostrRelay = suspend {
         SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
     }
@@ -47,7 +47,9 @@ class NostrClient {
             }
         }
 
-    suspend fun connectAndListen(onReceived: () -> Unit) {
+    suspend fun connectAndListen(
+        onReceived: () -> Unit
+    ) {
         runCatching {
             client.wss(nostrRelay.invoke()) {
                 val subscribeMessage = """["REQ", "my-sub", {"kinds": [2022], "limit": 1000}]"""
@@ -56,8 +58,10 @@ class NostrClient {
                     if (frame is Frame.Text) {
                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                         if (elem[0].jsonPrimitive.content == "EVENT") {
-                            _events.update {
-                                listOf(json.decodeFromJsonElement<NostrEvent>(elem[2])) + it
+                            _events.update { list ->
+                                list?.let {
+                                    listOf(json.decodeFromJsonElement<NostrEvent>(elem[2])) + it
+                                } ?: listOf(json.decodeFromJsonElement<NostrEvent>(elem[2]))
                             }
                         }
                         if (elem[0].jsonPrimitive.content == "EOSE") {
@@ -67,6 +71,7 @@ class NostrClient {
                 }
             }
         }.getOrElse {
+            it.printStackTrace()
             onReceived.invoke()
         }
     }
