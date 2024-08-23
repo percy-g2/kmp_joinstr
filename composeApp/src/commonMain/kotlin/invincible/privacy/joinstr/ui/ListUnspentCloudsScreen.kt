@@ -61,7 +61,7 @@ fun ListUnspentCloudsScreen() {
     val httpClient = remember { HttpClient() }
     var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
-    var isHovered by remember { mutableStateOf(false) }
+    var longPressDialog by remember { mutableStateOf(false) }
     var selectedTxId by remember { mutableStateOf("") }
     var autoRotation by remember { mutableStateOf(true) }
 
@@ -82,13 +82,13 @@ fun ListUnspentCloudsScreen() {
             ProgressDialog()
         }
 
-        if (isHovered) {
+        if (longPressDialog) {
             autoRotation = false
             AlertDialog(
                 properties = DialogProperties(),
                 onDismissRequest = {
                     autoRotation = true
-                    isHovered = false
+                    longPressDialog = false
                 },
                 text = {
                     val unspent = listUnspent.find { it.txid == selectedTxId }
@@ -158,7 +158,7 @@ fun ListUnspentCloudsScreen() {
                                     }
                                 },
                                 onLongClick = {
-                                    isHovered = !isHovered
+                                    longPressDialog = !longPressDialog
                                     selectedTxId = item.txid
                                 }
                             )

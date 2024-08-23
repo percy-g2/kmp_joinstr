@@ -83,7 +83,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
 
-          //  implementation(libs.ktor.client.auth)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.logging)
             implementation(libs.ktor.client.content.negotiation)
@@ -128,7 +127,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.0.1"
     }
     packaging {
         resources {
@@ -136,8 +135,14 @@ android {
         }
     }
     buildTypes {
-        getByName("release") {
+        debug {
             isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
