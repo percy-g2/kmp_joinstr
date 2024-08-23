@@ -107,8 +107,6 @@ kotlin {
 
             implementation(libs.kotlinx.coroutines.core)
 
-            implementation("com.soywiz.korge:korlibs-crypto:5.4.0")
-
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

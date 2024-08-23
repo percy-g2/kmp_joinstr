@@ -3,8 +3,9 @@ package invincible.privacy.joinstr.utils
 import dev.whyoleg.cryptography.random.CryptographyRandom
 import fr.acinq.secp256k1.Secp256k1
 import invincible.privacy.joinstr.model.NostrEvent
+import invincible.privacy.joinstr.utils.CryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.CryptoUtils.getPublicKey
-import korlibs.crypto.sha256
+import invincible.privacy.joinstr.utils.CryptoUtils.sha256Hash
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,11 +14,12 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 
-object NostrUtil {
+class NostrUtil {
     private val secp256k1 = Secp256k1
     private val json = Json { encodeDefaults = true }
 
-    suspend fun createKind1Event(content: String, privateKey: ByteArray): NostrEvent {
+    fun createKindEvent(content: String, events: Events): NostrEvent {
+        val privateKey = generatePrivateKey()
         val publicKey = getPublicKey(privateKey)
         val createdAt = Clock.System.now().epochSeconds
 
@@ -26,7 +28,7 @@ object NostrUtil {
             add(0) // serialize_0
             add(publicKey.toHexString()) // serialize_1
             add(createdAt) // serialize_2
-            add(1) // serialize_3 (kind)
+            add(events.value) // serialize_3 (kind)
             add(JsonArray(emptyList<JsonElement>())) // serialize_4 (tags)
             add(content) // serialize_5
         }
@@ -53,11 +55,10 @@ object NostrUtil {
     }
 
     private fun sha256(input: String): String {
-        val hashBytes = input.encodeToByteArray().sha256()
-        return hashBytes.hex
+        return sha256Hash(input).toHexString()
     }
 
-    private suspend fun signEvent(id: String, privateKey: ByteArray): String {
+    private fun signEvent(id: String, privateKey: ByteArray): String {
         val freshRandomBytes = ByteArray(32)
         CryptographyRandom.nextBytes(freshRandomBytes)
         val signature = secp256k1.signSchnorr(id.hexToByteArray(), privateKey, freshRandomBytes)
@@ -69,4 +70,8 @@ object NostrUtil {
 
     private fun String.hexToByteArray(): ByteArray =
         ByteArray(length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
+}
+
+enum class Events(val value: Int) {
+    KIND_1(1)
 }

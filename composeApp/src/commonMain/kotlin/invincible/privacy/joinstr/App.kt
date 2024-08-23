@@ -37,6 +37,7 @@ import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.PoolScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.utils.CryptoUtils
+import invincible.privacy.joinstr.utils.Events
 import invincible.privacy.joinstr.utils.NostrUtil
 import io.github.xxfast.kstore.KStore
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -176,10 +177,8 @@ fun main() {
 
 suspend fun sendTestEvent() {
     val content = "This is a test Nostr note"
-    val nostrUtil = NostrUtil
-    val privateKey = ByteArray(32).apply { kotlin.random.Random.nextBytes(this) }
-    //val event = NostrUtil.createKind1Event(content, privateKey)
-    val nostrEvent = nostrUtil.createKind1Event(content, privateKey)
+    val nostrUtil = NostrUtil()
+    val nostrEvent = nostrUtil.createKindEvent(content, Events.KIND_1)
     println("Event to be sent: $nostrEvent")
     NostrClient().sendEvent(nostrEvent)
 }

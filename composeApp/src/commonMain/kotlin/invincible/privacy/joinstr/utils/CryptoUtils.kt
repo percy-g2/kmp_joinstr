@@ -43,11 +43,10 @@ object CryptoUtils {
      * @param content the content to be hashed
      * @return the content hash, as a byte array.
      */
-    //TODO: Should the function return a string or a byte array?
-    fun contentHash(content: String): ByteArray {
+    fun sha256Hash(content: String): ByteArray {
         return getCryptoProvider().get(SHA256)
             .hasher()
-            .hashBlocking(content.toByteArray())
+            .hashBlocking(content.encodeToByteArray())
 
     }
 
