@@ -1,6 +1,5 @@
 package invincible.privacy.joinstr
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +26,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.whyoleg.cryptography.CryptographyProvider
 import invincible.privacy.joinstr.model.NavItem
+import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -37,11 +37,12 @@ import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.PoolScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.utils.CryptoUtils
+import invincible.privacy.joinstr.utils.NostrUtil
 import io.github.xxfast.kstore.KStore
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.imageResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -101,10 +102,10 @@ fun App() {
                                                 contentDescription = item.title
                                             )
                                         }
-                                        item.drawableResource?.let {
-                                            Image(
+                                        item.drawableResource?.let { icon ->
+                                            Icon(
                                                 modifier = Modifier.size(24.dp),
-                                                bitmap = imageResource(it),
+                                                painter = painterResource(icon),
                                                 contentDescription = item.title
                                             )
                                         }
@@ -168,7 +169,19 @@ fun main() {
         } else {
             println("Decryption failed! The decrypted message does not match the original.")
         }
+
+        sendTestEvent()
     }
+}
+
+suspend fun sendTestEvent() {
+    val content = "This is a test Nostr note"
+    val nostrUtil = NostrUtil
+    val privateKey = ByteArray(32).apply { kotlin.random.Random.nextBytes(this) }
+    //val event = NostrUtil.createKind1Event(content, privateKey)
+    val nostrEvent = nostrUtil.createKind1Event(content, privateKey)
+    println("Event to be sent: $nostrEvent")
+    NostrClient().sendEvent(nostrEvent)
 }
 
 expect fun getKStore(): KStore<Settings>

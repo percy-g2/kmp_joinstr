@@ -9,6 +9,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
@@ -55,6 +56,24 @@ class NostrClient {
                         if (elem[0].jsonPrimitive.content == "EOSE") {
                             onReceived.invoke()
                         }
+                    }.getOrElse {
+                        it.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun sendEvent(event: NostrEvent) {
+        client.wss("wss://nos.lol") {
+            val eventMessage = json.encodeToString(event)
+            val sendMessage = """["EVENT", $eventMessage]"""
+            println("sendMessage ->" + sendMessage)
+            send(Frame.Text(sendMessage))
+            for (frame in incoming) {
+                if (frame is Frame.Text) {
+                    runCatching {
+                        println("data >>" + frame.readText())
                     }.getOrElse {
                         it.printStackTrace()
                     }

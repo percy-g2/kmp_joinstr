@@ -47,7 +47,7 @@ object CryptoUtils {
     fun contentHash(content: String): ByteArray {
         return getCryptoProvider().get(SHA256)
             .hasher()
-            .hashBlocking(content.encodeToByteArray())
+            .hashBlocking(content.toByteArray())
 
     }
 
@@ -95,7 +95,7 @@ object CryptoUtils {
 
         // Decrypt the message and return as a String
         val decryptedBytes = cipher.decrypt(iv, encryptedMsg)
-        return String(decryptedBytes)
+        return decryptedBytes.decodeToString(0, 0 + decryptedBytes.size)
     }
 
     @OptIn(ExperimentalEncodingApi::class, DelicateCryptographyApi::class)
