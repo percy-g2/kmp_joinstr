@@ -148,6 +148,7 @@ fun ListUnspentCloudsScreen() {
                             CustomOutlinedButton(
                                 text = item.amount.toString(),
                                 color = color,
+                                isSelected = item.txid == selectedTxId,
                                 onClick = {
                                     selectedTxId = if (selectedTxId == item.txid) {
                                         autoRotation = true
@@ -262,6 +263,7 @@ fun CustomOutlinedButton(
     modifier: Modifier = Modifier,
     text: String,
     color: Color,
+    isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     longPressDuration: Long = 500L
@@ -298,6 +300,7 @@ fun CustomOutlinedButton(
     ) {
         Text(
             text = text,
+            color = if (isSelected) Color.White else Color.Unspecified,
             fontSize = fontSize,
             onTextLayout = { textLayoutResult: TextLayoutResult ->
                 textWidth = with(density) { textLayoutResult.size.width.toDp() }
