@@ -4,7 +4,6 @@ import invincible.privacy.joinstr.model.BlockChainInfo
 import invincible.privacy.joinstr.model.ListUnspentResponse
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.RpcRequestBody
-import invincible.privacy.joinstr.model.TickerResponse
 import invincible.privacy.joinstr.model.Transaction
 import invincible.privacy.joinstr.model.TransactionsResponse
 import invincible.privacy.joinstr.theme.NodeConfig
@@ -48,18 +47,6 @@ class HttpClient {
             defaultRequest {
                 contentType(ContentType.Application.Json)
             }
-    }
-
-    suspend fun fetchUsdtPrice(): Double = try {
-        val response: HttpResponse = createHttpClient.get {
-            url("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-        }
-        if (response.status == HttpStatusCode.OK) {
-            json.decodeFromString<TickerResponse>(response.bodyAsText()).price.toDouble()
-        } else 0.0
-    } catch (e: Exception) {
-        e.printStackTrace()
-        0.0
     }
 
     suspend fun fetchBlockChainInfo(body: RpcRequestBody): BlockChainInfo? = try {

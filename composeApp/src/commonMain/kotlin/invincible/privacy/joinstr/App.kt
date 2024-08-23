@@ -1,8 +1,10 @@
 package invincible.privacy.joinstr
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -17,11 +19,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.whyoleg.cryptography.CryptographyProvider
 import invincible.privacy.joinstr.model.NavItem
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
@@ -30,8 +34,14 @@ import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
 import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
+import invincible.privacy.joinstr.ui.PoolScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
+import invincible.privacy.joinstr.utils.CryptoUtils
 import io.github.xxfast.kstore.KStore
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -40,6 +50,7 @@ fun App() {
     val themeState by SettingsManager.themeState.collectAsState()
 
     LaunchedEffect(Unit) {
+        main()
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
         }
@@ -62,9 +73,12 @@ fun App() {
                 NavItem.Home.path -> {
                     selectedItem = 0
                 }
+                NavItem.Pools.path -> {
+                    selectedItem = 1
+                }
 
                 NavItem.Settings.path -> {
-                    selectedItem = 1
+                    selectedItem = 2
                 }
             }
         }
@@ -74,17 +88,26 @@ fun App() {
             bottomBar = {
                 BottomAppBar(
                     actions = {
-                        val navItems = listOf(NavItem.Home, NavItem.Settings)
+                        val navItems = listOf(NavItem.Home, NavItem.Pools, NavItem.Settings)
 
                         NavigationBar {
                             navItems.forEachIndexed { index, item ->
                                 NavigationBarItem(
                                     alwaysShowLabel = true,
                                     icon = {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = item.title
-                                        )
+                                        item.icon?.let { icon ->
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = item.title
+                                            )
+                                        }
+                                        item.drawableResource?.let {
+                                            Image(
+                                                modifier = Modifier.size(24.dp),
+                                                bitmap = imageResource(it),
+                                                contentDescription = item.title
+                                            )
+                                        }
                                     },
                                     label = { if (selectedItem == index) Text(item.title) },
                                     selected = selectedItem == index,
@@ -109,6 +132,9 @@ fun App() {
                 composable(route = NavItem.Home.path) {
                     ListUnspentCloudsScreen()
                 }
+                composable(route = NavItem.Pools.path) {
+                    PoolScreen()
+                }
                 composable(route = NavItem.Settings.path) {
                     SettingsScreen {
                         navController.popBackStack()
@@ -119,4 +145,33 @@ fun App() {
     }
 }
 
+@OptIn(DelicateCoroutinesApi::class)
+fun main() {
+    GlobalScope.launch {
+        // Initialize CryptoUtils
+        val privateKey = CryptoUtils.generatePrivateKey()
+        val publicKey = CryptoUtils.getPublicKey(privateKey)
+        val sharedSecret = CryptoUtils.getSharedSecret(privateKey, publicKey)
+        val message = "This is a secret message"
+
+        // Encrypt the message
+        val encryptedMessage = CryptoUtils.encrypt(message, sharedSecret)
+        println("Encrypted Message: $encryptedMessage")
+
+        // Decrypt the message
+        val decryptedMessage = CryptoUtils.decrypt(encryptedMessage, sharedSecret)
+        println("Decrypted Message: $decryptedMessage")
+
+        // Verify that the decrypted message matches the original message
+        if (message == decryptedMessage) {
+            println("Decryption successful! The decrypted message matches the original.")
+        } else {
+            println("Decryption failed! The decrypted message does not match the original.")
+        }
+    }
+}
+
 expect fun getKStore(): KStore<Settings>
+
+
+expect fun getCryptoProvider(): CryptographyProvider

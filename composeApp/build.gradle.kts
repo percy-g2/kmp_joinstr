@@ -1,3 +1,4 @@
+
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -60,6 +61,8 @@ kotlin {
             implementation(libs.ktor.client.darwin)
 
             implementation(libs.kstore.file)
+
+            implementation(cryptographyLibs.provider.apple)
         }
 
         androidMain.dependencies {
@@ -72,6 +75,8 @@ kotlin {
             implementation(libs.ktor.client.cio)
 
             implementation(libs.kstore.file)
+            implementation(libs.secp256k1.kmp.jni.android)
+            implementation(cryptographyLibs.provider.jdk)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -89,7 +94,11 @@ kotlin {
             implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.serialization.kotlinx.json)
 
+            implementation(libs.secp256k1.kmp)
 
+
+            implementation(cryptographyLibs.core)
+            implementation(cryptographyLibs.serialization.pem)
             implementation(libs.kotlinx.datetime)
 
             implementation(libs.navigation.compose)
@@ -97,6 +106,7 @@ kotlin {
             implementation(libs.kstore)
 
             implementation(libs.kotlinx.coroutines.core)
+
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -104,12 +114,14 @@ kotlin {
             implementation(libs.kstore.file)
             implementation(libs.harawata.appdirs)
             implementation(libs.kotlinx.coroutines.swing)
+            implementation(cryptographyLibs.provider.jdk)
+            implementation(libs.secp256k1.kmp.jni.jvm)
         }
 
         wasmJsMain.dependencies {
             implementation(libs.kstore.storage)
-
             implementation(libs.ktor.client.js)
+            implementation(cryptographyLibs.provider.webcrypto)
         }
     }
 }
@@ -153,6 +165,8 @@ android {
         compose = true
     }
     dependencies {
+        implementation(fileTree("dir" to "libs", "include" to listOf("*.jar")))
+
         debugImplementation(compose.uiTooling)
     }
 }

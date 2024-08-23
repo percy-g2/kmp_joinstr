@@ -21,6 +21,7 @@ ktor = "3.0.0-beta-2"
 navigationCompose = "2.7.0-alpha07"
 kstore = "0.8.0"
 harawata-appdirs = "1.2.2"
+secp256k1Kmp = "0.15.0"
 startupRuntime = "1.1.1"
 
 [libraries]
@@ -58,7 +59,9 @@ ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negoti
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
-ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
+secp256k1-kmp = { module = "fr.acinq.secp256k1:secp256k1-kmp", version.ref = "secp256k1Kmp" }
+secp256k1-kmp-jni-android = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-android", version.ref = "secp256k1Kmp" }
+secp256k1-kmp-jni-jvm = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-jvm", version.ref = "secp256k1Kmp" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

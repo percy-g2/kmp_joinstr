@@ -1,5 +1,7 @@
 package invincible.privacy.joinstr
 
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.providers.jdk.JDK
 import invincible.privacy.joinstr.theme.NodeConfig
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
@@ -22,4 +24,8 @@ actual fun getKStore(): KStore<Settings> {
             nodeConfig = NodeConfig()
         )
     )
+}
+
+actual fun getCryptoProvider(): CryptographyProvider {
+    return CryptographyProvider.JDK
 }

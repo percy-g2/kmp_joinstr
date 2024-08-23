@@ -2,6 +2,7 @@ package invincible.privacy.joinstr.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -57,7 +59,6 @@ import kotlinx.datetime.Clock
 @Composable
 fun ListUnspentCloudsScreen() {
     var isLoading by remember { mutableStateOf(true) }
-    var usdPerBtc by remember { mutableStateOf(0.0) }
     val httpClient = remember { HttpClient() }
     var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
@@ -67,7 +68,6 @@ fun ListUnspentCloudsScreen() {
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
-            usdPerBtc = httpClient.fetchUsdtPrice()
             val rpcRequestBody = RpcRequestBody(
                 method = Methods.LIST_UNSPENT.value
             )
@@ -99,7 +99,16 @@ fun ListUnspentCloudsScreen() {
                     )
                 },
                 confirmButton = {
-
+                    Text(
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .clickable {
+                                autoRotation = true
+                                longPressDialog = false
+                            },
+                        text = "Dismiss",
+                        textAlign = TextAlign.Center,
+                    )
                 }
             )
         }
@@ -111,11 +120,14 @@ fun ListUnspentCloudsScreen() {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SelectSpendableOutputsScreen(
-                totalSats = listUnspent.sumOf { it.amount.times(100000000) }.toLong(),
-                totalUsdt = listUnspent.sumOf { it.amount * usdPerBtc },
-                selectedSats = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(100000000))?.toLong() ?: 0L,
-                selectedUsdt = (listUnspent.find { it.txid == selectedTxId }?.amount?.times(usdPerBtc)) ?: 0.0
+            Text(
+                text = "Input Registration".uppercase(),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 12.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             if (listUnspent.isNotEmpty()) {
@@ -134,7 +146,7 @@ fun ListUnspentCloudsScreen() {
                     modifier = Modifier
                         .width((listUnspent.size * 70).dp)
                         .height((listUnspent.size * 30).dp)
-                        .padding(all = 32.dp),
+                        .padding(all = 64.dp),
                     state = state
                 ) {
                     items(listUnspent) { item ->
@@ -179,7 +191,7 @@ fun ListUnspentCloudsScreen() {
                         modifier = Modifier
                             .padding(4.dp)
                             .align(Alignment.Bottom),
-                        text = "Confirm",
+                        text = "Register",
                         fontSize = 16.sp
                     )
                 }
@@ -203,62 +215,6 @@ fun ListUnspentCloudsScreen() {
 }
 
 @Composable
-fun SelectSpendableOutputsScreen(
-    totalSats: Long,
-    totalUsdt: Double,
-    selectedSats: Long,
-    selectedUsdt: Double
-) {
-    Surface(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Title
-            Text(
-                text = "Select spendable outputs",
-                fontSize = 24.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            // Total sats and USD
-            Text(
-                text = "Total: $totalSats sats = $totalUsdt USDT",
-                fontSize = 16.sp,
-                color = Color.Gray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 18.dp)
-            )
-
-            // Selected sats
-            Text(
-                text = "$selectedSats SATS",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // Selected USDT
-            Text(
-                text = "$selectedUsdt USDT",
-                fontSize = 20.sp,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
 fun CustomOutlinedButton(
     modifier: Modifier = Modifier,
     text: String,
@@ -277,6 +233,9 @@ fun CustomOutlinedButton(
     Box(
         modifier = modifier
             .clip(CircleShape)
+            .then(
+                if (isSelected) Modifier.shadow(8.dp, CircleShape) else Modifier
+            )
             .size(buttonSize)
             .background(color, CircleShape)
             .border(1.dp, MaterialTheme.colorScheme.onBackground, CircleShape)

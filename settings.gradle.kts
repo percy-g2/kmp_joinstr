@@ -26,6 +26,11 @@ dependencyResolutionManagement {
         }
         mavenCentral()
     }
+    versionCatalogs {
+        create("cryptographyLibs") {
+            from("dev.whyoleg.cryptography:cryptography-version-catalog:0.3.1")
+        }
+    }
 }
 
 include(":composeApp")
