@@ -2,6 +2,7 @@ package invincible.privacy.joinstr.ui.pools
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -30,9 +32,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PoolScreen(
     poolsViewModel: PoolsViewModel = viewModel { PoolsViewModel() }
@@ -100,13 +109,22 @@ fun PoolScreen(
 
         if (selectedTab == 0) {
             Box {
+                val (focusRequester) = FocusRequester.createRefs()
+                val keyboardController = LocalSoftwareKeyboardController.current
+                val focusManager = LocalFocusManager.current
+
                 var denomination by remember { mutableStateOf("") }
                 var peers by remember { mutableStateOf("") }
 
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                focusManager.clearFocus()
+                            }
+                        },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -118,10 +136,15 @@ fun PoolScreen(
                         },
                         label = { Text("Denomination") },
                         keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Next
                         ),
-                        modifier = Modifier.wrapContentSize(),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusRequester.requestFocus()}
+                        ),
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .focusRequester(focusRequester),
                         trailingIcon = {
                             if (denomination.isNotEmpty()) {
                                 IconButton(onClick = { denomination = "" }) {
@@ -143,10 +166,15 @@ fun PoolScreen(
                         },
                         label = { Text("Number of peers") },
                         keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
+                            keyboardType = KeyboardType.Decimal,
                             imeAction = ImeAction.Done
                         ),
-                        modifier = Modifier.wrapContentSize(),
+                        keyboardActions = KeyboardActions(
+                            onDone = { keyboardController?.hide() }
+                        ),
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .focusRequester(focusRequester),
                         trailingIcon = {
                             if (peers.isNotEmpty()) {
                                 IconButton(onClick = { peers = "" }) {
