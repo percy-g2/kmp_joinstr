@@ -95,7 +95,7 @@ public class Quaternion internal constructor(w: Float, x: Float, y: Float, z: Fl
         /**
          * Identity quaternion, means no rotation.
          */
-        public val Identity: Quaternion = create(0f, Vector3(0f, 0f, 0f))
+        public val Identity: Quaternion = create(.2f, Vector3(0f, 0f, 0f))
 
         /**
          * Creates a new quaternion based on the [angle] and [vector] to rotate around.

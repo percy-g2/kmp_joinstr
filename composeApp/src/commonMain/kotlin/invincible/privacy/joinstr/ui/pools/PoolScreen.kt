@@ -1,4 +1,4 @@
-package invincible.privacy.joinstr.ui
+package invincible.privacy.joinstr.ui.pools
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +38,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.ui.components.ProgressDialog
 
 @Composable
-fun PoolScreen() {
+fun PoolScreen(
+    poolsViewModel: PoolsViewModel = viewModel { PoolsViewModel() }
+) {
+    val isLoading by poolsViewModel.isLoading.collectAsState()
+
     @Composable
     fun Tab(
         selected: Boolean,
@@ -60,6 +67,10 @@ fun PoolScreen() {
     }
 
     var selectedTab by remember { mutableStateOf(0) }
+
+    if (isLoading) {
+        ProgressDialog()
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -88,66 +99,71 @@ fun PoolScreen() {
         }
 
         if (selectedTab == 0) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+            Box {
                 var denomination by remember { mutableStateOf("") }
                 var peers by remember { mutableStateOf("") }
 
-                OutlinedTextField(
-                    value = denomination,
-                    onValueChange = {
-                        denomination = it
-                    },
-                    label = { Text("Denomination") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier.wrapContentSize(),
-                    trailingIcon = {
-                        if (denomination.isNotEmpty()) {
-                            IconButton(onClick = { denomination = "" }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = "Clear text"
-                                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    OutlinedTextField(
+                        value = denomination,
+                        onValueChange = {
+                            denomination = it
+                        },
+                        label = { Text("Denomination") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier.wrapContentSize(),
+                        trailingIcon = {
+                            if (denomination.isNotEmpty()) {
+                                IconButton(onClick = { denomination = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Clear text"
+                                    )
+                                }
                             }
                         }
-                    }
-                )
+                    )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = peers,
-                    onValueChange = {
-                        peers = it
-                    },
-                    label = { Text("Number of peers") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier.wrapContentSize(),
-                    trailingIcon = {
-                        if (peers.isNotEmpty()) {
-                            IconButton(onClick = { peers = "" }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = "Clear text"
-                                )
+                    OutlinedTextField(
+                        value = peers,
+                        onValueChange = {
+                            peers = it
+                        },
+                        label = { Text("Number of peers") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier.wrapContentSize(),
+                        trailingIcon = {
+                            if (peers.isNotEmpty()) {
+                                IconButton(onClick = { peers = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Clear text"
+                                    )
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
 
                 Button(
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier
+                        .padding(all = 12.dp)
+                        .align(Alignment.BottomCenter),
                     shape = RoundedCornerShape(8.dp),
                     enabled = denomination.isNotEmpty() && peers.isNotEmpty(),
                     onClick = {

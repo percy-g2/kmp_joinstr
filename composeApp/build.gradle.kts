@@ -2,7 +2,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
@@ -67,15 +67,17 @@ kotlin {
 
         androidMain.dependencies {
             implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
 
+            implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.startup.runtime)
 
             implementation(libs.ktor.client.android)
             implementation(libs.ktor.client.cio)
 
             implementation(libs.kstore.file)
+
             implementation(libs.secp256k1.kmp.jni.android)
+
             implementation(cryptographyLibs.provider.jdk)
         }
         commonMain.dependencies {
@@ -85,6 +87,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
 
@@ -96,9 +99,9 @@ kotlin {
 
             implementation(libs.secp256k1.kmp)
 
-
             implementation(cryptographyLibs.core)
             implementation(cryptographyLibs.serialization.pem)
+
             implementation(libs.kotlinx.datetime)
 
             implementation(libs.navigation.compose)
@@ -106,22 +109,30 @@ kotlin {
             implementation(libs.kstore)
 
             implementation(libs.kotlinx.coroutines.core)
-
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+
             implementation(libs.ktor.client.cio)
+
             implementation(libs.kstore.file)
+
             implementation(libs.harawata.appdirs)
+
             implementation(libs.kotlinx.coroutines.swing)
+
             implementation(cryptographyLibs.provider.jdk)
+
             implementation(libs.secp256k1.kmp.jni.jvm)
         }
 
         wasmJsMain.dependencies {
             implementation(libs.kstore.storage)
+
             implementation(libs.ktor.client.js)
+
             implementation(cryptographyLibs.provider.webcrypto)
+
             implementation(libs.secp256k1.wasm.js)
         }
     }

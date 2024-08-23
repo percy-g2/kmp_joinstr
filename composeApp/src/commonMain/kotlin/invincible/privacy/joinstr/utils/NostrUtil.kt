@@ -16,21 +16,24 @@ import kotlinx.serialization.json.buildJsonArray
 
 class NostrUtil {
     private val secp256k1 = Secp256k1
-    private val json = Json { encodeDefaults = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
-    fun createKindEvent(content: String, events: Events): NostrEvent {
+    fun createEvent(content: String, event: Event): NostrEvent {
         val privateKey = generatePrivateKey()
         val publicKey = getPublicKey(privateKey)
         val createdAt = Clock.System.now().epochSeconds
 
         // 1. Create the event object without the 'id' and 'sig' fields
         val eventData = buildJsonArray {
-            add(0) // serialize_0
-            add(publicKey.toHexString()) // serialize_1
-            add(createdAt) // serialize_2
-            add(events.value) // serialize_3 (kind)
-            add(JsonArray(emptyList<JsonElement>())) // serialize_4 (tags)
-            add(content) // serialize_5
+            add(0)
+            add(publicKey.toHexString())
+            add(createdAt)
+            add(event.kind)
+            add(JsonArray(emptyList<JsonElement>()))
+            add(content)
         }
 
         // 2. Serialize the event object
@@ -45,8 +48,8 @@ class NostrUtil {
         // 5. Construct the final event object
         return NostrEvent(
             id = id,
-            pubkey = publicKey.toHexString(),
-            created_at = createdAt,
+            pubKey = publicKey.toHexString(),
+            createdAt = createdAt,
             kind = 1,
             tags = emptyList(),
             content = content,
@@ -72,6 +75,8 @@ class NostrUtil {
         ByteArray(length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 }
 
-enum class Events(val value: Int) {
-    KIND_1(1)
+enum class Event(val kind: Int) {
+    NOTE(1),
+    JOIN_STR(2022),
+    TEST_JOIN_STR(2022566)
 }

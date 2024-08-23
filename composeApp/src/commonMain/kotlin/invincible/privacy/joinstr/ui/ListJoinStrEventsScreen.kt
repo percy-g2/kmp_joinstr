@@ -90,8 +90,8 @@ fun EventItem(event: NostrEvent) {
         ) {
             Text(text = event.content, style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Author: ${event.pubkey.take(8)}...", style = MaterialTheme.typography.labelSmall)
-            Text(text = "Created at: ${Instant.fromEpochMilliseconds(event.created_at * 1000)}", style = MaterialTheme.typography.labelSmall)
+            Text(text = "Author: ${event.pubKey.take(8)}...", style = MaterialTheme.typography.labelSmall)
+            Text(text = "Created at: ${Instant.fromEpochMilliseconds(event.createdAt * 1000)}", style = MaterialTheme.typography.labelSmall)
         }
     }
 }

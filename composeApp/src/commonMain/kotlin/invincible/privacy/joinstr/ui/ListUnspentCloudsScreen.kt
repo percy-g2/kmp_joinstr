@@ -3,7 +3,6 @@ package invincible.privacy.joinstr.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
@@ -41,7 +38,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogProperties
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
@@ -54,7 +50,6 @@ import invincible.privacy.joinstr.ui.components.tagcloud.rememberTagCloudState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 
 @Composable
 fun ListUnspentCloudsScreen() {
@@ -62,9 +57,8 @@ fun ListUnspentCloudsScreen() {
     val httpClient = remember { HttpClient() }
     var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
-    var longPressDialog by remember { mutableStateOf(false) }
     var selectedTxId by remember { mutableStateOf("") }
-    var autoRotation by remember { mutableStateOf(true) }
+    var autoRotation by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
@@ -81,134 +75,112 @@ fun ListUnspentCloudsScreen() {
         if (isLoading) {
             ProgressDialog()
         }
-
-        if (longPressDialog) {
-            autoRotation = false
-            AlertDialog(
-                properties = DialogProperties(),
-                onDismissRequest = {
-                    autoRotation = true
-                    longPressDialog = false
-                },
-                text = {
-                    val unspent = listUnspent.find { it.txid == selectedTxId }
-                    Text(
-                        modifier = Modifier.padding(8.dp),
-                        text = "${unspent?.vout} | ${unspent?.txid}",
-                        textAlign = TextAlign.Center
-                    )
-                },
-                confirmButton = {
-                    Text(
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .clickable {
-                                autoRotation = true
-                                longPressDialog = false
-                            },
-                        text = "Dismiss",
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            )
-        }
-
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(rememberScrollState())
         ) {
-            Text(
-                text = "Input Registration".uppercase(),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 12.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Input Registration".uppercase(),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val unspent = listUnspent.find { it.txid == selectedTxId }
 
-            if (listUnspent.isNotEmpty()) {
-                val state = rememberTagCloudState(
-                    onStartGesture = { autoRotation = false },
-                    onEndGesture = { autoRotation = true },
+                Text(
+                    text = if (selectedTxId.isNotEmpty()) "${unspent?.txid} | ${unspent?.vout}" else "",
+                    fontSize = 16.sp,
+                    color = Color.LightGray,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    modifier = Modifier.padding(all = 8.dp)
                 )
 
-                LaunchedEffect(state, autoRotation) {
-                    while (isActive && autoRotation) {
-                        delay(10)
-                        state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
-                    }
-                }
-                TagCloud(
-                    modifier = Modifier
-                        .width((listUnspent.size * 70).dp)
-                        .height((listUnspent.size * 30).dp)
-                        .padding(all = 64.dp),
-                    state = state
-                ) {
-                    items(listUnspent) { item ->
-                        Box(
-                            modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
-                        ) {
-                            val color = if (item.txid == selectedTxId) {
-                                red
-                            } else Color.Transparent
+                if (listUnspent.isNotEmpty()) {
+                    val state = rememberTagCloudState(
+                        onStartGesture = { autoRotation = false },
+                        onEndGesture = { autoRotation = true },
+                    )
 
-                            CustomOutlinedButton(
-                                text = item.amount.toString(),
-                                color = color,
-                                isSelected = item.txid == selectedTxId,
-                                onClick = {
-                                    selectedTxId = if (selectedTxId == item.txid) {
-                                        autoRotation = true
-                                        ""
-                                    } else {
-                                        autoRotation = false
-                                        item.txid
+                    LaunchedEffect(state, autoRotation) {
+                        while (isActive && autoRotation && selectedTxId.isEmpty()) {
+                            delay(10)
+                            state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
+                        }
+                    }
+                    TagCloud(
+                        modifier = Modifier
+                            .width((listUnspent.size * 70).dp)
+                            .height((listUnspent.size * 30).dp)
+                            .padding(all = 64.dp),
+                        state = state
+                    ) {
+                        items(listUnspent) { item ->
+                            Box(
+                                modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
+                            ) {
+                                val color = if (item.txid == selectedTxId) {
+                                    red
+                                } else Color.Transparent
+
+                                CustomOutlinedButton(
+                                    text = item.amount.toString(),
+                                    color = color,
+                                    isSelected = item.txid == selectedTxId,
+                                    onClick = {
+                                        selectedTxId = if (selectedTxId == item.txid) {
+                                            autoRotation = true
+                                            ""
+                                        } else {
+                                            item.txid
+                                        }
                                     }
-                                },
-                                onLongClick = {
-                                    longPressDialog = !longPressDialog
-                                    selectedTxId = item.txid
-                                }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    if (isLoading.not()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "No amount found to spend",
+                                fontSize = 18.sp,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
                 }
-
-                Button(
-                    modifier = Modifier.padding(4.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    enabled = selectedTxId.isNotEmpty(),
-                    onClick = {
-                        // TODO
-                    }
-                ) {
-                    Text(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .align(Alignment.Bottom),
-                        text = "Register",
-                        fontSize = 16.sp
-                    )
+            }
+            Button(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
+                shape = RoundedCornerShape(8.dp),
+                enabled = selectedTxId.isNotEmpty(),
+                onClick = {
+                    // TODO
                 }
-            } else {
-                if (isLoading.not()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "No amount found to spend",
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+            ) {
+                Text(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .align(Alignment.Bottom),
+                    text = "Register",
+                    fontSize = 16.sp
+                )
             }
         }
     }
@@ -220,11 +192,8 @@ fun CustomOutlinedButton(
     text: String,
     color: Color,
     isSelected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    longPressDuration: Long = 500L
+    onClick: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
     val fontSize = 16.sp
     var textWidth by remember { mutableStateOf(0.dp) }
@@ -239,21 +208,8 @@ fun CustomOutlinedButton(
             .size(buttonSize)
             .background(color, CircleShape)
             .border(1.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        val pressStartTime = Clock.System.now().toEpochMilliseconds()
-                        val job = coroutineScope.launch {
-                            delay(longPressDuration)
-                            onLongClick()
-                        }
-                        tryAwaitRelease()
-                        job.cancel()
-                        if (Clock.System.now().toEpochMilliseconds() - pressStartTime < longPressDuration) {
-                            onClick()
-                        }
-                    }
-                )
+            .clickable {
+                onClick()
             },
         contentAlignment = Alignment.Center
     ) {

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -66,17 +68,42 @@ class NostrClient {
 
     suspend fun sendEvent(event: NostrEvent) {
         client.wss("wss://nos.lol") {
-            val eventMessage = json.encodeToString(event)
-            val sendMessage = """["EVENT", $eventMessage]"""
-            println("sendMessage ->" + sendMessage)
+            val eventJson = json.encodeToString(event)
+            val sendMessage = """["EVENT", $eventJson]"""
             send(Frame.Text(sendMessage))
+
+            println("Sent event: $sendMessage")
+
             for (frame in incoming) {
-                if (frame is Frame.Text) {
-                    runCatching {
-                        println("data >>" + frame.readText())
-                    }.getOrElse {
-                        it.printStackTrace()
+                when (frame) {
+                    is Frame.Text -> {
+                        val response = frame.readText()
+                        println("Received raw response: $response")
+                        try {
+                            val responseArray = json.decodeFromString<List<JsonElement>>(response)
+                            println("Parsed response: $responseArray")
+                            when (responseArray[0].jsonPrimitive.content) {
+                                "OK" -> {
+
+                                    if (responseArray[2].jsonPrimitive.boolean) {
+                                        println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
+                                    } else {
+                                        println("Error: ${responseArray[3].jsonPrimitive.content}")
+                                    }
+                                    break
+                                }
+                                "NOTICE" -> println("Received notice: ${responseArray[1].jsonPrimitive.content}")
+                                else -> println("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
+                            }
+                            if (responseArray.size > 2) {
+                                println("Additional information: ${responseArray.subList(2, responseArray.size)}")
+                            }
+                        } catch (e: Exception) {
+                            println("Failed to parse response: ${e.message}")
+                            e.printStackTrace()
+                        }
                     }
+                    else -> println("Received non-text frame: $frame")
                 }
             }
         }

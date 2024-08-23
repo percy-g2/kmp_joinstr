@@ -26,7 +26,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.whyoleg.cryptography.CryptographyProvider
 import invincible.privacy.joinstr.model.NavItem
-import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -34,15 +33,9 @@ import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
 import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
-import invincible.privacy.joinstr.ui.PoolScreen
+import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
-import invincible.privacy.joinstr.utils.CryptoUtils
-import invincible.privacy.joinstr.utils.Events
-import invincible.privacy.joinstr.utils.NostrUtil
 import io.github.xxfast.kstore.KStore
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -52,7 +45,7 @@ fun App() {
     val themeState by SettingsManager.themeState.collectAsState()
 
     LaunchedEffect(Unit) {
-        main()
+      //  main()
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
         }
@@ -147,6 +140,7 @@ fun App() {
     }
 }
 
+/*
 @OptIn(DelicateCoroutinesApi::class)
 fun main() {
     GlobalScope.launch {
@@ -178,10 +172,11 @@ fun main() {
 suspend fun sendTestEvent() {
     val content = "This is a test Nostr note"
     val nostrUtil = NostrUtil()
-    val nostrEvent = nostrUtil.createKindEvent(content, Events.KIND_1)
+    val nostrEvent = nostrUtil.createKindEvent(content, Events.NOTE)
     println("Event to be sent: $nostrEvent")
     NostrClient().sendEvent(nostrEvent)
 }
+*/
 
 expect fun getKStore(): KStore<Settings>
 
