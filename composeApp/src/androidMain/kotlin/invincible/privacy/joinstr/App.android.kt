@@ -8,7 +8,13 @@ import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.websocket.*
 import okio.Path.Companion.toPath
+import kotlin.time.Duration.Companion.seconds
 
 actual fun getKStore(): KStore<Settings> {
     val context = ContextProvider.getContext()
@@ -28,10 +34,28 @@ actual fun pubkeyCreate(privateKey: ByteArray): ByteArray {
     return pubKey
 }
 
-actual fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshRandomBytes: ByteArray): ByteArray {
+actual suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshRandomBytes: ByteArray): ByteArray {
     val contentSignature = Secp256k1.signSchnorr(content, privateKey, freshRandomBytes)
     return contentSignature
 }
+
+actual fun getWebSocketClient(): HttpClient {
+    return HttpClient(CIO) {
+        install(WebSockets)
+
+        install(HttpTimeout) {
+            requestTimeoutMillis = 5.seconds.inWholeMilliseconds
+            connectTimeoutMillis = 5.seconds.inWholeMilliseconds
+            socketTimeoutMillis = 5.seconds.inWholeMilliseconds
+        }
+
+        install(Logging) {
+            logger = Logger.DEFAULT
+            level = LogLevel.ALL
+        }
+    }
+}
+
 
 actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
     pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)

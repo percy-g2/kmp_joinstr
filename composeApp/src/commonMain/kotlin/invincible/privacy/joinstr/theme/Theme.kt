@@ -135,7 +135,8 @@ data class NodeConfig(
 )
 
 enum class Theme(val id: Int, val title: String, val description: String? = null) {
-    SYSTEM(0, "Use Device Settings", "Upon activation, Day or Night mode will be followed by device settings."),
+    SYSTEM(0, "Use Device Settings", "\n" +
+        "When selected, the Day or Night mode will align with the device's settings."),
     LIGHT(1, "Light"),
     DARK(2, "Dark")
 }

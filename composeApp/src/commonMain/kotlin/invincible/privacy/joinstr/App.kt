@@ -32,11 +32,14 @@ import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
+import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
+import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.utils.CryptoUtils
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrUtil
 import io.github.xxfast.kstore.KStore
+import io.ktor.client.*
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -126,10 +129,10 @@ fun App() {
                 startDestination = NavItem.Home.path
             ) {
                 composable(route = NavItem.Home.path) {
-               //     ListUnspentCloudsScreen()
+                    ListUnspentCloudsScreen()
                 }
                 composable(route = NavItem.Pools.path) {
-              //      PoolScreen()
+                    PoolScreen()
                 }
                 composable(route = NavItem.Settings.path) {
                     SettingsScreen {
@@ -167,6 +170,8 @@ fun App() {
     println("Event to be sent: $nostrEvent")
     NostrClient().sendEvent(nostrEvent)
 }
+
+expect fun getWebSocketClient(): HttpClient
 
 expect fun getKStore(): KStore<Settings>
 

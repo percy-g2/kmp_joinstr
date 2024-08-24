@@ -1,11 +1,9 @@
 package invincible.privacy.joinstr.network
 
+import invincible.privacy.joinstr.getWebSocketClient
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
-import io.ktor.client.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +16,6 @@ import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.time.Duration.Companion.seconds
 
 class NostrClient {
     private val _events = MutableStateFlow<List<NostrEvent>?>(null)
@@ -33,25 +30,13 @@ class NostrClient {
         encodeDefaults = true
     }
 
-    private val client =
-        HttpClient {
-            install(HttpTimeout) {
-                requestTimeoutMillis = 5.seconds.inWholeMilliseconds
-                connectTimeoutMillis = 5.seconds.inWholeMilliseconds
-                socketTimeoutMillis = 5.seconds.inWholeMilliseconds
-            }
-            install(WebSockets)
-            install(Logging) {
-                logger = Logger.SIMPLE
-                level = LogLevel.ALL
-            }
-        }
+    private val client = lazy { getWebSocketClient() }
 
     suspend fun connectAndListen(
         onReceived: () -> Unit
     ) {
         runCatching {
-            client.wss(nostrRelay.invoke()) {
+            client.value.wss(nostrRelay.invoke()) {
                 val subscribeMessage = """["REQ", "my-sub", {"kinds": [2022], "limit": 1000}]"""
                 send(Frame.Text(subscribeMessage))
                 for (frame in incoming) {
@@ -77,7 +62,7 @@ class NostrClient {
     }
 
     suspend fun sendEvent(event: NostrEvent) {
-        client.wss(nostrRelay.invoke()) {
+        client.value.wss(nostrRelay.invoke()) {
             val eventJson = json.encodeToString(event)
             val sendMessage = """["EVENT", $eventJson]"""
             send(Frame.Text(sendMessage))

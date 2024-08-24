@@ -96,7 +96,7 @@ class HttpClient {
             setBody(body)
         }
         if (response.status == HttpStatusCode.OK) {
-            json.decodeFromString<ListUnspentResponse>(test).result
+            json.decodeFromString<ListUnspentResponse>(response.bodyAsText()).result
         } else emptyList()
     } catch (e: Exception) {
         e.printStackTrace()

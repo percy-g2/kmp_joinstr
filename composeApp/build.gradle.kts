@@ -62,6 +62,8 @@ kotlin {
             implementation(cryptographyLibs.provider.apple)
 
             implementation(libs.secp256k1.kmp)
+
+            implementation(libs.logback.classic)
         }
 
         androidMain.dependencies {
@@ -80,6 +82,10 @@ kotlin {
             implementation(cryptographyLibs.provider.jdk)
 
             implementation(libs.secp256k1.kmp)
+
+            implementation(libs.slf4j.api)
+
+            implementation(libs.logback.android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -109,9 +115,7 @@ kotlin {
 
             implementation(libs.kotlinx.coroutines.core)
 
-            implementation(libs.logback.classic)
-
-            implementation("com.squareup.okio:okio:3.9.0")
+            implementation(libs.okio)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -129,6 +133,8 @@ kotlin {
             implementation(libs.secp256k1.kmp.jni.jvm)
 
             implementation(libs.secp256k1.kmp)
+
+            implementation(libs.logback.classic)
         }
 
         wasmJsMain.dependencies {
@@ -138,7 +144,7 @@ kotlin {
 
             implementation(cryptographyLibs.provider.webcrypto)
 
-           // implementation(libs.secp256k1.wasm.js)
+            implementation(libs.logback.classic)
 
             implementation(npm("@noble/secp256k1", "1.7.1"))
         }
@@ -187,6 +193,12 @@ android {
         implementation(fileTree("dir" to "libs", "include" to listOf("*.jar")))
 
         debugImplementation(compose.uiTooling)
+    }
+
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+        }
     }
 }
 

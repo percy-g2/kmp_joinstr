@@ -8,9 +8,15 @@ import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.websocket.*
 import net.harawata.appdirs.AppDirsFactory
 import okio.Path.Companion.toPath
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 
 actual fun getKStore(): KStore<Settings> {
     val directory = AppDirsFactory.getInstance()
@@ -25,6 +31,23 @@ actual fun getKStore(): KStore<Settings> {
             nodeConfig = NodeConfig()
         )
     )
+}
+
+actual fun getWebSocketClient(): HttpClient {
+    return HttpClient(CIO) {
+        install(WebSockets)
+
+        install(HttpTimeout) {
+            requestTimeoutMillis = 5.seconds.inWholeMilliseconds
+            connectTimeoutMillis = 5.seconds.inWholeMilliseconds
+            socketTimeoutMillis = 5.seconds.inWholeMilliseconds
+        }
+
+        install(Logging) {
+            logger = Logger.SIMPLE
+            level = LogLevel.ALL
+        }
+    }
 }
 
 actual fun pubkeyCreate(privateKey: ByteArray): ByteArray {

@@ -5,11 +5,17 @@ import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
+import io.ktor.client.*
+import io.ktor.client.engine.js.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.await
 import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
 import org.khronos.webgl.set
 import kotlin.js.Promise
+import kotlin.time.Duration.Companion.seconds
 
 @JsModule("@noble/secp256k1")
 external object Secp256k1 {
@@ -125,4 +131,21 @@ actual fun getKStore(): KStore<Settings> {
             nodeConfig = NodeConfig()
         )
     )
+}
+
+actual fun getWebSocketClient(): HttpClient {
+    return HttpClient(Js) {
+        install(WebSockets)
+
+        install(HttpTimeout) {
+            requestTimeoutMillis = 5.seconds.inWholeMilliseconds
+            connectTimeoutMillis = 5.seconds.inWholeMilliseconds
+            socketTimeoutMillis = 5.seconds.inWholeMilliseconds
+        }
+
+        install(Logging) {
+            logger = Logger.SIMPLE
+            level = LogLevel.ALL
+        }
+    }
 }
