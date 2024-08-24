@@ -1,16 +1,14 @@
 package invincible.privacy.joinstr.utils
 
+
 import dev.whyoleg.cryptography.CryptographyProvider
 import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.digest.SHA256
 import dev.whyoleg.cryptography.algorithms.symmetric.AES
 import dev.whyoleg.cryptography.random.CryptographyRandom
-import fr.acinq.secp256k1.Hex
-import fr.acinq.secp256k1.Secp256k1
-import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
-import fr.acinq.secp256k1.Secp256k1Exception
-import invincible.privacy.joinstr.getCryptoProvider
+import invincible.privacy.joinstr.pubkeyCreate
+import invincible.privacy.joinstr.signSchnorr
 import io.ktor.utils.io.core.*
+import okio.ByteString.Companion.encodeUtf8
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -32,10 +30,7 @@ object CryptoUtils {
      * @return the public key, as a byte array.
      */
     fun getPublicKey(privateKey: ByteArray): ByteArray {
-        if (!Secp256k1.secKeyVerify(privateKey)) throw Exception("Invalid private key!")
-        val pubKey = Secp256k1.pubkeyCreate(privateKey).drop(1).take(32).toByteArray()
-        //context.cleanup()
-        return pubKey
+        return pubkeyCreate(privateKey)
     }
 
     /**
@@ -43,12 +38,19 @@ object CryptoUtils {
      * @param content the content to be hashed
      * @return the content hash, as a byte array.
      */
-    fun sha256Hash(content: String): ByteArray {
-        return getCryptoProvider().get(SHA256)
-            .hasher()
-            .hashBlocking(content.encodeToByteArray())
 
+
+    fun sha256Hash(input: String): String {
+        // Convert input string to ByteString
+        val byteString = input.encodeUtf8()
+
+        // Generate SHA-256 hash
+        val hash = byteString.sha256()
+
+        // Return the hash as a hex string
+        return hash.hex()
     }
+
 
     /**
      * The function signs the content provided to it, and
@@ -60,12 +62,11 @@ object CryptoUtils {
      *
      * @return the 64-byte signature, as a byte array.
      */
-    @Throws(Error::class)
-    fun signContent(privateKey: ByteArray, content: ByteArray): ByteArray {
+
+    suspend fun signContent(privateKey: ByteArray, content: ByteArray): ByteArray {
         val freshRandomBytes = ByteArray(32)
         CryptographyRandom.nextBytes(freshRandomBytes)
-        val contentSignature = Secp256k1.signSchnorr(content, privateKey, freshRandomBytes)
-        return contentSignature
+        return signSchnorr(content, privateKey, freshRandomBytes)
     }
 
     /**
@@ -126,29 +127,4 @@ object CryptoUtils {
         return "$encryptedMsgBase64?iv=$ivBase64"
     }
 
-
-    /**
-     * The function verifies the provided 64-byte signature.
-     * @param signature the signature to provide, as a byte array.
-     * @param publicKey the 32-byte public key to provide, as a byte array.
-     * @param content the signed content to provide, as a byte array.
-     *
-     * @return the validity of the signature, as a boolean.
-     */
-    @Throws(Secp256k1Exception::class)
-    fun verifyContentSignature(
-        signature: ByteArray,
-        publicKey: ByteArray,
-        content: ByteArray
-    ): Boolean {
-        val verificationStatus = Secp256k1.verifySchnorr(signature, content, publicKey)
-
-        return verificationStatus
-    }
-
-    fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
-        pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
 }
-
-fun ByteArray.toHexString() = Hex.encode(this)
-fun String.toBytes() = Hex.decode(this)

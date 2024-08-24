@@ -1,8 +1,8 @@
 package invincible.privacy.joinstr.utils
 
 import dev.whyoleg.cryptography.random.CryptographyRandom
-import fr.acinq.secp256k1.Secp256k1
 import invincible.privacy.joinstr.model.NostrEvent
+import invincible.privacy.joinstr.signSchnorr
 import invincible.privacy.joinstr.utils.CryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.CryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.CryptoUtils.sha256Hash
@@ -15,15 +15,15 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 
 class NostrUtil {
-    private val secp256k1 = Secp256k1
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
 
-    fun createEvent(content: String, event: Event): NostrEvent {
+    suspend fun createEvent(content: String, event: Event): NostrEvent {
         val privateKey = generatePrivateKey()
         val publicKey = getPublicKey(privateKey)
+        // TODO need .drop(1).take(32).toByteArray() for wasmJs
         val createdAt = Clock.System.now().epochSeconds
 
         // 1. Create the event object without the 'id' and 'sig' fields
@@ -57,14 +57,14 @@ class NostrUtil {
         )
     }
 
-    private fun sha256(input: String): String {
-        return sha256Hash(input).toHexString()
+    private suspend fun sha256(input: String): String {
+        return sha256Hash(input)
     }
 
-    private fun signEvent(id: String, privateKey: ByteArray): String {
+    private suspend fun signEvent(id: String, privateKey: ByteArray): String {
         val freshRandomBytes = ByteArray(32)
         CryptographyRandom.nextBytes(freshRandomBytes)
-        val signature = secp256k1.signSchnorr(id.hexToByteArray(), privateKey, freshRandomBytes)
+        val signature = signSchnorr(id.hexToByteArray(), privateKey, freshRandomBytes)
         return signature.toHexString()
     }
 

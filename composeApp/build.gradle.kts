@@ -1,4 +1,3 @@
-
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
@@ -55,14 +54,14 @@ kotlin {
     sourceSets {
         val desktopMain by getting
 
-        val wasmJsMain by getting
-
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
 
             implementation(libs.kstore.file)
 
             implementation(cryptographyLibs.provider.apple)
+
+            implementation(libs.secp256k1.kmp)
         }
 
         androidMain.dependencies {
@@ -79,6 +78,8 @@ kotlin {
             implementation(libs.secp256k1.kmp.jni.android)
 
             implementation(cryptographyLibs.provider.jdk)
+
+            implementation(libs.secp256k1.kmp)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -97,8 +98,6 @@ kotlin {
             implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.serialization.kotlinx.json)
 
-            implementation(libs.secp256k1.kmp)
-
             implementation(cryptographyLibs.core)
             implementation(cryptographyLibs.serialization.pem)
 
@@ -109,6 +108,10 @@ kotlin {
             implementation(libs.kstore)
 
             implementation(libs.kotlinx.coroutines.core)
+
+            implementation(libs.logback.classic)
+
+            implementation("com.squareup.okio:okio:3.9.0")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -124,6 +127,8 @@ kotlin {
             implementation(cryptographyLibs.provider.jdk)
 
             implementation(libs.secp256k1.kmp.jni.jvm)
+
+            implementation(libs.secp256k1.kmp)
         }
 
         wasmJsMain.dependencies {
@@ -133,7 +138,9 @@ kotlin {
 
             implementation(cryptographyLibs.provider.webcrypto)
 
-            implementation(libs.secp256k1.wasm.js)
+           // implementation(libs.secp256k1.wasm.js)
+
+            implementation(npm("@noble/secp256k1", "1.7.1"))
         }
     }
 }

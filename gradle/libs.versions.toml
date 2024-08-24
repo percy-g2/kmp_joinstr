@@ -10,17 +10,21 @@ kotlin = "2.0.20"
 kotlinx-coroutines = "1.9.0-RC.2"
 kotlinxDatetime = "0.6.1"
 ktor = "3.0.0-beta-2"
+logbackClassic = "1.5.6"
 navigationCompose = "2.7.0-alpha07"
 kstore = "0.8.0"
 harawata-appdirs = "1.2.2"
 secp256k1Kmp = "0.15.0"
 secp256k1WasmJs = "0.6.1"
 startupRuntime = "1.1.1"
+bignum = "0.3.9"
+
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logbackClassic" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 kstore = { module = "io.github.xxfast:kstore", version.ref = "kstore" }
 kstore-file = { module = "io.github.xxfast:kstore-file", version.ref = "kstore" }
@@ -43,6 +47,8 @@ secp256k1-kmp = { module = "fr.acinq.secp256k1:secp256k1-kmp", version.ref = "se
 secp256k1-kmp-jni-android = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-android", version.ref = "secp256k1Kmp" }
 secp256k1-kmp-jni-jvm = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-jvm", version.ref = "secp256k1Kmp" }
 secp256k1-wasm-js = { module = "io.eqoty.kryptools:secp256k1-wasm-js", version.ref = "secp256k1WasmJs" }
+bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "bignum" }
+bignum-serialization-kotlinx = { module = "com.ionspin.kotlin:bignum-serialization-kotlinx", version.ref = "bignum" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
