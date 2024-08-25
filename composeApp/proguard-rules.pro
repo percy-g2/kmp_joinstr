@@ -20,6 +20,5 @@
 # hide the original source file name.
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 
-# If you're using a specific Secp256k1 library, you might need to keep its classes as well
-# Replace 'your.secp256k1.package' with the actual package name
+# If you're using a specific Secp256k1 library,
 -keep class fr.acinq.secp256k1.** { *; }
