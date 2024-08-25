@@ -1,31 +1,19 @@
-package invincible.privacy.joinstr.ui.pools
-
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,27 +22,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import invincible.privacy.joinstr.ui.ListJoinStrEventsScreen
-import invincible.privacy.joinstr.ui.MyPoolsScreens
 import invincible.privacy.joinstr.ui.components.ProgressDialog
+import invincible.privacy.joinstr.ui.pools.CreateNewPoolScreen
+import invincible.privacy.joinstr.ui.pools.ListJoinStrEventsScreen
+import invincible.privacy.joinstr.ui.pools.MyPoolsScreens
+import invincible.privacy.joinstr.ui.pools.PoolsViewModel
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PoolScreen(
     poolsViewModel: PoolsViewModel = viewModel { PoolsViewModel() }
@@ -98,131 +77,66 @@ fun PoolScreen(
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = {
+                    selectedTab = 0
+                }
+            ) {
                 val color = if (selectedTab == 0) Color.DarkGray else Color.Gray
-                Text("Create New Pool", style = MaterialTheme.typography.labelMedium.copy(color = color))
+                Text(
+                    text = "Create New Pool",
+                    style = MaterialTheme.typography.labelMedium.copy(color = color)
+                )
             }
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+            Tab(
+                selected = selectedTab == 1,
+                onClick = {
+                    selectedTab = 1
+                }
+            ) {
                 val color = if (selectedTab == 1) Color.DarkGray else Color.Gray
-                Text("My Pools", style = MaterialTheme.typography.labelMedium.copy(color = color))
+                Text(
+                    text = "My Pools",
+                    style = MaterialTheme.typography.labelMedium.copy(color = color)
+                )
             }
-            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+            Tab(
+                selected = selectedTab == 2,
+                onClick = {
+                    selectedTab = 2
+                }
+            ) {
                 val color = if (selectedTab == 2) Color.DarkGray else Color.Gray
-                Text("View Other Pools", style = MaterialTheme.typography.labelMedium.copy(color = color))
+                Text(
+                    text = "View Other Pools",
+                    style = MaterialTheme.typography.labelMedium.copy(color = color)
+                )
             }
         }
 
-        if (selectedTab == 0) {
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .shadow(4.dp, RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp))
-                    .imePadding(),
-                contentAlignment = Alignment.Center
-            ) {
-                val (focusRequester) = FocusRequester.createRefs()
-                val keyboardController = LocalSoftwareKeyboardController.current
-                val focusManager = LocalFocusManager.current
+        AnimatedVisibility(
+            visible = selectedTab == 0,
+            enter = expandIn(expandFrom = Alignment.Center),
+            exit = shrinkOut(shrinkTowards = Alignment.Center)
+        ) {
+            CreateNewPoolScreen(poolsViewModel = poolsViewModel)
+        }
 
-                var denomination by remember { mutableStateOf("") }
-                var peers by remember { mutableStateOf("") }
+        AnimatedVisibility(
+            visible = selectedTab == 1,
+            enter = expandIn(expandFrom = Alignment.Center),
+            exit = shrinkOut(shrinkTowards = Alignment.Center)
+        ) {
+            MyPoolsScreens(poolsViewModel = poolsViewModel)
+        }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp)
-                        .pointerInput(Unit) {
-                            detectTapGestures {
-                                focusManager.clearFocus()
-                            }
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-
-                    OutlinedTextField(
-                        value = denomination,
-                        onValueChange = {
-                            denomination = it
-                        },
-                        label = { Text("Denomination") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusRequester.requestFocus()}
-                        ),
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .focusRequester(focusRequester),
-                        trailingIcon = {
-                            if (denomination.isNotEmpty()) {
-                                IconButton(onClick = { denomination = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Clear text"
-                                    )
-                                }
-                            }
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = peers,
-                        onValueChange = {
-                            peers = it
-                        },
-                        label = { Text("Number of peers") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { keyboardController?.hide() }
-                        ),
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .focusRequester(focusRequester),
-                        trailingIcon = {
-                            if (peers.isNotEmpty()) {
-                                IconButton(onClick = { peers = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Clear text"
-                                    )
-                                }
-                            }
-                        }
-                    )
-                }
-
-                Button(
-                    modifier = Modifier
-                        .padding(all = 12.dp)
-                        .align(Alignment.BottomCenter),
-                    shape = RoundedCornerShape(8.dp),
-                    enabled = denomination.isNotEmpty() && peers.isNotEmpty(),
-                    onClick = {
-                        poolsViewModel.createPool(denomination, peers)
-                    }
-                ) {
-                    Text(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .align(Alignment.Bottom),
-                        text = "Create",
-                        fontSize = 16.sp
-                    )
-                }
-            }
-        } else if (selectedTab == 1) {
-            MyPoolsScreens()
-        } else if (selectedTab == 2) {
-            ListJoinStrEventsScreen()
+        AnimatedVisibility(
+            visible = selectedTab == 2,
+            enter = expandIn(expandFrom = Alignment.Center),
+            exit = shrinkOut(shrinkTowards = Alignment.Center)
+        ) {
+            ListJoinStrEventsScreen(poolsViewModel = poolsViewModel)
         }
     }
 }

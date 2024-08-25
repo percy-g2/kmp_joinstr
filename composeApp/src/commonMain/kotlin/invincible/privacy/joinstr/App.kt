@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr
 
+import PoolScreen
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -37,7 +38,6 @@ import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
-import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.utils.CryptoUtils
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrUtil

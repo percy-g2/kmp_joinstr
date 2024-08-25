@@ -7,9 +7,6 @@ import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.utils.Event
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -19,8 +16,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 class NostrClient {
-    private val _events = MutableStateFlow<List<NostrEvent>?>(null)
-    val events: StateFlow<List<NostrEvent>?> = _events
     private val nostrRelay = suspend {
         SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
     }
@@ -33,37 +28,30 @@ class NostrClient {
 
     private val client = lazy { getWebSocketClient() }
 
-    suspend fun connectAndListen(
-        onReceived: () -> Unit
+    suspend fun fetchOtherPools(
+        onReceived: (List<NostrEvent>?) -> Unit
     ) {
         runCatching {
             client.value.wss(nostrRelay.invoke()) {
-                val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}], "limit": 1000}]"""
+                var events: List<NostrEvent> = emptyList()
+                val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}]}]"""
                 send(Frame.Text(subscribeMessage))
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
                         println(frame.readText())
                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                         if (elem[0].jsonPrimitive.content == "EVENT") {
-                            _events.update { list ->
-                                list?.let {
-                                    listOf(json.decodeFromJsonElement<NostrEvent>(elem[2])) + it
-                                } ?: listOf(json.decodeFromJsonElement<NostrEvent>(elem[2]))
-                            }
+                            events = listOf(json.decodeFromJsonElement<NostrEvent>(elem[2])) + events
                         }
                         if (elem[0].jsonPrimitive.content == "EOSE") {
-                            if (_events.value == null) {
-                                _events.value = emptyList()
-                            }
-                            onReceived.invoke()
+                            onReceived.invoke(events)
                         }
                     }
                 }
             }
         }.getOrElse {
-            _events.value = emptyList()
             it.printStackTrace()
-            onReceived.invoke()
+            onReceived.invoke(emptyList())
         }
     }
 

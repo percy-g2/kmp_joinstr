@@ -3,6 +3,7 @@ package invincible.privacy.joinstr.ui.pools
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.PoolCreationContent
 import invincible.privacy.joinstr.network.HttpClient
@@ -22,12 +23,18 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 
 class PoolsViewModel : ViewModel() {
-    private val nostrClient = NostrClient()
-    private val httpClient = HttpClient()
+    private val nostrClient = lazy { NostrClient() }
+    private val httpClient = lazy { HttpClient() }
     private val poolStore = lazy { getPoolsStore() }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _events = MutableStateFlow<List<NostrEvent>?>(null)
+    val events: StateFlow<List<NostrEvent>?> = _events
+
+    private val _localPools = MutableStateFlow<List<PoolContent>?>(null)
+    val localPools: StateFlow<List<PoolContent>?> = _localPools
 
 
     private fun generatePoolId(): String {
@@ -39,16 +46,35 @@ class PoolsViewModel : ViewModel() {
         return randomString + timestamp.toString()
     }
 
+    fun fetchLocalPools() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _localPools.value = poolStore.value.get()
+            _isLoading.value = false
+        }
+    }
+
+    fun fetchOtherPools() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            nostrClient.value.fetchOtherPools { nostrEvents ->
+                _events.value = nostrEvents
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun createPool(
         denomination: String,
-        peers: String
+        peers: String,
+        onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
                 val privateKey = generatePrivateKey()
                 val publicKey = getPublicKey(privateKey)
-                val hourFee = httpClient.fetchHourFee()
+                val hourFee = httpClient.value.fetchHourFee()
                 val poolCreationContent = PoolCreationContent(
                     id = generatePoolId(),
                     type = "new_pool",
@@ -59,42 +85,29 @@ class PoolsViewModel : ViewModel() {
                     timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
                     publicKey = publicKey.toHexString()
                 )
-                val content = nostrClient.json.encodeToString(poolCreationContent).replace("\\\"", "\"")
+                val content = nostrClient.value.json.encodeToString(poolCreationContent).replace("\\\"", "\"")
                 val nostrUtil = NostrUtil()
                 val nostrEvent = nostrUtil.createEvent(content, Event.TEST_JOIN_STR)
-                println("Event to be sent: $nostrEvent")
                 NostrClient().sendEvent(
                     event = nostrEvent,
                     onSuccess = {
                         viewModelScope.launch {
                             poolStore.value.update {
-                                it?.plus(
-                                    PoolContent(
-                                        id = generatePoolId(),
-                                        type = "new_pool",
-                                        peers = peers.toInt(),
-                                        denomination = denomination.toFloat(),
-                                        relay = nostrRelay,
-                                        feeRate = hourFee,
-                                        timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
-                                        publicKey = publicKey.toHexString(),
-                                        privateKey = ""
-                                    )
-                                ) ?: listOf(
-                                    PoolContent(
-                                        id = generatePoolId(),
-                                        type = "new_pool",
-                                        peers = peers.toInt(),
-                                        denomination = denomination.toFloat(),
-                                        relay = nostrRelay,
-                                        feeRate = hourFee,
-                                        timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
-                                        publicKey = publicKey.toHexString(),
-                                        privateKey = ""
-                                    )
+                                val pool = PoolContent(
+                                    id = generatePoolId(),
+                                    type = "new_pool",
+                                    peers = peers.toInt(),
+                                    denomination = denomination.toFloat(),
+                                    relay = nostrRelay,
+                                    feeRate = hourFee,
+                                    timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                    publicKey = publicKey.toHexString(),
+                                    privateKey = privateKey.toHexString()
                                 )
+                                it?.plus(pool) ?: listOf(pool)
                             }
                         }
+                        onSuccess.invoke()
                         _isLoading.value = false
                         SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
                     },

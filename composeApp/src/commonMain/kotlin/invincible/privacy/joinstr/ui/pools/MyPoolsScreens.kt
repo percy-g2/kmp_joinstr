@@ -1,4 +1,4 @@
-package invincible.privacy.joinstr.ui
+package invincible.privacy.joinstr.ui.pools
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,9 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -31,18 +28,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
-import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.ui.components.ProgressDialog
 import kotlinx.datetime.Instant
 
 @Composable
-fun MyPoolsScreens() {
-    val events by getPoolsStore().updates.collectAsState(null)
-    var isLoading by remember { mutableStateOf(true) }
+fun MyPoolsScreens(
+    poolsViewModel: PoolsViewModel
+) {
+    val events by poolsViewModel.localPools.collectAsState()
+    val isLoading by poolsViewModel.isLoading.collectAsState()
 
-    LaunchedEffect(events) {
-        isLoading = false
+    LaunchedEffect(Unit) {
+        poolsViewModel.fetchLocalPools()
     }
 
     BoxWithConstraints(
@@ -52,11 +49,6 @@ fun MyPoolsScreens() {
             .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {
-
-        if (isLoading) {
-            ProgressDialog()
-        }
-
         events?.let { list ->
             if (list.isNotEmpty()) {
                 LazyColumn(

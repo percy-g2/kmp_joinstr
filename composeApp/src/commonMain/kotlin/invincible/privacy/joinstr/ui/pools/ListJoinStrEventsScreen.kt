@@ -1,4 +1,4 @@
-package invincible.privacy.joinstr.ui
+package invincible.privacy.joinstr.ui.pools
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,10 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -32,27 +28,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.model.NostrEvent
-import invincible.privacy.joinstr.network.NostrClient
-import invincible.privacy.joinstr.ui.components.ProgressDialog
-import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 
 @Composable
-fun ListJoinStrEventsScreen() {
-    val nostrClient = remember { NostrClient() }
-    val events by nostrClient.events.collectAsState(initial = null)
-    var isLoading by remember { mutableStateOf(true) }
-    val coroutineScope = rememberCoroutineScope()
-
+fun ListJoinStrEventsScreen(
+    poolsViewModel: PoolsViewModel
+) {
+    val events by poolsViewModel.events.collectAsState(initial = null)
+    val isLoading by poolsViewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            nostrClient.connectAndListen(
-                onReceived = {
-                    isLoading = false
-                }
-            )
-        }
+        poolsViewModel.fetchOtherPools()
     }
 
     BoxWithConstraints(
@@ -62,11 +48,6 @@ fun ListJoinStrEventsScreen() {
             .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {
-
-        if (isLoading) {
-            ProgressDialog()
-        }
-
         events?.let { list ->
             if (list.isNotEmpty()) {
                 LazyColumn(
