@@ -35,8 +35,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.ui.components.SnackbarController
@@ -57,7 +59,7 @@ fun CreateNewPoolScreen(
         val keyboardController = LocalSoftwareKeyboardController.current
         val focusManager = LocalFocusManager.current
 
-        var denomination by remember { mutableStateOf("") }
+        var denomination by remember { mutableStateOf(TextFieldValue("")) }
         var peers by remember { mutableStateOf("") }
 
         Column(
@@ -75,28 +77,37 @@ fun CreateNewPoolScreen(
 
             OutlinedTextField(
                 value = denomination,
-                onValueChange = {
+                onValueChange = { inputText ->
                     val maxBtcValue = 21_000_000.00000000
-                    val input = it.trim()
+                    var input = inputText.text.trim()
+                    var selectionPosition = inputText.selection.start
+
+                    // Automatically add '0' if the input starts with '.'
+                    if (input.startsWith(".")) {
+                        input = "0$input"
+                        selectionPosition += 1 // Move cursor after the dot
+                    }
+
                     val regex = Regex("^\\d{0,8}(\\.\\d{0,8})?\$")
 
                     if (regex.matches(input)) {
                         val value = input.toDoubleOrNull()
 
-                        denomination = if (value != null && value <= maxBtcValue) {
-                            input
+                        if (value != null && value <= maxBtcValue) {
+                            denomination = TextFieldValue(text = input, selection = TextRange(selectionPosition))
                         } else {
                             if (input.isNotEmpty()) {
                                 SnackbarController.showMessage(
                                     message = "Input exceeds the maximum BTC value of 21 million or is invalid."
                                 )
                             }
-                            ""
+                            denomination = TextFieldValue("")
                         }
                     } else {
                         SnackbarController.showMessage(
                             message = "Input is not a valid BTC amount. Ensure it is up to 8 decimal places and contains only numbers."
                         )
+                        denomination = TextFieldValue("")
                     }
                 },
                 label = { Text("Denomination") },
@@ -111,8 +122,8 @@ fun CreateNewPoolScreen(
                     .wrapContentSize()
                     .focusRequester(focusRequester),
                 trailingIcon = {
-                    if (denomination.isNotEmpty()) {
-                        IconButton(onClick = { denomination = "" }) {
+                    if (denomination.text.isNotEmpty()) {
+                        IconButton(onClick = { denomination = TextFieldValue("") }) {
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = "Clear text"
@@ -158,10 +169,10 @@ fun CreateNewPoolScreen(
                 .padding(all = 12.dp)
                 .align(Alignment.BottomCenter),
             shape = RoundedCornerShape(8.dp),
-            enabled = denomination.isNotEmpty() && peers.isNotEmpty(),
+            enabled = denomination.text.isNotEmpty() && peers.isNotEmpty(),
             onClick = {
-                poolsViewModel.createPool(denomination, peers) {
-                    denomination = ""
+                poolsViewModel.createPool(denomination.text, peers) {
+                    denomination = TextFieldValue("")
                     peers = ""
                 }
             }
