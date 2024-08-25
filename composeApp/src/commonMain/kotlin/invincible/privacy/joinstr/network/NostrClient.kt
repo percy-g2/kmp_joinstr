@@ -4,6 +4,7 @@ import invincible.privacy.joinstr.getWebSocketClient
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
+import invincible.privacy.joinstr.utils.Event
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,10 +38,11 @@ class NostrClient {
     ) {
         runCatching {
             client.value.wss(nostrRelay.invoke()) {
-                val subscribeMessage = """["REQ", "my-sub", {"kinds": [2022], "limit": 1000}]"""
+                val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}], "limit": 1000}]"""
                 send(Frame.Text(subscribeMessage))
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
+                        println(frame.readText())
                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                         if (elem[0].jsonPrimitive.content == "EVENT") {
                             _events.update { list ->
@@ -50,12 +52,16 @@ class NostrClient {
                             }
                         }
                         if (elem[0].jsonPrimitive.content == "EOSE") {
+                            if (_events.value == null) {
+                                _events.value = emptyList()
+                            }
                             onReceived.invoke()
                         }
                     }
                 }
             }
         }.getOrElse {
+            _events.value = emptyList()
             it.printStackTrace()
             onReceived.invoke()
         }

@@ -2,6 +2,8 @@ package invincible.privacy.joinstr.ui.pools
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.PoolCreationContent
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
@@ -22,6 +24,7 @@ import kotlinx.serialization.encodeToString
 class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
     private val httpClient = HttpClient()
+    private val poolStore = lazy { getPoolsStore() }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -44,15 +47,15 @@ class PoolsViewModel : ViewModel() {
             _isLoading.value = true
             SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
                 val privateKey = generatePrivateKey()
-                println(privateKey.toHexString())
                 val publicKey = getPublicKey(privateKey)
+                val hourFee = httpClient.fetchHourFee()
                 val poolCreationContent = PoolCreationContent(
                     id = generatePoolId(),
                     type = "new_pool",
                     peers = peers.toInt(),
                     denomination = denomination.toFloat(),
                     relay = nostrRelay,
-                    feeRate = httpClient.fetchHourFee(),
+                    feeRate = hourFee,
                     timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
                     publicKey = publicKey.toHexString()
                 )
@@ -63,6 +66,35 @@ class PoolsViewModel : ViewModel() {
                 NostrClient().sendEvent(
                     event = nostrEvent,
                     onSuccess = {
+                        viewModelScope.launch {
+                            poolStore.value.update {
+                                it?.plus(
+                                    PoolContent(
+                                        id = generatePoolId(),
+                                        type = "new_pool",
+                                        peers = peers.toInt(),
+                                        denomination = denomination.toFloat(),
+                                        relay = nostrRelay,
+                                        feeRate = hourFee,
+                                        timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                        publicKey = publicKey.toHexString(),
+                                        privateKey = ""
+                                    )
+                                ) ?: listOf(
+                                    PoolContent(
+                                        id = generatePoolId(),
+                                        type = "new_pool",
+                                        peers = peers.toInt(),
+                                        denomination = denomination.toFloat(),
+                                        relay = nostrRelay,
+                                        feeRate = hourFee,
+                                        timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                        publicKey = publicKey.toHexString(),
+                                        privateKey = ""
+                                    )
+                                )
+                            }
+                        }
                         _isLoading.value = false
                         SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
                     },

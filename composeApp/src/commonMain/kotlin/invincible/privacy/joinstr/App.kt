@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import invincible.privacy.joinstr.model.NavItem
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -191,7 +192,10 @@ suspend fun sendTestEvent() {
 
 expect fun getWebSocketClient(): HttpClient
 
-expect fun getKStore(): KStore<Settings>
+expect fun getSettingsStore(): KStore<Settings>
+expect fun getPoolsStore(): KStore<List<PoolContent>>
+
+expect fun Float.convertFloatExponentialToString(): String
 
 expect fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray
 expect fun pubkeyCreate(privateKey: ByteArray): ByteArray

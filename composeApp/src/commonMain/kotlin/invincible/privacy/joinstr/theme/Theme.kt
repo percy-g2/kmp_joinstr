@@ -5,7 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import invincible.privacy.joinstr.getKStore
+import invincible.privacy.joinstr.getSettingsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 
@@ -98,7 +98,7 @@ fun JoinstrTheme(
 
 object SettingsManager {
     val themeState = MutableStateFlow(Theme.SYSTEM.id)
-    val store = getKStore()
+    val store = getSettingsStore()
 
     suspend fun updateTheme(newTheme: Int) {
         themeState.value = newTheme

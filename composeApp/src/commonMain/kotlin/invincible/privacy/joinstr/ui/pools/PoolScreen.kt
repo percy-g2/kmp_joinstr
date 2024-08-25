@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ui.ListJoinStrEventsScreen
+import invincible.privacy.joinstr.ui.MyPoolsScreens
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -110,8 +113,13 @@ fun PoolScreen(
         }
 
         if (selectedTab == 0) {
-            Box(
-                modifier = Modifier.imePadding()
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .shadow(4.dp, RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp))
+                    .imePadding(),
+                contentAlignment = Alignment.Center
             ) {
                 val (focusRequester) = FocusRequester.createRefs()
                 val keyboardController = LocalSoftwareKeyboardController.current
@@ -212,6 +220,8 @@ fun PoolScreen(
                 }
             }
         } else if (selectedTab == 1) {
+            MyPoolsScreens()
+        } else if (selectedTab == 2) {
             ListJoinStrEventsScreen()
         }
     }

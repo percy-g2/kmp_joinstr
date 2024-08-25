@@ -3,6 +3,7 @@ package invincible.privacy.joinstr
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.theme.NodeConfig
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
@@ -14,9 +15,10 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import okio.Path.Companion.toPath
+import java.math.BigDecimal
 import kotlin.time.Duration.Companion.seconds
 
-actual fun getKStore(): KStore<Settings> {
+actual fun getSettingsStore(): KStore<Settings> {
     val context = ContextProvider.getContext()
     return storeOf<Settings>(
         file = "${context.cacheDir?.absolutePath}/settings.json".toPath(),
@@ -24,6 +26,14 @@ actual fun getKStore(): KStore<Settings> {
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig()
         )
+    )
+}
+
+actual fun getPoolsStore(): KStore<List<PoolContent>> {
+    val context = ContextProvider.getContext()
+    return storeOf<List<PoolContent>>(
+        file = "${context.cacheDir?.absolutePath}/pools.json".toPath(),
+        default = emptyList()
     )
 }
 
@@ -37,6 +47,10 @@ actual fun pubkeyCreate(privateKey: ByteArray): ByteArray {
 actual suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshRandomBytes: ByteArray): ByteArray {
     val contentSignature = Secp256k1.signSchnorr(content, privateKey, freshRandomBytes)
     return contentSignature
+}
+
+actual fun Float.convertFloatExponentialToString(): String {
+    return BigDecimal(toDouble()).toPlainString()
 }
 
 actual fun getWebSocketClient(): HttpClient {

@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr
 
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.theme.NodeConfig
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
@@ -123,7 +124,7 @@ private fun ByteArray.toHexString(): String {
     }
 }
 
-actual fun getKStore(): KStore<Settings> {
+actual fun getSettingsStore(): KStore<Settings> {
     return storeOf<Settings>(
         key = "settings",
         default = Settings(
@@ -131,6 +132,17 @@ actual fun getKStore(): KStore<Settings> {
             nodeConfig = NodeConfig()
         )
     )
+}
+
+actual fun getPoolsStore(): KStore<List<PoolContent>> {
+    return storeOf<List<PoolContent>>(
+        key = "pools",
+        default = emptyList()
+    )
+}
+
+actual fun Float.convertFloatExponentialToString(): String {
+    return this.toString()
 }
 
 actual fun getWebSocketClient(): HttpClient {

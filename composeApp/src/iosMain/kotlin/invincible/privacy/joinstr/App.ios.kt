@@ -3,6 +3,7 @@ package invincible.privacy.joinstr
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.theme.NodeConfig
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.Theme
@@ -15,11 +16,12 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import okio.Path.Companion.toPath
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import kotlin.time.Duration.Companion.seconds
 
-actual fun getKStore(): KStore<Settings> {
+actual fun getSettingsStore(): KStore<Settings> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
     return storeOf<Settings>(
         file = "${paths.firstOrNull() as? String}/settings.json".toPath(),
@@ -28,6 +30,19 @@ actual fun getKStore(): KStore<Settings> {
             nodeConfig = NodeConfig()
         )
     )
+}
+
+actual fun getPoolsStore(): KStore<List<PoolContent>> {
+    val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
+    return storeOf<List<PoolContent>>(
+        file = "${paths.firstOrNull() as? String}/pools.json".toPath(),
+        default = emptyList()
+    )
+}
+
+actual fun Float.convertFloatExponentialToString(): String {
+    val nsNumber = NSNumber(this)
+    return nsNumber.stringValue
 }
 
 actual fun getWebSocketClient(): HttpClient {

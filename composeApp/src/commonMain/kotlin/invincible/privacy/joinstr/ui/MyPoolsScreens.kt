@@ -23,7 +23,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,28 +30,19 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import invincible.privacy.joinstr.model.NostrEvent
-import invincible.privacy.joinstr.network.NostrClient
+import invincible.privacy.joinstr.convertFloatExponentialToString
+import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.ui.components.ProgressDialog
-import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 
 @Composable
-fun ListJoinStrEventsScreen() {
-    val nostrClient = remember { NostrClient() }
-    val events by nostrClient.events.collectAsState(initial = null)
+fun MyPoolsScreens() {
+    val events by getPoolsStore().updates.collectAsState(null)
     var isLoading by remember { mutableStateOf(true) }
-    val coroutineScope = rememberCoroutineScope()
 
-
-    LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            nostrClient.connectAndListen(
-                onReceived = {
-                    isLoading = false
-                }
-            )
-        }
+    LaunchedEffect(events) {
+        isLoading = false
     }
 
     BoxWithConstraints(
@@ -73,7 +63,7 @@ fun ListJoinStrEventsScreen() {
                     modifier = Modifier.wrapContentSize(),
                 ) {
                     items(list) { event ->
-                        EventItem(event)
+                        PoolItem(event)
                     }
                 }
             } else {
@@ -83,7 +73,7 @@ fun ListJoinStrEventsScreen() {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "No pools available",
+                        text = "No pools available, please create one!",
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center
                     )
@@ -107,9 +97,8 @@ fun ListJoinStrEventsScreen() {
     }
 }
 
-
 @Composable
-fun EventItem(event: NostrEvent) {
+fun PoolItem(poolContent: PoolContent) {
     Card(
         modifier =
         Modifier
@@ -120,10 +109,15 @@ fun EventItem(event: NostrEvent) {
         Column(
             modifier = Modifier.padding(16.dp),
         ) {
-            Text(text = event.content, style = MaterialTheme.typography.bodyMedium)
+            Text(text = poolContent.relay, style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Author: ${event.pubKey.take(8)}...", style = MaterialTheme.typography.labelSmall)
-            Text(text = "Created at: ${Instant.fromEpochMilliseconds(event.createdAt * 1000)}", style = MaterialTheme.typography.labelSmall)
+            Text(text = "Author: ${poolContent.publicKey.take(8)}...", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Denomination: ${poolContent.denomination.convertFloatExponentialToString()}", style = MaterialTheme.typography.labelMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Peers: ${poolContent.peers}", style = MaterialTheme.typography.labelMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Created at: ${Instant.fromEpochMilliseconds(poolContent.timeout * 1000)}", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
