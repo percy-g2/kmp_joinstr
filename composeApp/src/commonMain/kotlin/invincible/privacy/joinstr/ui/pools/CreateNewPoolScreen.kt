@@ -39,6 +39,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.ui.components.SnackbarController
@@ -46,7 +47,8 @@ import invincible.privacy.joinstr.ui.components.SnackbarController
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CreateNewPoolScreen(
-    poolsViewModel: PoolsViewModel
+    poolsViewModel: PoolsViewModel,
+    onPoolCreate: () -> Unit
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -75,6 +77,12 @@ fun CreateNewPoolScreen(
             verticalArrangement = Arrangement.Top
         ) {
 
+            Text(
+                text = "Pool Details",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+
             OutlinedTextField(
                 value = denomination,
                 onValueChange = { inputText ->
@@ -82,10 +90,9 @@ fun CreateNewPoolScreen(
                     var input = inputText.text.trim()
                     var selectionPosition = inputText.selection.start
 
-                    // Automatically add '0' if the input starts with '.'
                     if (input.startsWith(".")) {
                         input = "0$input"
-                        selectionPosition += 1 // Move cursor after the dot
+                        selectionPosition += 1
                     }
 
                     val regex = Regex("^\\d{0,8}(\\.\\d{0,8})?\$")
@@ -138,7 +145,19 @@ fun CreateNewPoolScreen(
             OutlinedTextField(
                 value = peers,
                 onValueChange = {
-                    peers = it
+                    val input = it.trim()
+                    if (input.all { char -> char.isDigit() }) {
+                        peers = input
+                    } else {
+                        runCatching {
+                            SnackbarController.showMessage("Invalid input: '$input' is not a valid peer.")
+                            peers = ""
+                        }.onFailure { exception ->
+                            SnackbarController.showMessage("Error occurred while processing input '$input': ${exception.message}")
+                            exception.printStackTrace()
+                            peers = ""
+                        }
+                    }
                 },
                 label = { Text("Number of peers") },
                 keyboardOptions = KeyboardOptions(
@@ -174,6 +193,7 @@ fun CreateNewPoolScreen(
                 poolsViewModel.createPool(denomination.text, peers) {
                     denomination = TextFieldValue("")
                     peers = ""
+                    onPoolCreate.invoke()
                 }
             }
         ) {

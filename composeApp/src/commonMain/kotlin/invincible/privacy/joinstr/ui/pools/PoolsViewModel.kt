@@ -49,7 +49,7 @@ class PoolsViewModel : ViewModel() {
     fun fetchLocalPools() {
         viewModelScope.launch {
             _isLoading.value = true
-            _localPools.value = poolStore.value.get()
+            _localPools.value = poolStore.value.get()?.sortedByDescending { it.timeout }
             _isLoading.value = false
         }
     }
