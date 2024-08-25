@@ -98,7 +98,7 @@ fun ListUnspentCloudsScreen() {
                 Text(
                     text = if (selectedTxId.isNotEmpty()) "${unspent?.txid}:${unspent?.vout}" else "",
                     fontSize = 16.sp,
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                     modifier = Modifier.padding(all = 8.dp)

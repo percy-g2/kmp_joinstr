@@ -2,6 +2,7 @@ package invincible.privacy.joinstr
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.BottomAppBar
@@ -89,7 +90,9 @@ fun App() {
 
         SnackbarControllerProvider { host ->
             Scaffold(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding(),
                 snackbarHost = {
                     SnackbarHost(
                         hostState = host,

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import invincible.privacy.joinstr.ui.components.SnackbarController
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -50,8 +50,7 @@ fun CreateNewPoolScreen(
         modifier = Modifier
             .fillMaxSize()
             .shadow(4.dp, RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp))
-            .imePadding(),
+            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {
         val (focusRequester) = FocusRequester.createRefs()
@@ -77,7 +76,28 @@ fun CreateNewPoolScreen(
             OutlinedTextField(
                 value = denomination,
                 onValueChange = {
-                    denomination = it
+                    val maxBtcValue = 21_000_000.00000000
+                    val input = it.trim()
+                    val regex = Regex("^\\d{0,8}(\\.\\d{0,8})?\$")
+
+                    if (regex.matches(input)) {
+                        val value = input.toDoubleOrNull()
+
+                        denomination = if (value != null && value <= maxBtcValue) {
+                            input
+                        } else {
+                            if (input.isNotEmpty()) {
+                                SnackbarController.showMessage(
+                                    message = "Input exceeds the maximum BTC value of 21 million or is invalid."
+                                )
+                            }
+                            ""
+                        }
+                    } else {
+                        SnackbarController.showMessage(
+                            message = "Input is not a valid BTC amount. Ensure it is up to 8 decimal places and contains only numbers."
+                        )
+                    }
                 },
                 label = { Text("Denomination") },
                 keyboardOptions = KeyboardOptions(
