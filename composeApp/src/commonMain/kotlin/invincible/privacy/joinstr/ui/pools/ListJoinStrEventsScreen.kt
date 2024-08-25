@@ -24,15 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.capitalize
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.NostrEvent
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun ListJoinStrEventsScreen(
@@ -119,20 +115,8 @@ fun EventItem(event: NostrEvent) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            val instant = Instant.fromEpochMilliseconds(event.createdAt * 1000)
-            val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-
-            val month = localDateTime.month.name.take(3).lowercase().capitalize(Locale.current) // "Aug"
-            val date = localDateTime.dayOfMonth.toString().padStart(2, '0') // "05"
-            val year = localDateTime.year.toString() // "2006"
-
-            val hour = if (localDateTime.hour % 12 == 0) 12 else localDateTime.hour % 12
-            val minute = localDateTime.minute.toString().padStart(2, '0') // "05"
-            val second = localDateTime.second.toString().padStart(2, '0') // "15"
-            val period = if (localDateTime.hour < 12) "am" else "pm" // "PM"
-
             Text(
-                text = "Created at: $hour:$minute:$second $period $month $date $year",
+                text = "Created at: ${event.createdAt.displayDateTime()}",
                 style = MaterialTheme.typography.labelSmall
             )
         }

@@ -24,16 +24,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.capitalize
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
+import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.PoolContent
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun MyPoolsScreens(
@@ -105,28 +101,37 @@ fun PoolItem(poolContent: PoolContent) {
         Column(
             modifier = Modifier.padding(16.dp),
         ) {
-            Text(text = "Relay: ${poolContent.relay}", style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Author: ${poolContent.publicKey.take(8)}...", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Denomination: ${poolContent.denomination.convertFloatExponentialToString()}", style = MaterialTheme.typography.labelMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Peers: ${poolContent.peers}", style = MaterialTheme.typography.labelMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            val instant = Instant.fromEpochMilliseconds(poolContent.timeout * 1000)
-            val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+            Text(
+                text = "Relay: ${poolContent.relay}",
+                style = MaterialTheme.typography.labelLarge
+            )
 
-            val month = localDateTime.month.name.take(3).lowercase().capitalize(Locale.current) // "Aug"
-            val date = localDateTime.dayOfMonth.toString().padStart(2, '0') // "05"
-            val year = localDateTime.year.toString() // "2006"
+            Spacer(modifier = Modifier.height(8.dp))
 
-            val hour = if (localDateTime.hour % 12 == 0) 12 else localDateTime.hour % 12
-            val minute = localDateTime.minute.toString().padStart(2, '0') // "05"
-            val second = localDateTime.second.toString().padStart(2, '0') // "15"
-            val period = if (localDateTime.hour < 12) "am" else "pm" // "PM"
+            Text(text = "Author: ${poolContent.publicKey.take(8)}...", style = MaterialTheme.typography.labelSmall)
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Created at: $hour:$minute:$second $period $month $date $year",
+                text = "Denomination: ${poolContent.denomination.convertFloatExponentialToString()}",
+                style = MaterialTheme.typography.labelSmall
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(text = "Peers: ${poolContent.peers}", style = MaterialTheme.typography.labelSmall)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Created at: ${(poolContent.timeout - 600).displayDateTime()}",
+                style = MaterialTheme.typography.labelSmall
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Timeout at: ${poolContent.timeout.displayDateTime()}",
                 style = MaterialTheme.typography.labelSmall
             )
         }
