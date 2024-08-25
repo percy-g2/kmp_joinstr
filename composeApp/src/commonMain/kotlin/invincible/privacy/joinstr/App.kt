@@ -1,6 +1,5 @@
 package invincible.privacy.joinstr
 
-import PoolScreen
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import invincible.privacy.joinstr.model.NavItem
 import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -38,6 +38,7 @@ import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
+import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.utils.CryptoUtils
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrUtil
@@ -183,11 +184,19 @@ suspend fun sendTestEvent() {
     } else {
         println("Decryption failed! The decrypted message does not match the original.")
     }
-    val content = "This is a test Nostr notesadasd"
+    val content = "This is a test Nostr event"
     val nostrUtil = NostrUtil()
     val nostrEvent = nostrUtil.createEvent(content, Event.NOTE)
     println("Event to be sent: $nostrEvent")
-    // NostrClient().sendEvent(nostrEvent)
+    NostrClient().sendEvent(
+        event = nostrEvent,
+        onError = {
+            println("Error sending event")
+        },
+        onSuccess = {
+            println("Event sent successfully")
+        }
+    )
 }
 
 expect fun getWebSocketClient(): HttpClient

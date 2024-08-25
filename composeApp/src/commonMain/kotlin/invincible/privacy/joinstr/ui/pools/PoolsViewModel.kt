@@ -57,8 +57,9 @@ class PoolsViewModel : ViewModel() {
     fun fetchOtherPools() {
         viewModelScope.launch {
             _isLoading.value = true
+            _events.value = null
             nostrClient.value.fetchOtherPools { nostrEvents ->
-                _events.value = nostrEvents
+                _events.value = nostrEvents?.sortedByDescending { it.createdAt }
                 _isLoading.value = false
             }
         }

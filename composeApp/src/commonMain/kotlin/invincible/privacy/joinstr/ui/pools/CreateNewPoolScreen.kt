@@ -52,7 +52,7 @@ fun CreateNewPoolScreen(
             .shadow(4.dp, RoundedCornerShape(4.dp))
             .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp))
             .imePadding(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopCenter
     ) {
         val (focusRequester) = FocusRequester.createRefs()
         val keyboardController = LocalSoftwareKeyboardController.current
@@ -64,14 +64,14 @@ fun CreateNewPoolScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .padding(all = 16.dp)
                 .pointerInput(Unit) {
                     detectTapGestures {
                         focusManager.clearFocus()
                     }
                 },
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
 
             OutlinedTextField(

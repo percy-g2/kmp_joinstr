@@ -264,7 +264,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text("Username") },
+                        label = { Text("RPC Username") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(usernameFocusRequester),
@@ -292,7 +292,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password") },
+                        label = { Text("RPC Password") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(passwordFocusRequester),
@@ -320,7 +320,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = port,
                         onValueChange = { port = it },
-                        label = { Text("Port") },
+                        label = { Text("RPC Port") },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done

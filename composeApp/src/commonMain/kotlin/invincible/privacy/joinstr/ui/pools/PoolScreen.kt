@@ -1,3 +1,5 @@
+package invincible.privacy.joinstr.ui.pools
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.shrinkOut
@@ -29,10 +31,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ui.components.ProgressDialog
-import invincible.privacy.joinstr.ui.pools.CreateNewPoolScreen
-import invincible.privacy.joinstr.ui.pools.ListJoinStrEventsScreen
-import invincible.privacy.joinstr.ui.pools.MyPoolsScreens
-import invincible.privacy.joinstr.ui.pools.PoolsViewModel
 
 @Composable
 fun PoolScreen(

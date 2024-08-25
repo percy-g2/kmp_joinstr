@@ -96,7 +96,7 @@ fun ListUnspentCloudsScreen() {
                 val unspent = listUnspent.find { it.txid == selectedTxId }
 
                 Text(
-                    text = if (selectedTxId.isNotEmpty()) "${unspent?.txid} | ${unspent?.vout}" else "",
+                    text = if (selectedTxId.isNotEmpty()) "${unspent?.txid}:${unspent?.vout}" else "",
                     fontSize = 16.sp,
                     color = Color.LightGray,
                     textAlign = TextAlign.Center,
@@ -117,7 +117,7 @@ fun ListUnspentCloudsScreen() {
                         }
                     }
 
-                    val minItemWidth = 30
+                    val minItemWidth = 15
                     val horizontalPadding = 16
                     val itemTotalWidth = minItemWidth + horizontalPadding
 
