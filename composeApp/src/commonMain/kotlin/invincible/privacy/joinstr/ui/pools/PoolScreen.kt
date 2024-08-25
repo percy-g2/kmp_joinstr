@@ -199,7 +199,7 @@ fun PoolScreen(
                     shape = RoundedCornerShape(8.dp),
                     enabled = denomination.isNotEmpty() && peers.isNotEmpty(),
                     onClick = {
-                        // TODO
+                        poolsViewModel.createPool(denomination, peers)
                     }
                 ) {
                     Text(

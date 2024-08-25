@@ -24,7 +24,7 @@ class NostrClient {
         SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
     }
 
-    private val json = Json {
+    val json = Json {
         isLenient = true
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -61,7 +61,11 @@ class NostrClient {
         }
     }
 
-    suspend fun sendEvent(event: NostrEvent) {
+    suspend fun sendEvent(
+        event: NostrEvent,
+        onSuccess: () -> Unit,
+        onError: () -> Unit
+    ) {
         client.value.wss(nostrRelay.invoke()) {
             val eventJson = json.encodeToString(event)
             val sendMessage = """["EVENT", $eventJson]"""
@@ -81,24 +85,37 @@ class NostrClient {
                                 "OK" -> {
 
                                     if (responseArray[2].jsonPrimitive.boolean) {
+                                        onSuccess.invoke()
                                         println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
                                     } else {
+                                        onError.invoke()
                                         println("Error: ${responseArray[3].jsonPrimitive.content}")
                                     }
                                     break
                                 }
-                                "NOTICE" -> println("Received notice: ${responseArray[1].jsonPrimitive.content}")
-                                else -> println("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
+                                "NOTICE" -> {
+                                    onError.invoke()
+                                    println("Received notice: ${responseArray[1].jsonPrimitive.content}")
+                                }
+                                else -> {
+                                    onError.invoke()
+                                    println("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
+                                }
                             }
                             if (responseArray.size > 2) {
+                                onError.invoke()
                                 println("Additional information: ${responseArray.subList(2, responseArray.size)}")
                             }
                         } catch (e: Exception) {
+                            onError.invoke()
                             println("Failed to parse response: ${e.message}")
                             e.printStackTrace()
                         }
                     }
-                    else -> println("Received non-text frame: $frame")
+                    else -> {
+                        onError.invoke()
+                        println("Received non-text frame: $frame")
+                    }
                 }
             }
         }

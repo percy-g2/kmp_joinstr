@@ -3,6 +3,7 @@ package invincible.privacy.joinstr.network
 import invincible.privacy.joinstr.model.BlockChainInfo
 import invincible.privacy.joinstr.model.ListUnspentResponse
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
+import invincible.privacy.joinstr.model.MempoolFee
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.Transaction
 import invincible.privacy.joinstr.model.TransactionsResponse
@@ -101,6 +102,18 @@ class HttpClient {
     } catch (e: Exception) {
         e.printStackTrace()
         json.decodeFromString<ListUnspentResponse>(test).result
+    }
+
+    suspend fun fetchHourFee(): Int = try {
+        val response: HttpResponse = createHttpClient.get {
+            url("https://mempool.space/api/v1/fees/recommended")
+        }
+        if (response.status == HttpStatusCode.OK) {
+            json.decodeFromString<MempoolFee>(response.bodyAsText()).hourFee
+        } else 0
+    } catch (e: Exception) {
+        e.printStackTrace()
+        0
     }
 }
 

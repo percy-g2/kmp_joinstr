@@ -123,7 +123,7 @@ object SettingsManager {
 data class Settings(
     val selectedTheme: Int = Theme.SYSTEM.id,
     val nodeConfig: NodeConfig = NodeConfig(),
-    val nostrRelay: String = "wss://relay.nostrdice.com"
+    val nostrRelay: String = "wss://nostr.fmt.wiz.biz"
 )
 
 @Serializable

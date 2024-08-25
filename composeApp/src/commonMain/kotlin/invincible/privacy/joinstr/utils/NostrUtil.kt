@@ -50,14 +50,14 @@ class NostrUtil {
             id = id,
             pubKey = publicKey.toHexString(),
             createdAt = createdAt,
-            kind = 1,
+            kind = event.kind,
             tags = emptyList(),
             content = content,
             sig = signature
         )
     }
 
-    private suspend fun sha256(input: String): String {
+    private fun sha256(input: String): String {
         return sha256Hash(input)
     }
 
@@ -68,9 +68,6 @@ class NostrUtil {
         return signature.toHexString()
     }
 
-    private fun ByteArray.toHexString(): String =
-        joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
-
     private fun String.hexToByteArray(): ByteArray =
         ByteArray(length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 }
@@ -80,3 +77,6 @@ enum class Event(val kind: Int) {
     JOIN_STR(2022),
     TEST_JOIN_STR(2022566)
 }
+
+fun ByteArray.toHexString(): String =
+    joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -115,8 +116,18 @@ fun ListUnspentCloudsScreen() {
                             state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
                         }
                     }
+
+                    val minItemWidth = 30
+                    val horizontalPadding = 16
+                    val itemTotalWidth = minItemWidth + horizontalPadding
+
+                    val tagCloudMinWidth = (listUnspent.size * itemTotalWidth).coerceAtLeast(250)
+
+
                     TagCloud(
-                        modifier = Modifier.padding(all = 64.dp),
+                        modifier = Modifier
+                            .width(tagCloudMinWidth.dp)
+                            .padding(all = 64.dp),
                         state = state
                     ) {
                         items(listUnspent) { item ->

@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,7 +26,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import invincible.privacy.joinstr.model.NavItem
-import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -34,6 +34,8 @@ import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
 import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
+import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
+import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.utils.CryptoUtils
 import invincible.privacy.joinstr.utils.Event
@@ -49,7 +51,7 @@ fun App() {
     val themeState by SettingsManager.themeState.collectAsState()
 
     LaunchedEffect(Unit) {
-        sendTestEvent()
+        //sendTestEvent()
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
         }
@@ -72,6 +74,7 @@ fun App() {
                 NavItem.Home.path -> {
                     selectedItem = 0
                 }
+
                 NavItem.Pools.path -> {
                     selectedItem = 1
                 }
@@ -82,61 +85,76 @@ fun App() {
             }
         }
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            bottomBar = {
-                BottomAppBar(
-                    actions = {
-                        val navItems = listOf(NavItem.Home, NavItem.Pools, NavItem.Settings)
+        SnackbarControllerProvider { host ->
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = host,
+                        snackbar = { data ->
+                            CustomStackedSnackbar(
+                                snackbarData = data,
+                                onActionClicked = {
+                                    data.performAction()
+                                }
+                            )
+                        }
+                    )
+                },
+                bottomBar = {
+                    BottomAppBar(
+                        actions = {
+                            val navItems = listOf(NavItem.Home, NavItem.Pools, NavItem.Settings)
 
-                        NavigationBar {
-                            navItems.forEachIndexed { index, item ->
-                                NavigationBarItem(
-                                    alwaysShowLabel = true,
-                                    icon = {
-                                        item.icon?.let { icon ->
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = item.title
-                                            )
+                            NavigationBar {
+                                navItems.forEachIndexed { index, item ->
+                                    NavigationBarItem(
+                                        alwaysShowLabel = true,
+                                        icon = {
+                                            item.icon?.let { icon ->
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = item.title
+                                                )
+                                            }
+                                            item.drawableResource?.let { icon ->
+                                                Icon(
+                                                    modifier = Modifier.size(24.dp),
+                                                    painter = painterResource(icon),
+                                                    contentDescription = item.title
+                                                )
+                                            }
+                                        },
+                                        label = { if (selectedItem == index) Text(item.title) },
+                                        selected = selectedItem == index,
+                                        onClick = {
+                                            selectedItem = index
+                                            navController.navigate(item.path)
                                         }
-                                        item.drawableResource?.let { icon ->
-                                            Icon(
-                                                modifier = Modifier.size(24.dp),
-                                                painter = painterResource(icon),
-                                                contentDescription = item.title
-                                            )
-                                        }
-                                    },
-                                    label = { if (selectedItem == index) Text(item.title) },
-                                    selected = selectedItem == index,
-                                    onClick = {
-                                        selectedItem = index
-                                        navController.navigate(item.path)
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
+                    )
+                }
+            ) { innerPadding ->
+                NavHost(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    navController = navController,
+                    startDestination = NavItem.Home.path
+                ) {
+                    composable(route = NavItem.Home.path) {
+                        ListUnspentCloudsScreen()
                     }
-                )
-            }
-        ) { innerPadding ->
-            NavHost(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                navController = navController,
-                startDestination = NavItem.Home.path
-            ) {
-                composable(route = NavItem.Home.path) {
-                    ListUnspentCloudsScreen()
-                }
-                composable(route = NavItem.Pools.path) {
-                    PoolScreen()
-                }
-                composable(route = NavItem.Settings.path) {
-                    SettingsScreen {
-                        navController.popBackStack()
+                    composable(route = NavItem.Pools.path) {
+                        PoolScreen()
+                    }
+                    composable(route = NavItem.Settings.path) {
+                        SettingsScreen {
+                            navController.popBackStack()
+                        }
                     }
                 }
             }
@@ -144,31 +162,31 @@ fun App() {
     }
 }
 
- suspend fun sendTestEvent() {
-     val privateKey = CryptoUtils.generatePrivateKey()
-     val publicKey = CryptoUtils.getPublicKey(privateKey)
-     val sharedSecret = getSharedSecret(privateKey, publicKey)
-     val message = "This is a secret message"
+suspend fun sendTestEvent() {
+    val privateKey = CryptoUtils.generatePrivateKey()
+    val publicKey = CryptoUtils.getPublicKey(privateKey)
+    val sharedSecret = getSharedSecret(privateKey, publicKey)
+    val message = "This is a secret message"
 
-     // Encrypt the message
-     val encryptedMessage = CryptoUtils.encrypt(message, sharedSecret)
-     println("Encrypted Message: $encryptedMessage")
+    // Encrypt the message
+    val encryptedMessage = CryptoUtils.encrypt(message, sharedSecret)
+    println("Encrypted Message: $encryptedMessage")
 
-     // Decrypt the message
-     val decryptedMessage = CryptoUtils.decrypt(encryptedMessage, sharedSecret)
-     println("Decrypted Message: $decryptedMessage")
+    // Decrypt the message
+    val decryptedMessage = CryptoUtils.decrypt(encryptedMessage, sharedSecret)
+    println("Decrypted Message: $decryptedMessage")
 
-     // Verify that the decrypted message matches the original message
-     if (message == decryptedMessage) {
-         println("Decryption successful! The decrypted message matches the original.")
-     } else {
-         println("Decryption failed! The decrypted message does not match the original.")
-     }
+    // Verify that the decrypted message matches the original message
+    if (message == decryptedMessage) {
+        println("Decryption successful! The decrypted message matches the original.")
+    } else {
+        println("Decryption failed! The decrypted message does not match the original.")
+    }
     val content = "This is a test Nostr notesadasd"
     val nostrUtil = NostrUtil()
     val nostrEvent = nostrUtil.createEvent(content, Event.NOTE)
     println("Event to be sent: $nostrEvent")
-    NostrClient().sendEvent(nostrEvent)
+    // NostrClient().sendEvent(nostrEvent)
 }
 
 expect fun getWebSocketClient(): HttpClient
