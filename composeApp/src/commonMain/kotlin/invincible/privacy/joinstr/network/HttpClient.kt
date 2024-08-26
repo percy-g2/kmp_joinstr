@@ -1,11 +1,7 @@
 package invincible.privacy.joinstr.network
 
-import invincible.privacy.joinstr.model.ListUnspentResponse
-import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.MempoolFee
 import invincible.privacy.joinstr.model.RpcRequestBody
-import invincible.privacy.joinstr.model.Transaction
-import invincible.privacy.joinstr.model.TransactionsResponse
 import invincible.privacy.joinstr.theme.NodeConfig
 import invincible.privacy.joinstr.theme.SettingsManager
 import io.ktor.client.HttpClient
@@ -21,17 +17,11 @@ import kotlin.time.Duration.Companion.seconds
 
 class HttpClient {
 
-    private val json = Json {
-        isLenient = true
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
-
-    private suspend fun getNodeConfig(): NodeConfig {
+    suspend fun getNodeConfig(): NodeConfig {
         return SettingsManager.store.get()?.nodeConfig ?: NodeConfig()
     }
 
-    private val createHttpClient: HttpClient =  HttpClient {
+    val createHttpClient: HttpClient =  HttpClient {
             install(HttpTimeout) {
                 requestTimeoutMillis = 5.seconds.inWholeMilliseconds
                 connectTimeoutMillis = 5.seconds.inWholeMilliseconds
@@ -49,7 +39,7 @@ class HttpClient {
             }
     }
 
-    suspend fun fetchTransactions(body: RpcRequestBody): List<Transaction>? = runCatching {
+    suspend inline fun <reified T> fetchNodeData(body: RpcRequestBody): T? = runCatching {
         val nodeConfig = getNodeConfig()
         val response: HttpResponse = createHttpClient.post {
             url("${nodeConfig.url}:${nodeConfig.port}/")
@@ -60,42 +50,30 @@ class HttpClient {
             setBody(body)
         }
         if (response.status == HttpStatusCode.OK) {
-            json.decodeFromString<TransactionsResponse>(response.bodyAsText()).result
+            json.decodeFromString<T>(response.bodyAsText())
         } else null
     }.getOrElse {
         it.printStackTrace()
         null
     }
 
-    suspend fun fetchUnspentList(body: RpcRequestBody): List<ListUnspentResponseItem> = runCatching {
-        val nodeConfig = getNodeConfig()
-        val response: HttpResponse = createHttpClient.post {
-            url("${nodeConfig.url}:${nodeConfig.port}/")
-            basicAuth(
-                username = nodeConfig.userName,
-                password = nodeConfig.password
-            )
-            setBody(body)
-        }
-        if (response.status == HttpStatusCode.OK) {
-            json.decodeFromString<ListUnspentResponse>(response.bodyAsText()).result
-        } else emptyList()
-    }.getOrElse {
-        it.printStackTrace()
-        json.decodeFromString<ListUnspentResponse>(test).result
-    }
-
-    suspend fun fetchHourFee(): Int = runCatching {
+    suspend fun fetchHourFee(): Int? = runCatching {
         val response: HttpResponse = createHttpClient.get {
             url("https://mempool.space/api/v1/fees/recommended")
         }
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<MempoolFee>(response.bodyAsText()).hourFee
-        } else 0
+        } else null
     }.getOrElse {
         it.printStackTrace()
-        0
+        null
     }
+}
+
+val json = Json {
+    isLenient = true
+    ignoreUnknownKeys = true
+    encodeDefaults = true
 }
 
 const val test = "{\n" +

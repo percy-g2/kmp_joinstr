@@ -3,9 +3,12 @@ package invincible.privacy.joinstr.ui.pools
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.PoolCreationContent
+import invincible.privacy.joinstr.model.RpcRequestBody
+import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.SettingsManager
@@ -73,49 +76,56 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
-                val privateKey = generatePrivateKey()
-                val publicKey = getPublicKey(privateKey)
-                val hourFee = httpClient.value.fetchHourFee()
-                val poolCreationContent = PoolCreationContent(
-                    id = generatePoolId(),
-                    type = "new_pool",
-                    peers = peers.toInt(),
-                    denomination = denomination.toFloat(),
-                    relay = nostrRelay,
-                    feeRate = hourFee,
-                    timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
-                    publicKey = publicKey.toHexString()
-                )
-                val content = nostrClient.value.json.encodeToString(poolCreationContent).replace("\\\"", "\"")
-                val nostrUtil = NostrUtil()
-                val nostrEvent = nostrUtil.createEvent(content, Event.TEST_JOIN_STR)
-                NostrClient().sendEvent(
-                    event = nostrEvent,
-                    onSuccess = {
-                        viewModelScope.launch {
-                            poolStore.value.update {
-                                val pool = PoolContent(
-                                    id = generatePoolId(),
-                                    type = "new_pool",
-                                    peers = peers.toInt(),
-                                    denomination = denomination.toFloat(),
-                                    relay = nostrRelay,
-                                    feeRate = hourFee,
-                                    timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
-                                    publicKey = publicKey.toHexString(),
-                                    privateKey = privateKey.toHexString()
-                                )
-                                it?.plus(pool) ?: listOf(pool)
+                httpClient.value.fetchHourFee()?.let { hourFee ->
+                    val rpcRequestBody = RpcRequestBody(
+                        method = Methods.NEW_ADDRESS.value,
+                        params = listOf("coin_join", "bech32")
+                    )
+                    httpClient.value.fetchNodeData<RpcResponse<String>>(rpcRequestBody)?.result?.let { address ->
+                        val privateKey = generatePrivateKey()
+                        val publicKey = getPublicKey(privateKey)
+                        val poolCreationContent = PoolCreationContent(
+                            id = generatePoolId(),
+                            type = "new_pool",
+                            peers = peers.toInt(),
+                            denomination = denomination.toFloat(),
+                            relay = nostrRelay,
+                            feeRate = hourFee,
+                            timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                            publicKey = publicKey.toHexString()
+                        )
+                        val content = nostrClient.value.json.encodeToString(poolCreationContent)
+                        val nostrUtil = NostrUtil()
+                        val nostrEvent = nostrUtil.createEvent(content, Event.TEST_JOIN_STR)
+                        NostrClient().sendEvent(
+                            event = nostrEvent,
+                            onSuccess = {
+                                viewModelScope.launch {
+                                    poolStore.value.update {
+                                        val pool = PoolContent(
+                                            id = generatePoolId(),
+                                            type = "new_pool",
+                                            peers = peers.toInt(),
+                                            denomination = denomination.toFloat(),
+                                            relay = nostrRelay,
+                                            feeRate = hourFee,
+                                            timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                            publicKey = publicKey.toHexString(),
+                                            privateKey = privateKey.toHexString()
+                                        )
+                                        it?.plus(pool) ?: listOf(pool)
+                                    }
+                                }
+                                onSuccess.invoke()
+                                _isLoading.value = false
+                                SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
+                            },
+                            onError = {
+                                _isLoading.value = false
                             }
-                        }
-                        onSuccess.invoke()
-                        _isLoading.value = false
-                        SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
-                    },
-                    onError = {
-                        _isLoading.value = false
+                        )
                     }
-                )
+                }
             }
         }
     }

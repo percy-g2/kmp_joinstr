@@ -59,7 +59,7 @@ fun TransactionsScreen() {
             val rpcRequestBody = RpcRequestBody(
                 method = "listtransactions"
             )
-            transactions = httpClient.fetchTransactions(rpcRequestBody)
+            transactions = httpClient.fetchNodeData<List<Transaction>>(rpcRequestBody)
             isLoading = false
         }
     }

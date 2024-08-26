@@ -40,7 +40,10 @@ import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
+import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
+import invincible.privacy.joinstr.network.json
+import invincible.privacy.joinstr.network.test
 import invincible.privacy.joinstr.theme.red
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
@@ -54,7 +57,7 @@ import kotlinx.coroutines.launch
 fun RegisterInputScreen() {
     var isLoading by remember { mutableStateOf(true) }
     val httpClient = remember { HttpClient() }
-    var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
+    var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>?>(null) }
     val coroutineScope = rememberCoroutineScope()
     var selectedTxId by remember { mutableStateOf("") }
     var autoRotation by remember { mutableStateOf(false) }
@@ -64,7 +67,9 @@ fun RegisterInputScreen() {
             val rpcRequestBody = RpcRequestBody(
                 method = Methods.LIST_UNSPENT.value
             )
-            listUnspent = httpClient.fetchUnspentList(rpcRequestBody)
+            listUnspent = httpClient
+                .fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(rpcRequestBody)?.result ?: json
+                .decodeFromString<RpcResponse<List<ListUnspentResponseItem>>>(test).result
             isLoading = false
         }
     }
@@ -93,76 +98,94 @@ fun RegisterInputScreen() {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                val unspent = listUnspent.find { it.txid == selectedTxId }
 
-                Text(
-                    text = if (selectedTxId.isNotEmpty()) "${unspent?.txid}:${unspent?.vout}" else "",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    modifier = Modifier.padding(all = 8.dp)
-                )
+                listUnspent?.let { list ->
 
-                if (listUnspent.isNotEmpty()) {
-                    val state = rememberTagCloudState(
-                        onStartGesture = { autoRotation = false },
-                        onEndGesture = { autoRotation = true },
+                    val unspent = list.find { it.txid == selectedTxId }
+
+                    Text(
+                        text = if (selectedTxId.isNotEmpty()) "${unspent?.txid}:${unspent?.vout}" else "",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        modifier = Modifier.padding(all = 8.dp)
                     )
 
-                    LaunchedEffect(state, autoRotation) {
-                        while (isActive && autoRotation && selectedTxId.isEmpty()) {
-                            delay(10)
-                            state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
+                    if (list.isNotEmpty()) {
+                        val state = rememberTagCloudState(
+                            onStartGesture = { autoRotation = false },
+                            onEndGesture = { autoRotation = true },
+                        )
+
+                        LaunchedEffect(state, autoRotation) {
+                            while (isActive && autoRotation && selectedTxId.isEmpty()) {
+                                delay(10)
+                                state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
+                            }
                         }
-                    }
 
-                    val minItemWidth = 15
-                    val horizontalPadding = 16
-                    val itemTotalWidth = minItemWidth + horizontalPadding
+                        val minItemWidth = 15
+                        val horizontalPadding = 16
+                        val itemTotalWidth = minItemWidth + horizontalPadding
 
-                    val tagCloudMinWidth = (listUnspent.size * itemTotalWidth).coerceAtLeast(250)
+                        val tagCloudMinWidth = (list.size * itemTotalWidth).coerceAtLeast(250)
 
 
-                    TagCloud(
-                        modifier = Modifier
-                            .width(tagCloudMinWidth.dp)
-                            .padding(all = 64.dp),
-                        state = state
-                    ) {
-                        items(listUnspent) { item ->
-                            Box(
-                                modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
-                            ) {
-                                val color = if (item.txid == selectedTxId) {
-                                    red
-                                } else Color.Transparent
+                        TagCloud(
+                            modifier = Modifier
+                                .width(tagCloudMinWidth.dp)
+                                .padding(all = 64.dp),
+                            state = state
+                        ) {
+                            items(list) { item ->
+                                Box(
+                                    modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
+                                ) {
+                                    val color = if (item.txid == selectedTxId) {
+                                        red
+                                    } else Color.Transparent
 
-                                CustomOutlinedButton(
-                                    text = item.amount.toString(),
-                                    color = color,
-                                    isSelected = item.txid == selectedTxId,
-                                    onClick = {
-                                        selectedTxId = if (selectedTxId == item.txid) {
-                                            autoRotation = true
-                                            ""
-                                        } else {
-                                            item.txid
+                                    CustomOutlinedButton(
+                                        text = item.amount.toString(),
+                                        color = color,
+                                        isSelected = item.txid == selectedTxId,
+                                        onClick = {
+                                            selectedTxId = if (selectedTxId == item.txid) {
+                                                autoRotation = true
+                                                ""
+                                            } else {
+                                                item.txid
+                                            }
                                         }
-                                    }
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        if (isLoading.not()) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "No amount found to spend",
+                                    fontSize = 18.sp,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
                     }
-                } else {
+                } ?: run {
                     if (isLoading.not()) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "No amount found to spend",
+                                text = "Something went wrong!\nCheck your settings",
                                 fontSize = 18.sp,
                                 textAlign = TextAlign.Center
                             )

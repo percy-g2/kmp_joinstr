@@ -3,11 +3,6 @@ package invincible.privacy.joinstr.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ListUnspentResponse(
-    val result: List<ListUnspentResponseItem>
-)
-
-@Serializable
 data class ListUnspentResponseItem(
     val address: String,
     val amount: Double,

@@ -12,5 +12,13 @@ data class RpcRequestBody(
 
 enum class Methods(val value: String) {
     LIST_UNSPENT("listunspent"),
+    NEW_ADDRESS("getnewaddress"),
     BLOCK_CHAIN_INFO("getblockchaininfo");
 }
+
+@Serializable
+data class RpcResponse<T>(
+    val result: T,
+    val error: String? = null,
+    val id: String
+)
