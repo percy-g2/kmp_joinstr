@@ -77,11 +77,11 @@ class PoolsViewModel : ViewModel() {
             _isLoading.value = true
             SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
                 httpClient.value.fetchHourFee()?.let { hourFee ->
-                    val rpcRequestBody = RpcRequestBody(
+                    val addressBody = RpcRequestBody(
                         method = Methods.NEW_ADDRESS.value,
                         params = listOf("coin_join", "bech32")
                     )
-                    httpClient.value.fetchNodeData<RpcResponse<String>>(rpcRequestBody)?.result?.let { address ->
+                    httpClient.value.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                         val privateKey = generatePrivateKey()
                         val publicKey = getPublicKey(privateKey)
                         val poolCreationContent = PoolCreationContent(

@@ -48,6 +48,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            freeCompilerArgs += "-Xbinary=bundleId=invincible.privacy.joinstr.Joinstr"
         }
     }
     

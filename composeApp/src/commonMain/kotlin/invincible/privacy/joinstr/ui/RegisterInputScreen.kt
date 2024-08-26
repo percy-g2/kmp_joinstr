@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -74,142 +72,126 @@ fun RegisterInputScreen() {
         }
     }
 
-    Surface {
-
+    Surface(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
             ProgressDialog()
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Input Registration".uppercase(),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                listUnspent?.let { list ->
-
-                    val unspent = list.find { it.txid == selectedTxId }
-
-                    Text(
-                        text = if (selectedTxId.isNotEmpty()) "${unspent?.txid}:${unspent?.vout}" else "",
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        modifier = Modifier.padding(all = 8.dp)
-                    )
-
-                    if (list.isNotEmpty()) {
-                        val state = rememberTagCloudState(
-                            onStartGesture = { autoRotation = false },
-                            onEndGesture = { autoRotation = true },
+        } else {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Header
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Input Registration".uppercase(),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
-                        LaunchedEffect(state, autoRotation) {
-                            while (isActive && autoRotation && selectedTxId.isEmpty()) {
-                                delay(10)
-                                state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
-                            }
-                        }
+                        Text(
+                            text = if (selectedTxId.isNotEmpty())
+                                "${listUnspent?.find { it.txid == selectedTxId }?.txid}:${listUnspent?.find { it.txid == selectedTxId }?.vout}"
+                            else "",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
 
-                        val minItemWidth = 15
-                        val horizontalPadding = 16
-                        val itemTotalWidth = minItemWidth + horizontalPadding
+                    // TagCloud
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(64.dp)
+                    ) {
+                        listUnspent?.let { list ->
+                            if (list.isNotEmpty()) {
+                                val state = rememberTagCloudState(
+                                    onStartGesture = { autoRotation = false },
+                                    onEndGesture = { autoRotation = true },
+                                )
 
-                        val tagCloudMinWidth = (list.size * itemTotalWidth).coerceAtLeast(250)
-
-
-                        TagCloud(
-                            modifier = Modifier
-                                .width(tagCloudMinWidth.dp)
-                                .padding(all = 64.dp),
-                            state = state
-                        ) {
-                            items(list) { item ->
-                                Box(
-                                    modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
-                                ) {
-                                    val color = if (item.txid == selectedTxId) {
-                                        red
-                                    } else Color.Transparent
-
-                                    CustomOutlinedButton(
-                                        text = item.amount.toString(),
-                                        color = color,
-                                        isSelected = item.txid == selectedTxId,
-                                        onClick = {
-                                            selectedTxId = if (selectedTxId == item.txid) {
-                                                autoRotation = true
-                                                ""
-                                            } else {
-                                                item.txid
-                                            }
-                                        }
-                                    )
+                                LaunchedEffect(state, autoRotation) {
+                                    while (isActive && autoRotation && selectedTxId.isEmpty()) {
+                                        delay(10)
+                                        state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
+                                    }
                                 }
-                            }
-                        }
-                    } else {
-                        if (isLoading.not()) {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
+
+                                TagCloud(
+                                    modifier = Modifier.fillMaxSize(),
+                                    state = state
+                                ) {
+                                    items(list) { item ->
+                                        Box(
+                                            modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
+                                        ) {
+                                            val color = if (item.txid == selectedTxId) {
+                                                red
+                                            } else Color.Transparent
+
+                                            CustomOutlinedButton(
+                                                text = item.amount.toString(),
+                                                color = color,
+                                                isSelected = item.txid == selectedTxId,
+                                                onClick = {
+                                                    selectedTxId = if (selectedTxId == item.txid) {
+                                                        autoRotation = true
+                                                        ""
+                                                    } else {
+                                                        item.txid
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
                                 Text(
                                     text = "No amount found to spend",
                                     fontSize = 18.sp,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.align(Alignment.Center)
                                 )
                             }
-                        }
-                    }
-                } ?: run {
-                    if (isLoading.not()) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        } ?: run {
                             Text(
                                 text = "Something went wrong!\nCheck your settings",
                                 fontSize = 18.sp,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.align(Alignment.Center)
                             )
                         }
                     }
+
+                    // Button
+                    Button(
+                        modifier = Modifier.padding(16.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = selectedTxId.isNotEmpty(),
+                        onClick = {
+                            // TODO
+                        }
+                    ) {
+                        Text(
+                            text = "Register",
+                            fontSize = 16.sp,
+                            modifier = Modifier.padding(4.dp)
+                        )
+                    }
                 }
-            }
-            Button(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp),
-                shape = RoundedCornerShape(8.dp),
-                enabled = selectedTxId.isNotEmpty(),
-                onClick = {
-                    // TODO
-                }
-            ) {
-                Text(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .align(Alignment.Bottom),
-                    text = "Register",
-                    fontSize = 16.sp
-                )
             }
         }
     }
