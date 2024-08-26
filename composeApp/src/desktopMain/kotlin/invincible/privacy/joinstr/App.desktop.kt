@@ -18,6 +18,8 @@ import net.harawata.appdirs.AppDirsFactory
 import okio.Path.Companion.toPath
 import java.io.File
 import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 import kotlin.time.Duration.Companion.seconds
 
 actual fun getSettingsStore(): KStore<Settings> {
@@ -48,7 +50,8 @@ actual fun getPoolsStore(): KStore<List<PoolContent>> {
 }
 
 actual fun Float.convertFloatExponentialToString(): String {
-    return BigDecimal(toDouble()).toPlainString()
+    val mathContext = MathContext(8, RoundingMode.HALF_UP)
+    return BigDecimal(toString()).round(mathContext).toPlainString()
 }
 
 actual fun getWebSocketClient(): HttpClient {

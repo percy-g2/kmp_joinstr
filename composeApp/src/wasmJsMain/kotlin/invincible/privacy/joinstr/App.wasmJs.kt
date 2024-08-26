@@ -16,6 +16,8 @@ import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
 import org.khronos.webgl.set
 import kotlin.js.Promise
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.time.Duration.Companion.seconds
 
 @JsModule("@noble/secp256k1")
@@ -142,7 +144,37 @@ actual fun getPoolsStore(): KStore<List<PoolContent>> {
 }
 
 actual fun Float.convertFloatExponentialToString(): String {
-    return this.toString()
+    // Handle special cases
+    if (this.isNaN()) return "NaN"
+    if (this.isInfinite()) return if (this > 0) "Infinity" else "-Infinity"
+
+    val absValue = abs(this)
+    val intPart = floor(absValue).toInt()
+    val fracPart = absValue - intPart
+
+    // Convert integer part to string
+    var result = if (this < 0) "-" else ""
+    result += intPart.toString()
+
+    // Handle fractional part
+    if (fracPart > 0) {
+        result += "."
+        var fraction = fracPart
+        repeat(6) { // Use 6 decimal places
+            fraction *= 10
+            val digit = floor(fraction).toInt()
+            result += digit.toString()
+            fraction -= digit
+        }
+
+        // Remove trailing zeros
+        result = result.trimEnd('0')
+        if (result.endsWith(".")) {
+            result = result.dropLast(1)
+        }
+    }
+
+    return result
 }
 
 actual fun getWebSocketClient(): HttpClient {

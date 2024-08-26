@@ -16,7 +16,7 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import okio.Path.Companion.toPath
 import platform.Foundation.NSCachesDirectory
-import platform.Foundation.NSNumber
+import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import kotlin.time.Duration.Companion.seconds
@@ -41,8 +41,8 @@ actual fun getPoolsStore(): KStore<List<PoolContent>> {
 }
 
 actual fun Float.convertFloatExponentialToString(): String {
-    val nsNumber = NSNumber(this)
-    return nsNumber.stringValue
+    val decimalNumber = NSDecimalNumber(string = toString())
+    return decimalNumber.stringValue
 }
 
 actual fun getWebSocketClient(): HttpClient {
