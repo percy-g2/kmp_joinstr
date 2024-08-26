@@ -35,7 +35,7 @@ import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
-import invincible.privacy.joinstr.ui.ListUnspentCloudsScreen
+import invincible.privacy.joinstr.ui.RegisterInputScreen
 import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
@@ -151,7 +151,7 @@ fun App() {
                     startDestination = NavItem.Home.path
                 ) {
                     composable(route = NavItem.Home.path) {
-                        ListUnspentCloudsScreen()
+                        RegisterInputScreen()
                     }
                     composable(route = NavItem.Pools.path) {
                         PoolScreen()

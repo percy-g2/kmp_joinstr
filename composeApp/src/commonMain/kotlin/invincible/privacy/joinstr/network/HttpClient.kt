@@ -1,6 +1,5 @@
 package invincible.privacy.joinstr.network
 
-import invincible.privacy.joinstr.model.BlockChainInfo
 import invincible.privacy.joinstr.model.ListUnspentResponse
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.MempoolFee
@@ -50,25 +49,7 @@ class HttpClient {
             }
     }
 
-    suspend fun fetchBlockChainInfo(body: RpcRequestBody): BlockChainInfo? = try {
-        val nodeConfig = getNodeConfig()
-        val response: HttpResponse = createHttpClient.post {
-            url("${nodeConfig.url}:${nodeConfig.port}/")
-            basicAuth(
-                username = nodeConfig.userName,
-                password = nodeConfig.password
-            )
-            setBody(body)
-        }
-        if (response.status == HttpStatusCode.OK) {
-            json.decodeFromString<BlockChainInfo>(response.bodyAsText())
-        } else null
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
-
-    suspend fun fetchTransactions(body: RpcRequestBody): List<Transaction>? = try {
+    suspend fun fetchTransactions(body: RpcRequestBody): List<Transaction>? = runCatching {
         val nodeConfig = getNodeConfig()
         val response: HttpResponse = createHttpClient.post {
             url("${nodeConfig.url}:${nodeConfig.port}/")
@@ -81,12 +62,12 @@ class HttpClient {
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<TransactionsResponse>(response.bodyAsText()).result
         } else null
-    } catch (e: Exception) {
-        e.printStackTrace()
+    }.getOrElse {
+        it.printStackTrace()
         null
     }
 
-    suspend fun fetchUnspentList(body: RpcRequestBody): List<ListUnspentResponseItem> = try {
+    suspend fun fetchUnspentList(body: RpcRequestBody): List<ListUnspentResponseItem> = runCatching {
         val nodeConfig = getNodeConfig()
         val response: HttpResponse = createHttpClient.post {
             url("${nodeConfig.url}:${nodeConfig.port}/")
@@ -99,25 +80,25 @@ class HttpClient {
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<ListUnspentResponse>(response.bodyAsText()).result
         } else emptyList()
-    } catch (e: Exception) {
-        e.printStackTrace()
+    }.getOrElse {
+        it.printStackTrace()
         json.decodeFromString<ListUnspentResponse>(test).result
     }
 
-    suspend fun fetchHourFee(): Int = try {
+    suspend fun fetchHourFee(): Int = runCatching {
         val response: HttpResponse = createHttpClient.get {
             url("https://mempool.space/api/v1/fees/recommended")
         }
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<MempoolFee>(response.bodyAsText()).hourFee
         } else 0
-    } catch (e: Exception) {
-        e.printStackTrace()
+    }.getOrElse {
+        it.printStackTrace()
         0
     }
 }
 
-val test = "{\n" +
+const val test = "{\n" +
     "    \"result\": [\n" +
     "        {\n" +
     "            \"txid\": \"a1f6d4b2c4328bc2d0281b518cc7ecae0b7e6b47ad6a578c1e61747c4b842d91\",\n" +

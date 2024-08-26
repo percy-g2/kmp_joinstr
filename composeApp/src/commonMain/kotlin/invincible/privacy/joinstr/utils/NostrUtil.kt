@@ -6,6 +6,7 @@ import invincible.privacy.joinstr.signSchnorr
 import invincible.privacy.joinstr.utils.CryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.CryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.CryptoUtils.sha256Hash
+import io.ktor.util.*
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -22,8 +23,9 @@ class NostrUtil {
 
     suspend fun createEvent(content: String, event: Event): NostrEvent {
         val privateKey = generatePrivateKey()
-        val publicKey = getPublicKey(privateKey)
-        // TODO need .drop(1).take(32).toByteArray() for wasmJs
+        val publicKey = if (PlatformUtils.IS_BROWSER) {
+            getPublicKey(privateKey).drop(1).take(32).toByteArray()
+        } else getPublicKey(privateKey)
         val createdAt = Clock.System.now().epochSeconds
 
         // 1. Create the event object without the 'id' and 'sig' fields

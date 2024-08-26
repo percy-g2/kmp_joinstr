@@ -51,7 +51,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @Composable
-fun ListUnspentCloudsScreen() {
+fun RegisterInputScreen() {
     var isLoading by remember { mutableStateOf(true) }
     val httpClient = remember { HttpClient() }
     var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>>(emptyList()) }
