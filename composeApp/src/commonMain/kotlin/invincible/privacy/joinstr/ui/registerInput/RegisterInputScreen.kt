@@ -1,4 +1,4 @@
-package invincible.privacy.joinstr.ui
+package invincible.privacy.joinstr.ui.registerInput
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -21,7 +22,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,46 +35,33 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import invincible.privacy.joinstr.model.ListUnspentResponseItem
-import invincible.privacy.joinstr.model.Methods
-import invincible.privacy.joinstr.model.RpcRequestBody
-import invincible.privacy.joinstr.model.RpcResponse
-import invincible.privacy.joinstr.network.HttpClient
-import invincible.privacy.joinstr.network.json
-import invincible.privacy.joinstr.network.test
+import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.theme.red
-import invincible.privacy.joinstr.ui.components.ProgressDialog
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
 import invincible.privacy.joinstr.ui.components.tagcloud.math.Vector3
 import invincible.privacy.joinstr.ui.components.tagcloud.rememberTagCloudState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 @Composable
-fun RegisterInputScreen() {
-    var isLoading by remember { mutableStateOf(true) }
-    val httpClient = remember { HttpClient() }
-    var listUnspent by remember { mutableStateOf<List<ListUnspentResponseItem>?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-    var selectedTxId by remember { mutableStateOf("") }
+fun RegisterInputScreen(
+    viewModel: RegisterInputViewModel = viewModel { RegisterInputViewModel() }
+) {
+    val isLoading by viewModel.isLoading
+    val listUnspent by viewModel.listUnspent
+    val selectedTxId by viewModel.selectedTxId
     var autoRotation by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            val rpcRequestBody = RpcRequestBody(
-                method = Methods.LIST_UNSPENT.value
-            )
-            listUnspent = httpClient
-                .fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(rpcRequestBody)?.result ?: json
-                .decodeFromString<RpcResponse<List<ListUnspentResponseItem>>>(test).result
-            isLoading = false
-        }
-    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
-            ProgressDialog()
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(MaterialTheme.colorScheme.background, shape = RoundedCornerShape(8.dp))
+            ) {
+                CircularProgressIndicator()
+            }
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(
@@ -98,9 +85,7 @@ fun RegisterInputScreen() {
                         )
 
                         Text(
-                            text = if (selectedTxId.isNotEmpty())
-                                "${listUnspent?.find { it.txid == selectedTxId }?.txid}:${listUnspent?.find { it.txid == selectedTxId }?.vout}"
-                            else "",
+                            text = viewModel.getSelectedTxInfo()?.let { "${it.first}:${it.second}" } ?: "",
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center,
@@ -147,12 +132,8 @@ fun RegisterInputScreen() {
                                                 color = color,
                                                 isSelected = item.txid == selectedTxId,
                                                 onClick = {
-                                                    selectedTxId = if (selectedTxId == item.txid) {
-                                                        autoRotation = true
-                                                        ""
-                                                    } else {
-                                                        item.txid
-                                                    }
+                                                    viewModel.setSelectedTxId(item.txid)
+                                                    autoRotation = selectedTxId.isEmpty()
                                                 }
                                             )
                                         }

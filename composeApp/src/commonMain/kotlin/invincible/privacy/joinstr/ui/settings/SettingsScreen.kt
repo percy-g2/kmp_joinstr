@@ -1,9 +1,13 @@
 package invincible.privacy.joinstr.ui.settings
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,13 +30,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +59,14 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val saveOperation by viewModel.saveOperation.collectAsState()
     val listState = rememberScrollState()
+    val focusManager = LocalFocusManager.current
+    val hasScrolled by remember {
+        derivedStateOf {
+            listState.value > 0
+        }
+    }
+
+    val appBarElevation by animateDpAsState(targetValue = if (hasScrolled) 4.dp else 0.dp)
 
     LaunchedEffect(saveOperation) {
         when (saveOperation) {
@@ -65,19 +84,36 @@ fun SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (uiState.selectedTheme == Theme.DARK.id || (uiState.selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())) {
+                        MaterialTheme.colorScheme.surface.copy(alpha = if (hasScrolled) 1f else 0f)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                ),
+                modifier = Modifier.shadow(appBarElevation),
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                windowInsets = WindowInsets(
+                    top = 0.dp,
+                    bottom = 0.dp
+                )
             )
         }
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .verticalScroll(listState)
+                .padding(top = innerPadding.calculateTopPadding())
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        focusManager.clearFocus()
+                    }
+                }
         ) {
             // Theme section
             SettingsSection(title = "Theme") {
@@ -152,35 +188,85 @@ fun ConfigurationFields(
         value = uiState.nostrRelay,
         onValueChange = onNostrRelayChange,
         label = { Text("Nostr Relay") },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            if (uiState.nostrRelay.isNotEmpty()) {
+                IconButton(onClick = { onNostrRelayChange.invoke("") }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Clear text"
+                    )
+                }
+            }
+        }
     )
     Spacer(modifier = Modifier.height(8.dp))
     OutlinedTextField(
         value = uiState.nodeUrl,
         onValueChange = onNodeUrlChange,
         label = { Text("Node URL") },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            if (uiState.nodeUrl.isNotEmpty()) {
+                IconButton(onClick = { onNodeUrlChange.invoke("") }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Clear text"
+                    )
+                }
+            }
+        }
     )
     Spacer(modifier = Modifier.height(8.dp))
     OutlinedTextField(
         value = uiState.username,
         onValueChange = onUsernameChange,
         label = { Text("RPC Username") },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            if (uiState.username.isNotEmpty()) {
+                IconButton(onClick = { onUsernameChange.invoke("") }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Clear text"
+                    )
+                }
+            }
+        }
     )
     Spacer(modifier = Modifier.height(8.dp))
     OutlinedTextField(
         value = uiState.password,
         onValueChange = onPasswordChange,
         label = { Text("RPC Password") },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            if (uiState.password.isNotEmpty()) {
+                IconButton(onClick = { onPasswordChange.invoke("") }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Clear text"
+                    )
+                }
+            }
+        }
     )
     Spacer(modifier = Modifier.height(8.dp))
     OutlinedTextField(
         value = uiState.port,
         onValueChange = onPortChange,
         label = { Text("RPC Port") },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            if (uiState.port.isNotEmpty()) {
+                IconButton(onClick = { onPortChange.invoke("") }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Clear text"
+                    )
+                }
+            }
+        }
     )
 }
 

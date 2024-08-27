@@ -61,6 +61,7 @@ class PoolsViewModel : ViewModel() {
             _isLoading.value = true
             _localPools.value = poolStore.get()?.
             sortedByDescending { it.timeout }?.
+          //      map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }?.
                 filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
@@ -182,6 +183,12 @@ class PoolsViewModel : ViewModel() {
                     _isLoading.value = false
                 }
             )
+        }
+    }
+
+    fun removeLocalPool(id: String) {
+        viewModelScope.launch {
+            _localPools.value = _localPools.value?.filter { it.id != id }
         }
     }
 

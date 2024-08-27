@@ -1,9 +1,23 @@
 package invincible.privacy.joinstr.ui.pools
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,21 +29,33 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
 import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.PoolContent
+import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun MyPoolsScreens(
@@ -57,8 +83,24 @@ fun MyPoolsScreens(
                     LazyColumn(
                         modifier = Modifier.wrapContentSize(),
                     ) {
-                        items(list) { event ->
-                            PoolItem(event)
+                        items(
+                            items = list,
+                            key = { it.id }
+                        ) { event ->
+                            var isVisible by remember { mutableStateOf(true) }
+                            AnimatedVisibility(
+                                visible = isVisible,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                PoolItem(
+                                    poolContent = event,
+                                    onTimeout = {
+                                        isVisible = false
+                                        poolsViewModel.removeLocalPool(event.id)
+                                    }
+                                )
+                            }
                         }
                     }
                 } else {
@@ -94,12 +136,28 @@ fun MyPoolsScreens(
 }
 
 @Composable
-fun PoolItem(poolContent: PoolContent) {
+fun PoolItem(poolContent: PoolContent, onTimeout: () -> Unit) {
+    var isTimedOut by remember { mutableStateOf(false) }
+    val animatedProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(isTimedOut) {
+        if (isTimedOut) {
+            animatedProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            )
+            onTimeout()
+        }
+    }
+
     Card(
-        modifier =
-        Modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .graphicsLayer {
+                rotationX = animatedProgress.value * 90f
+                alpha = 1f - animatedProgress.value
+            },
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
     ) {
         Column(
@@ -112,7 +170,7 @@ fun PoolItem(poolContent: PoolContent) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Author: ${poolContent.publicKey.take(8)}...", style = MaterialTheme.typography.labelSmall)
+            Text(text = "Author: ${poolContent.publicKey}", style = MaterialTheme.typography.labelSmall)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -128,15 +186,105 @@ fun PoolItem(poolContent: PoolContent) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Created at: ${(poolContent.timeout - 600).displayDateTime()}",
+                text = "Timeout at: ${poolContent.timeout.displayDateTime()}",
                 style = MaterialTheme.typography.labelSmall
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            CountdownTimer(
+                targetTime = poolContent.timeout,
+                onTimeout = { isTimedOut = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
+    val currentTime = remember { mutableStateOf(Clock.System.now().epochSeconds) }
+    val remainingTime = remember { mutableStateOf(targetTime - currentTime.value) }
+    val progress = remember { Animatable(1f) }
+    val totalDuration = 600f // 10 minutes in seconds
+
+    LaunchedEffect(Unit) {
+        while (remainingTime.value > 0) {
+            currentTime.value = Clock.System.now().epochSeconds
+            remainingTime.value = (targetTime - currentTime.value).coerceAtLeast(0)
+            if (remainingTime.value == 0L) {
+                onTimeout()
+                break
+            }
+            delay(1.seconds)
+        }
+    }
+
+    LaunchedEffect(remainingTime.value) {
+        progress.animateTo(
+            targetValue = (remainingTime.value / totalDuration).coerceIn(0f, 1f),
+            animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
+        )
+    }
+
+    val timeColor = when {
+        progress.value > 0.6f -> Color.Green
+        progress.value > 0.3f -> Color.Yellow
+        else -> Color.Red
+    }
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Timeout at: ${poolContent.timeout.displayDateTime()}",
+                text = "Time remaining: ",
                 style = MaterialTheme.typography.labelSmall
+            )
+            AnimatedCountdownDisplay(remainingTime.value, timeColor, MaterialTheme.typography.labelSmall)
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        LinearProgressIndicator(
+            progress = { progress.value },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            color = timeColor,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            strokeCap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun AnimatedCountdownDisplay(remainingTime: Long, color: Color, style: TextStyle) {
+    val minutes = remainingTime / 60
+    val seconds = remainingTime % 60
+
+    Row {
+        Text(
+            text = "${minutes.toString().padStart(2, '0')}:",
+            color = color,
+            style = style
+        )
+
+        Text(
+            text = (seconds / 10).toString(),
+            color = color,
+            style = style
+        )
+
+        AnimatedContent(
+            targetState = seconds % 10,
+            transitionSpec = {
+                slideInVertically { height -> height } + fadeIn() togetherWith
+                    slideOutVertically { height -> -height } + fadeOut()
+            }
+        ) { digit ->
+            Text(
+                text = digit.toString(),
+                color = color,
+                style = style
             )
         }
     }

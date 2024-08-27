@@ -47,10 +47,10 @@ import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.theme.Settings
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.theme.Theme
-import invincible.privacy.joinstr.ui.RegisterInputScreen
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.pools.PoolScreen
+import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
