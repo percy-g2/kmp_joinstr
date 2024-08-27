@@ -44,9 +44,9 @@ import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
-import invincible.privacy.joinstr.theme.Settings
-import invincible.privacy.joinstr.theme.SettingsManager
-import invincible.privacy.joinstr.theme.Theme
+import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.Theme
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.pools.PoolScreen

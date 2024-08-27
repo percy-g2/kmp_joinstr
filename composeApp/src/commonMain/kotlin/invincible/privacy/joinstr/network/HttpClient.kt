@@ -2,8 +2,8 @@ package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.model.MempoolFee
 import invincible.privacy.joinstr.model.RpcRequestBody
-import invincible.privacy.joinstr.theme.NodeConfig
-import invincible.privacy.joinstr.theme.SettingsManager
+import invincible.privacy.joinstr.utils.NodeConfig
+import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*

@@ -2,8 +2,8 @@ package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.getWebSocketClient
 import invincible.privacy.joinstr.model.NostrEvent
-import invincible.privacy.joinstr.theme.Settings
-import invincible.privacy.joinstr.theme.SettingsManager
+import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Event
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
@@ -34,7 +34,8 @@ class NostrClient {
     private val mutex = Mutex()
 
     suspend fun fetchOtherPools(
-        onReceived: (List<NostrEvent>?) -> Unit
+        onSuccess: (List<NostrEvent>) -> Unit,
+        onError: (String?) -> Unit
     ) {
         mutex.withLock {
             runCatching {
@@ -55,17 +56,18 @@ class NostrClient {
                                 events = listOf(json.decodeFromJsonElement<NostrEvent>(elem[2])) + events
                             }
                             if (elem[0].jsonPrimitive.content == "EOSE") {
-                                onReceived(events)
+                                onSuccess(events)
                                 break
                             }
                         }
                     }
                 } ?: run {
+                    onError("Failed to establish WebSocket connection")
                     throw IllegalStateException("Failed to establish WebSocket connection")
                 }
             }.getOrElse { error ->
                 error.printStackTrace()
-                onReceived(emptyList())
+                onError(error.message)
                 closeSession()
             }
         }

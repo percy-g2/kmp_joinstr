@@ -1,9 +1,9 @@
 package invincible.privacy.joinstr
 
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.theme.NodeConfig
-import invincible.privacy.joinstr.theme.Settings
-import invincible.privacy.joinstr.theme.Theme
+import invincible.privacy.joinstr.utils.NodeConfig
+import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
 import io.ktor.client.*

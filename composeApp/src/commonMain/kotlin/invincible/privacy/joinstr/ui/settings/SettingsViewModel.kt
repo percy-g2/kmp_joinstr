@@ -2,10 +2,10 @@ package invincible.privacy.joinstr.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import invincible.privacy.joinstr.theme.NodeConfig
-import invincible.privacy.joinstr.theme.Settings
-import invincible.privacy.joinstr.theme.SettingsManager
-import invincible.privacy.joinstr.theme.Theme
+import invincible.privacy.joinstr.utils.NodeConfig
+import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.Theme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,30 +31,57 @@ class SettingsViewModel : ViewModel() {
                         password = settings?.nodeConfig?.password ?: Settings().nodeConfig.password,
                         port = settings?.nodeConfig?.port?.toString() ?: Settings().nodeConfig.port.toString(),
                         selectedTheme = settings?.selectedTheme ?: Theme.SYSTEM.id
-                    )
+                    ).also { newState ->
+                        validateAllFields(newState)
+                    }
                 }
             }
         }
     }
 
     fun updateNostrRelay(relay: String) {
-        _uiState.update { it.copy(nostrRelay = relay) }
+        _uiState.update {
+            it.copy(
+                nostrRelay = relay,
+                isNostrRelayValid = isValidWebSocketUrl(relay)
+            )
+        }
     }
 
-    fun updateNodeUrl(url: String) {
-        _uiState.update { it.copy(nodeUrl = url) }
+    fun updateNodeUrl(nodeUrl: String) {
+        _uiState.update {
+            it.copy(
+                nodeUrl = nodeUrl,
+                isNodeUrlValid = isValidHttpUrl(nodeUrl)
+            )
+        }
     }
 
     fun updateUsername(username: String) {
-        _uiState.update { it.copy(username = username) }
+        _uiState.update {
+            it.copy(
+                username = username,
+                isUsernameValid = username.isNotBlank()
+            )
+        }
     }
 
     fun updatePassword(password: String) {
-        _uiState.update { it.copy(password = password) }
+        _uiState.update {
+            it.copy(
+                password = password,
+                isPasswordValid = password.isNotBlank()
+            )
+        }
     }
 
     fun updatePort(port: String) {
-        _uiState.update { it.copy(port = port) }
+        _uiState.update {
+            it.copy(
+                port = port,
+                isPortValid = isValidPort(port)
+            )
+        }
     }
 
     fun updateTheme(themeId: Int) {
@@ -81,6 +108,30 @@ class SettingsViewModel : ViewModel() {
             }
         }
     }
+
+    private fun validateAllFields(state: SettingsUiState): SettingsUiState {
+        return state.copy(
+            isNostrRelayValid = isValidWebSocketUrl(state.nostrRelay),
+            isNodeUrlValid = isValidHttpUrl(state.nodeUrl),
+            isUsernameValid = state.username.isNotBlank(),
+            isPasswordValid = state.password.isNotBlank(),
+            isPortValid = isValidPort(state.port)
+        )
+    }
+
+    private fun isValidWebSocketUrl(url: String): Boolean {
+        val regex = "^(wss?://)[\\w.-]+(:\\d+)?(/.*)?$".toRegex()
+        return url.isNotBlank() && regex.matches(url)
+    }
+
+    private fun isValidHttpUrl(url: String): Boolean {
+        val regex = "^(https?://)[\\w.-]+(:\\d+)?(/.*)?$".toRegex()
+        return url.isNotBlank() && regex.matches(url)
+    }
+
+    private fun isValidPort(port: String): Boolean {
+        return port.isNotBlank() && port.toIntOrNull() in 1..65535
+    }
 }
 
 data class SettingsUiState(
@@ -89,12 +140,17 @@ data class SettingsUiState(
     val username: String = "",
     val password: String = "",
     val port: String = "",
-    val selectedTheme: Int = Theme.SYSTEM.id
+    val selectedTheme: Int = Theme.SYSTEM.id,
+    val isNostrRelayValid: Boolean = true,
+    val isNodeUrlValid: Boolean = true,
+    val isUsernameValid: Boolean = true,
+    val isPasswordValid: Boolean = true,
+    val isPortValid: Boolean = true
 )
 
 sealed class SaveOperation {
-    object Idle : SaveOperation()
-    object InProgress : SaveOperation()
-    object Success : SaveOperation()
+    data object Idle : SaveOperation()
+    data object InProgress : SaveOperation()
+    data object Success : SaveOperation()
     data class Error(val message: String) : SaveOperation()
 }

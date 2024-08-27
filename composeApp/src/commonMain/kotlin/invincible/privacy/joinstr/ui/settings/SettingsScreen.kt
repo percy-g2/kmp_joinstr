@@ -44,16 +44,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import invincible.privacy.joinstr.theme.Theme
 import invincible.privacy.joinstr.ui.components.SnackbarController
+import invincible.privacy.joinstr.utils.Theme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = viewModel{ SettingsViewModel() },
+    viewModel: SettingsViewModel = viewModel { SettingsViewModel() },
     onBackPress: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -73,9 +75,11 @@ fun SettingsScreen(
             is SaveOperation.Success -> {
                 SnackbarController.showMessage("Settings saved successfully")
             }
+
             is SaveOperation.Error -> {
                 SnackbarController.showMessage("Error: ${(saveOperation as SaveOperation.Error).message}")
             }
+
             else -> {}
         }
     }
@@ -92,7 +96,7 @@ fun SettingsScreen(
                     } else {
                         MaterialTheme.colorScheme.surface
                     },
-                    scrolledContainerColor =  MaterialTheme.colorScheme.surface
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
                 ),
                 modifier = Modifier.shadow(
                     elevation = appBarElevation,
@@ -144,7 +148,9 @@ fun SettingsScreen(
             // Save button
             Button(
                 onClick = { viewModel.saveSettings() },
-                enabled = saveOperation !is SaveOperation.InProgress,
+                enabled = saveOperation !is SaveOperation.InProgress &&
+                    uiState.isNostrRelayValid && uiState.isNodeUrlValid &&
+                    uiState.isUsernameValid && uiState.isPasswordValid && uiState.isPortValid,
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -174,7 +180,7 @@ fun ThemeOptions(selectedTheme: Int, onThemeSelected: (Int) -> Unit) {
         ThemeOption(
             title = theme.title,
             description = theme.description,
-            index= index,
+            index = index,
             isSelected = selectedTheme == index,
             onOptionSelected = { onThemeSelected(index) }
         )
@@ -190,87 +196,80 @@ fun ConfigurationFields(
     onPasswordChange: (String) -> Unit,
     onPortChange: (String) -> Unit
 ) {
-    OutlinedTextField(
+    ValidatedTextField(
         value = uiState.nostrRelay,
         onValueChange = onNostrRelayChange,
-        label = { Text("Nostr Relay") },
-        modifier = Modifier.fillMaxWidth(),
-        trailingIcon = {
-            if (uiState.nostrRelay.isNotEmpty()) {
-                IconButton(onClick = { onNostrRelayChange.invoke("") }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Clear text"
-                    )
-                }
-            }
-        }
+        label = "Nostr Relay",
+        isValid = uiState.isNostrRelayValid,
+        errorMessage = "Invalid WebSocket URL"
     )
     Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
+    ValidatedTextField(
         value = uiState.nodeUrl,
         onValueChange = onNodeUrlChange,
-        label = { Text("Node URL") },
-        modifier = Modifier.fillMaxWidth(),
-        trailingIcon = {
-            if (uiState.nodeUrl.isNotEmpty()) {
-                IconButton(onClick = { onNodeUrlChange.invoke("") }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Clear text"
-                    )
-                }
-            }
-        }
+        label = "Node URL",
+        isValid = uiState.isNodeUrlValid,
+        errorMessage = "Invalid HTTP URL"
     )
     Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
+    ValidatedTextField(
         value = uiState.username,
         onValueChange = onUsernameChange,
-        label = { Text("RPC Username") },
-        modifier = Modifier.fillMaxWidth(),
-        trailingIcon = {
-            if (uiState.username.isNotEmpty()) {
-                IconButton(onClick = { onUsernameChange.invoke("") }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Clear text"
-                    )
-                }
-            }
-        }
+        label = "RPC Username",
+        isValid = uiState.isUsernameValid,
+        errorMessage = "Username cannot be empty"
     )
     Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
+    ValidatedTextField(
         value = uiState.password,
         onValueChange = onPasswordChange,
-        label = { Text("RPC Password") },
+        label = "RPC Password",
+        isValid = uiState.isPasswordValid,
+        errorMessage = "Password cannot be empty",
+        visualTransformation = PasswordVisualTransformation()
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    ValidatedTextField(
+        value = uiState.port,
+        onValueChange = onPortChange,
+        label = "RPC Port",
+        isValid = uiState.isPortValid,
+        errorMessage = "Invalid port number"
+    )
+}
+
+@Composable
+fun ValidatedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isValid: Boolean,
+    errorMessage: String,
+    visualTransformation: VisualTransformation = VisualTransformation.None
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
+        isError = !isValid,
+        visualTransformation = visualTransformation,
         trailingIcon = {
-            if (uiState.password.isNotEmpty()) {
-                IconButton(onClick = { onPasswordChange.invoke("") }) {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onValueChange("") }) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = "Clear text"
                     )
                 }
             }
-        }
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
-        value = uiState.port,
-        onValueChange = onPortChange,
-        label = { Text("RPC Port") },
-        modifier = Modifier.fillMaxWidth(),
-        trailingIcon = {
-            if (uiState.port.isNotEmpty()) {
-                IconButton(onClick = { onPortChange.invoke("") }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Clear text"
-                    )
-                }
+        },
+        supportingText = {
+            if (!isValid) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     )

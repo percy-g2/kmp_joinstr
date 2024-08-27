@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -41,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.NostrEvent
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.Theme
 
 @Composable
 fun ListJoinStrEventsScreen(
@@ -53,10 +56,18 @@ fun ListJoinStrEventsScreen(
         poolsViewModel.fetchOtherPools()
     }
 
+    val selectedTheme = SettingsManager.themeState.value
+    val isDarkTheme = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .shadow(4.dp, RoundedCornerShape(4.dp))
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(4.dp),
+                ambientColor = if (isDarkTheme) Color.White else Color.Black,
+                spotColor = if (isDarkTheme) Color.White else Color.Black
+            )
             .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {

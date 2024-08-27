@@ -54,14 +54,14 @@ import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
 import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.theme.SettingsManager
-import invincible.privacy.joinstr.theme.Theme
 import invincible.privacy.joinstr.theme.greenDark
 import invincible.privacy.joinstr.theme.greenLight
 import invincible.privacy.joinstr.theme.orangeLight
 import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.theme.redLight
 import invincible.privacy.joinstr.theme.yellowDark
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.Theme
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.seconds
@@ -77,10 +77,18 @@ fun MyPoolsScreens(
         poolsViewModel.fetchLocalPools()
     }
 
+    val selectedTheme = SettingsManager.themeState.value
+    val isDarkTheme = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .shadow(4.dp, RoundedCornerShape(4.dp))
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(4.dp),
+                ambientColor = if (isDarkTheme) Color.White else Color.Black,
+                spotColor = if (isDarkTheme) Color.White else Color.Black
+            )
             .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {

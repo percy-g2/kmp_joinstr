@@ -14,7 +14,7 @@ import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
-import invincible.privacy.joinstr.theme.SettingsManager
+import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
@@ -60,10 +60,9 @@ class PoolsViewModel : ViewModel() {
     fun fetchLocalPools() {
         viewModelScope.launch {
             _isLoading.value = true
-            _localPools.value = poolStore.get()?.
-            sortedByDescending { it.timeout }?.
-                map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }?.
-                filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+            _localPools.value = poolStore.get()?.sortedByDescending { it.timeout }
+                ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
     }
@@ -72,12 +71,19 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _events.value = null
-            nostrClient.fetchOtherPools { nostrEvents ->
-                _events.value = nostrEvents?.
-                sortedByDescending { it.createdAt }?.
-                filter { json.decodeFromString<PoolCreationContent>(it.content).timeout > (Clock.System.now().toEpochMilliseconds() / 1000)}
-                _isLoading.value = false
-            }
+            nostrClient.fetchOtherPools(
+                onSuccess = { nostrEvents ->
+                    _events.value = nostrEvents.sortedByDescending { it.createdAt }.filter {
+                        json.decodeFromString<PoolCreationContent>(it.content).timeout > (Clock.System.now().toEpochMilliseconds() / 1000)
+                    }
+                    _isLoading.value = false
+                },
+                onError = { error ->
+                    _isLoading.value = false
+                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                    SnackbarController.showMessage(msg)
+                }
+            )
         }
     }
 

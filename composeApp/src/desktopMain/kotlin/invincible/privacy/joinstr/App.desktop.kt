@@ -4,9 +4,9 @@ import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.theme.NodeConfig
-import invincible.privacy.joinstr.theme.Settings
-import invincible.privacy.joinstr.theme.Theme
+import invincible.privacy.joinstr.utils.NodeConfig
+import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
 import io.ktor.client.*
