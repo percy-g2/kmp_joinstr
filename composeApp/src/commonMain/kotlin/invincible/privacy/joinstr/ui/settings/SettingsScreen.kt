@@ -224,8 +224,3 @@ fun ThemeOption(
         )
     }
 }
-
-data class ThemeData(
-    val title: String,
-    val description: String? = null
-)

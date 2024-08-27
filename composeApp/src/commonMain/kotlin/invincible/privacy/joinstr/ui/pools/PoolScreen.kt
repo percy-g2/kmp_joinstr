@@ -59,7 +59,7 @@ fun PoolScreen(
 
     var selectedTab by remember { mutableStateOf(0) }
 
-    if (isLoading) {
+    if (isLoading && selectedTab == 0) {
         ProgressDialog()
     }
 

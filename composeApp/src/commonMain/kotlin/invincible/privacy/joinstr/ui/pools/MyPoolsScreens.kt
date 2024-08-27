@@ -49,40 +49,44 @@ fun MyPoolsScreens(
             .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {
-        events?.let { list ->
-            if (list.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier.wrapContentSize(),
-                ) {
-                    items(list) { event ->
-                        PoolItem(event)
+        if (isLoading) {
+            ShimmerEventList()
+        } else {
+            events?.let { list ->
+                if (list.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier.wrapContentSize(),
+                    ) {
+                        items(list) { event ->
+                            PoolItem(event)
+                        }
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No pools available, please create one!",
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "No pools available, please create one!",
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        } ?: run {
-            if (isLoading.not()) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Something went wrong!\nCheck your settings",
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center
-                    )
+            } ?: run {
+                if (isLoading.not()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Something went wrong!\nCheck your settings",
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
