@@ -74,7 +74,7 @@ class NostrClient {
     suspend fun sendEvent(
         event: NostrEvent,
         onSuccess: () -> Unit,
-        onError: () -> Unit
+        onError: (String?) -> Unit
     ) {
         mutex.withLock {
             runCatching {
@@ -103,42 +103,37 @@ class NostrClient {
                                                 onSuccess()
                                                 println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
                                             } else {
-                                                onError()
-                                                println("Error: ${responseArray[3].jsonPrimitive.content}")
+                                                onError("Error: ${responseArray[3].jsonPrimitive.content}")
                                             }
                                             break
                                         }
                                         "NOTICE" -> {
-                                            onError()
-                                            println("Received notice: ${responseArray[1].jsonPrimitive.content}")
+                                            onError("Received notice: ${responseArray[1].jsonPrimitive.content}")
                                         }
                                         else -> {
-                                            onError()
-                                            println("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
+                                            onError("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
                                         }
                                     }
                                     if (responseArray.size > 2) {
-                                        onError()
-                                        println("Additional information: ${responseArray.subList(2, responseArray.size)}")
+                                        onError("Additional information: ${responseArray.subList(2, responseArray.size)}")
                                     }
                                 } catch (e: Exception) {
-                                    onError()
-                                    println("Failed to parse response: ${e.message}")
+                                    onError("Failed to parse response: ${e.message}")
                                     e.printStackTrace()
                                 }
                             }
                             else -> {
-                                onError()
-                                println("Received non-text frame: $frame")
+                                onError("Received non-text frame: $frame")
                             }
                         }
                     }
                 } ?: run {
+                    onError("Failed to establish WebSocket connection")
                     throw IllegalStateException("Failed to establish WebSocket connection")
                 }
             }.getOrElse { error ->
                 error.printStackTrace()
-                onError()
+                onError(error.message)
                 closeSession()
             }
         }

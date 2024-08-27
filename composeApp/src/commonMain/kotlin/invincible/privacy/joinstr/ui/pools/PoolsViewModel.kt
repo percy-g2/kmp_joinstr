@@ -87,78 +87,86 @@ class PoolsViewModel : ViewModel() {
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-            _isLoading.value = true
-            SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
-                httpClient.fetchHourFee()?.let { hourFee ->
-                    val addressBody = RpcRequestBody(
-                        method = Methods.NEW_ADDRESS.value,
-                        params = listOf("coin_join", "bech32")
-                    )
-                    httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
-                        val privateKey = generatePrivateKey()
-                        val publicKey = if (PlatformUtils.IS_BROWSER) {
-                            getPublicKey(privateKey).drop(1).take(32).toByteArray()
-                        } else getPublicKey(privateKey)
-                        val poolCreationContent = PoolCreationContent(
-                            id = generatePoolId(),
-                            type = "new_pool",
-                            peers = peers.toInt(),
-                            denomination = denomination.toFloat(),
-                            relay = nostrRelay,
-                            feeRate = hourFee,
-                            timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
-                            publicKey = publicKey.toHexString()
+            runCatching {
+                _isLoading.value = true
+                SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
+                    httpClient.fetchHourFee()?.let { hourFee ->
+                        val addressBody = RpcRequestBody(
+                            method = Methods.NEW_ADDRESS.value,
+                            params = listOf("coin_join", "bech32")
                         )
-                        val content = nostrClient.json.encodeToString(poolCreationContent)
-                        val nostrEvent = createEvent(
-                            content = content,
-                            event = Event.TEST_JOIN_STR,
-                            privateKey = privateKey,
-                            publicKey =  publicKey
-                        )
-                        nostrClient.sendEvent(
-                            event = nostrEvent,
-                            onSuccess = {
-                                viewModelScope.launch {
-                                    poolStore.update {
-                                        val pool = PoolContent(
-                                            id = generatePoolId(),
-                                            type = "new_pool",
-                                            peers = peers.toInt(),
-                                            denomination = denomination.toFloat(),
-                                            relay = nostrRelay,
-                                            feeRate = hourFee,
-                                            timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
-                                            publicKey = publicKey.toHexString(),
-                                            privateKey = privateKey.toHexString()
-                                        )
-                                        it?.plus(pool) ?: listOf(pool)
+                        httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
+                            val privateKey = generatePrivateKey()
+                            val publicKey = if (PlatformUtils.IS_BROWSER) {
+                                getPublicKey(privateKey).drop(1).take(32).toByteArray()
+                            } else getPublicKey(privateKey)
+                            val poolCreationContent = PoolCreationContent(
+                                id = generatePoolId(),
+                                type = "new_pool",
+                                peers = peers.toInt(),
+                                denomination = denomination.toFloat(),
+                                relay = nostrRelay,
+                                feeRate = hourFee,
+                                timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                publicKey = publicKey.toHexString()
+                            )
+                            val content = nostrClient.json.encodeToString(poolCreationContent)
+                            val nostrEvent = createEvent(
+                                content = content,
+                                event = Event.TEST_JOIN_STR,
+                                privateKey = privateKey,
+                                publicKey = publicKey
+                            )
+                            nostrClient.sendEvent(
+                                event = nostrEvent,
+                                onSuccess = {
+                                    viewModelScope.launch {
+                                        poolStore.update {
+                                            val pool = PoolContent(
+                                                id = generatePoolId(),
+                                                type = "new_pool",
+                                                peers = peers.toInt(),
+                                                denomination = denomination.toFloat(),
+                                                relay = nostrRelay,
+                                                feeRate = hourFee,
+                                                timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                                publicKey = publicKey.toHexString(),
+                                                privateKey = privateKey.toHexString()
+                                            )
+                                            it?.plus(pool) ?: listOf(pool)
+                                        }
                                     }
+                                    onSuccess.invoke()
+                                    _isLoading.value = false
+                                    SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
+                                    registerOutput(
+                                        address = address,
+                                        publicKey = publicKey,
+                                        privateKey = privateKey
+                                    )
+                                },
+                                onError = { error ->
+                                    _isLoading.value = false
+                                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                                    SnackbarController.showMessage(msg)
                                 }
-                                onSuccess.invoke()
-                                _isLoading.value = false
-                                SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
-                                registerOutput(
-                                    address = address,
-                                    publicKey = publicKey,
-                                    privateKey = privateKey
-                                )
-                            },
-                            onError = {
-                                _isLoading.value = false
-                            }
-                        )
+                            )
+                        } ?: run {
+                            _isLoading.value = false
+                            SnackbarController.showMessage("Unable to generate new address.\nPlease try again.")
+                        }
                     } ?: run {
                         _isLoading.value = false
-                        SnackbarController.showMessage("Unable to generate new address. Please try again.")
+                        SnackbarController.showMessage("Failed to retrieve current hour fee rate.\nPlease check your connection.")
                     }
                 } ?: run {
                     _isLoading.value = false
-                    SnackbarController.showMessage("Failed to retrieve current fee rate. Please check your connection.")
+                    SnackbarController.showMessage("Nostr relay settings missing.\nPlease configure in Settings.")
                 }
-            } ?: run {
+            }.getOrElse {
                 _isLoading.value = false
-                SnackbarController.showMessage("Nostr relay settings missing. Please configure in Settings.")
+                val msg = it.message ?: "Something went wrong!.\nPlease try again."
+                SnackbarController.showMessage(msg)
             }
         }
     }
@@ -189,8 +197,10 @@ class PoolsViewModel : ViewModel() {
                     _isLoading.value = false
                     SnackbarController.showMessage("Output registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
                 },
-                onError = {
+                onError = { error ->
                     _isLoading.value = false
+                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                    SnackbarController.showMessage(msg)
                 }
             )
         }
