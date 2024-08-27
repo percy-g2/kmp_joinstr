@@ -33,6 +33,7 @@ actual fun getSettingsStore(): KStore<Settings> {
         default = Settings(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig(),
+            nostrRelay = "wss://nostr.fmt.wiz.biz"
         )
     )
 }
