@@ -172,6 +172,7 @@ class PoolsViewModel : ViewModel() {
                 event = nostrEvent,
                 onSuccess = {
                     _isLoading.value = false
+                    SnackbarController.showMessage("Output registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
                 },
                 onError = {
                     _isLoading.value = false

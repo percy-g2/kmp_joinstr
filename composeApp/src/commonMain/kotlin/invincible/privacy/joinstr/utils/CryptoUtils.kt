@@ -40,9 +40,9 @@ object CryptoUtils {
      */
 
 
-    fun sha256Hash(input: String): String {
+    fun sha256Hash(content: String): String {
         // Convert input string to ByteString
-        val byteString = input.encodeUtf8()
+        val byteString = content.encodeUtf8()
 
         // Generate SHA-256 hash
         val hash = byteString.sha256()
@@ -63,7 +63,7 @@ object CryptoUtils {
      * @return the 64-byte signature, as a byte array.
      */
 
-    suspend fun signContent(privateKey: ByteArray, content: ByteArray): ByteArray {
+    suspend fun signContent(content: ByteArray, privateKey: ByteArray): ByteArray {
         val freshRandomBytes = ByteArray(32)
         CryptographyRandom.nextBytes(freshRandomBytes)
         return signSchnorr(content, privateKey, freshRandomBytes)

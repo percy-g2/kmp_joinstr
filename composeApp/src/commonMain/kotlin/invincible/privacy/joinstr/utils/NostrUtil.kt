@@ -1,22 +1,16 @@
 package invincible.privacy.joinstr.utils
 
-import dev.whyoleg.cryptography.random.CryptographyRandom
 import invincible.privacy.joinstr.model.NostrEvent
-import invincible.privacy.joinstr.signSchnorr
+import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.utils.CryptoUtils.sha256Hash
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 
 class NostrUtil {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
 
     suspend fun createEvent(
         content: String,
@@ -63,10 +57,10 @@ class NostrUtil {
     }
 
     private suspend fun signEvent(id: String, privateKey: ByteArray): String {
-        val freshRandomBytes = ByteArray(32)
-        CryptographyRandom.nextBytes(freshRandomBytes)
-        val signature = signSchnorr(id.hexToByteArray(), privateKey, freshRandomBytes)
-        return signature.toHexString()
+        return CryptoUtils.signContent(
+            content = id.hexToByteArray(),
+            privateKey = privateKey
+        ).toHexString()
     }
 
     private fun String.hexToByteArray(): ByteArray =
