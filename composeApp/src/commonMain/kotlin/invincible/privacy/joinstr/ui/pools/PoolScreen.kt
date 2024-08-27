@@ -118,11 +118,7 @@ fun PoolScreen(
             enter = expandIn(expandFrom = Alignment.Center),
             exit = shrinkOut(shrinkTowards = Alignment.Center)
         ) {
-            CreateNewPoolScreen(
-                poolsViewModel = poolsViewModel
-            ) {
-                selectedTab = 1
-            }
+            CreateNewPoolScreen(poolsViewModel = poolsViewModel)
         }
 
         AnimatedVisibility(

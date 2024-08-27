@@ -87,13 +87,15 @@ class SnackbarController(
         fun showMessage(
             message: String,
             action: SnackbarAction? = null,
+            onDismissAction: SnackbarAction? = null,
             duration: SnackbarDuration = SnackbarDuration.Short,
         ) {
             channel.trySend(
                 SnackbarChannelMessage(
                     message = message,
                     duration = duration,
-                    action = action
+                    action = action,
+                    onDismissAction = onDismissAction
                 )
             )
         }
@@ -103,6 +105,7 @@ class SnackbarController(
     fun showMessage(
         message: String,
         action: SnackbarAction? = null,
+        onDismissAction: SnackbarAction? = null,
         duration: SnackbarDuration = SnackbarDuration.Short,
     ) {
         scope.launch {
@@ -121,6 +124,9 @@ class SnackbarController(
             if (result == SnackbarResult.ActionPerformed) {
                 action?.onActionPress?.invoke()
             }
+            if (result == SnackbarResult.Dismissed) {
+                onDismissAction?.onActionPress?.invoke()
+            }
         }
     }
 }
@@ -128,6 +134,7 @@ class SnackbarController(
 data class SnackbarChannelMessage(
     val message: String,
     val action: SnackbarAction?,
+    val onDismissAction: SnackbarAction?,
     val duration: SnackbarDuration = SnackbarDuration.Short,
 )
 

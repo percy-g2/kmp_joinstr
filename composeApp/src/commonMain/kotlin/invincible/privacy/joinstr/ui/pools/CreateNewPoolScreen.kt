@@ -47,8 +47,7 @@ import invincible.privacy.joinstr.ui.components.SnackbarController
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CreateNewPoolScreen(
-    poolsViewModel: PoolsViewModel,
-    onPoolCreate: () -> Unit
+    poolsViewModel: PoolsViewModel
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -193,7 +192,6 @@ fun CreateNewPoolScreen(
                 poolsViewModel.createPool(denomination.text, peers) {
                     denomination = TextFieldValue("")
                     peers = ""
-                    onPoolCreate.invoke()
                 }
             }
         ) {

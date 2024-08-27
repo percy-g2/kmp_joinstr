@@ -105,7 +105,7 @@ fun RegisterInputScreen() {
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center,
                             maxLines = 2,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp)
                         )
                     }
 

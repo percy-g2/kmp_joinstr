@@ -234,7 +234,12 @@ suspend fun sendTestEvent() {
     }
     val content = "This is a test Nostr event"
     val nostrUtil = NostrUtil()
-    val nostrEvent = nostrUtil.createEvent(content, Event.NOTE)
+    val nostrEvent = nostrUtil.createEvent(
+        content,
+        Event.NOTE,
+        privateKey,
+        publicKey
+    )
     println("Event to be sent: $nostrEvent")
     NostrClient().sendEvent(
         event = nostrEvent,

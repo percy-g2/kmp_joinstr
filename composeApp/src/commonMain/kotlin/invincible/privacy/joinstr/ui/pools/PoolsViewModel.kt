@@ -3,6 +3,7 @@ package invincible.privacy.joinstr.ui.pools
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
@@ -11,19 +12,25 @@ import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
+import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.ui.components.SnackbarController
+import invincible.privacy.joinstr.utils.CryptoUtils
 import invincible.privacy.joinstr.utils.CryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.CryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrUtil
 import invincible.privacy.joinstr.utils.toHexString
+import io.ktor.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
 class PoolsViewModel : ViewModel() {
     private val nostrClient = lazy { NostrClient() }
@@ -83,7 +90,9 @@ class PoolsViewModel : ViewModel() {
                     )
                     httpClient.value.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                         val privateKey = generatePrivateKey()
-                        val publicKey = getPublicKey(privateKey)
+                        val publicKey = if (PlatformUtils.IS_BROWSER) {
+                            getPublicKey(privateKey).drop(1).take(32).toByteArray()
+                        } else getPublicKey(privateKey)
                         val poolCreationContent = PoolCreationContent(
                             id = generatePoolId(),
                             type = "new_pool",
@@ -95,8 +104,12 @@ class PoolsViewModel : ViewModel() {
                             publicKey = publicKey.toHexString()
                         )
                         val content = nostrClient.value.json.encodeToString(poolCreationContent)
-                        val nostrUtil = NostrUtil()
-                        val nostrEvent = nostrUtil.createEvent(content, Event.TEST_JOIN_STR)
+                        val nostrEvent = NostrUtil().createEvent(
+                            content = content,
+                            event = Event.TEST_JOIN_STR,
+                            privateKey = privateKey,
+                            publicKey =  publicKey
+                        )
                         NostrClient().sendEvent(
                             event = nostrEvent,
                             onSuccess = {
@@ -119,6 +132,11 @@ class PoolsViewModel : ViewModel() {
                                 onSuccess.invoke()
                                 _isLoading.value = false
                                 SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
+                                registerOutput(
+                                    address = address,
+                                    publicKey = publicKey,
+                                    privateKey = privateKey
+                                )
                             },
                             onError = {
                                 _isLoading.value = false
@@ -127,6 +145,38 @@ class PoolsViewModel : ViewModel() {
                     }
                 }
             }
+        }
+    }
+
+    private fun registerOutput(
+        address: String,
+        privateKey: ByteArray,
+        publicKey: ByteArray
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val jsonObject = buildJsonObject {
+                put("address", JsonPrimitive(address))
+                put("type", JsonPrimitive("output"))
+            }
+            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+            val sharedSecret = getSharedSecret(privateKey, publicKey)
+            val encryptedMessage = CryptoUtils.encrypt(data, sharedSecret)
+            val nostrEvent = NostrUtil().createEvent(
+                content = encryptedMessage,
+                event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                privateKey = privateKey,
+                publicKey = publicKey
+            )
+            NostrClient().sendEvent(
+                event = nostrEvent,
+                onSuccess = {
+                    _isLoading.value = false
+                },
+                onError = {
+                    _isLoading.value = false
+                }
+            )
         }
     }
 }

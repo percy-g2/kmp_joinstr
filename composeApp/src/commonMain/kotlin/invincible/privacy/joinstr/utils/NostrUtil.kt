@@ -3,10 +3,7 @@ package invincible.privacy.joinstr.utils
 import dev.whyoleg.cryptography.random.CryptographyRandom
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.signSchnorr
-import invincible.privacy.joinstr.utils.CryptoUtils.generatePrivateKey
-import invincible.privacy.joinstr.utils.CryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.CryptoUtils.sha256Hash
-import io.ktor.util.*
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -21,11 +18,13 @@ class NostrUtil {
         encodeDefaults = true
     }
 
-    suspend fun createEvent(content: String, event: Event): NostrEvent {
-        val privateKey = generatePrivateKey()
-        val publicKey = if (PlatformUtils.IS_BROWSER) {
-            getPublicKey(privateKey).drop(1).take(32).toByteArray()
-        } else getPublicKey(privateKey)
+    suspend fun createEvent(
+        content: String,
+        event: Event,
+        privateKey: ByteArray,
+        publicKey: ByteArray
+    ): NostrEvent {
+
         val createdAt = Clock.System.now().epochSeconds
 
         // 1. Create the event object without the 'id' and 'sig' fields
@@ -76,6 +75,7 @@ class NostrUtil {
 
 enum class Event(val kind: Int) {
     NOTE(1),
+    ENCRYPTED_DIRECT_MESSAGE(4),
     JOIN_STR(2022),
     TEST_JOIN_STR(2022566)
 }
