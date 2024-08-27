@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
+import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
@@ -15,12 +16,11 @@ import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.theme.SettingsManager
 import invincible.privacy.joinstr.ui.components.SnackbarController
-import invincible.privacy.joinstr.utils.CryptoUtils
-import invincible.privacy.joinstr.utils.CryptoUtils.generatePrivateKey
-import invincible.privacy.joinstr.utils.CryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.Event
-import invincible.privacy.joinstr.utils.NostrUtil
-import invincible.privacy.joinstr.utils.toHexString
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import io.ktor.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,9 +33,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 class PoolsViewModel : ViewModel() {
-    private val nostrClient = lazy { NostrClient() }
-    private val httpClient = lazy { HttpClient() }
-    private val poolStore = lazy { getPoolsStore() }
+    private val nostrClient = NostrClient()
+    private val httpClient = HttpClient()
+    private val poolStore = getPoolsStore()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -59,7 +59,9 @@ class PoolsViewModel : ViewModel() {
     fun fetchLocalPools() {
         viewModelScope.launch {
             _isLoading.value = true
-            _localPools.value = poolStore.value.get()?.sortedByDescending { it.timeout }
+            _localPools.value = poolStore.get()?.
+            sortedByDescending { it.timeout }?.
+                filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
     }
@@ -68,8 +70,10 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _events.value = null
-            nostrClient.value.fetchOtherPools { nostrEvents ->
-                _events.value = nostrEvents?.sortedByDescending { it.createdAt }
+            nostrClient.fetchOtherPools { nostrEvents ->
+                _events.value = nostrEvents?.
+                sortedByDescending { it.createdAt }?.
+                filter { json.decodeFromString<PoolCreationContent>(it.content).timeout > (Clock.System.now().toEpochMilliseconds() / 1000)}
                 _isLoading.value = false
             }
         }
@@ -83,12 +87,12 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
-                httpClient.value.fetchHourFee()?.let { hourFee ->
+                httpClient.fetchHourFee()?.let { hourFee ->
                     val addressBody = RpcRequestBody(
                         method = Methods.NEW_ADDRESS.value,
                         params = listOf("coin_join", "bech32")
                     )
-                    httpClient.value.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
+                    httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                         val privateKey = generatePrivateKey()
                         val publicKey = if (PlatformUtils.IS_BROWSER) {
                             getPublicKey(privateKey).drop(1).take(32).toByteArray()
@@ -103,18 +107,18 @@ class PoolsViewModel : ViewModel() {
                             timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
                             publicKey = publicKey.toHexString()
                         )
-                        val content = nostrClient.value.json.encodeToString(poolCreationContent)
-                        val nostrEvent = NostrUtil().createEvent(
+                        val content = nostrClient.json.encodeToString(poolCreationContent)
+                        val nostrEvent = createEvent(
                             content = content,
                             event = Event.TEST_JOIN_STR,
                             privateKey = privateKey,
                             publicKey =  publicKey
                         )
-                        NostrClient().sendEvent(
+                        nostrClient.sendEvent(
                             event = nostrEvent,
                             onSuccess = {
                                 viewModelScope.launch {
-                                    poolStore.value.update {
+                                    poolStore.update {
                                         val pool = PoolContent(
                                             id = generatePoolId(),
                                             type = "new_pool",
@@ -161,14 +165,14 @@ class PoolsViewModel : ViewModel() {
             }
             val data = json.encodeToString(JsonObject.serializer(), jsonObject)
             val sharedSecret = getSharedSecret(privateKey, publicKey)
-            val encryptedMessage = CryptoUtils.encrypt(data, sharedSecret)
-            val nostrEvent = NostrUtil().createEvent(
+            val encryptedMessage = encrypt(data, sharedSecret)
+            val nostrEvent = createEvent(
                 content = encryptedMessage,
                 event = Event.ENCRYPTED_DIRECT_MESSAGE,
                 privateKey = privateKey,
                 publicKey = publicKey
             )
-            NostrClient().sendEvent(
+            nostrClient.sendEvent(
                 event = nostrEvent,
                 onSuccess = {
                     _isLoading.value = false
@@ -178,6 +182,13 @@ class PoolsViewModel : ViewModel() {
                     _isLoading.value = false
                 }
             )
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        viewModelScope.launch {
+            nostrClient.close()
         }
     }
 }

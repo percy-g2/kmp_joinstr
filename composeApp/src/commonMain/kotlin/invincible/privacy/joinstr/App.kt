@@ -52,9 +52,12 @@ import invincible.privacy.joinstr.ui.SettingsScreen
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.pools.PoolScreen
-import invincible.privacy.joinstr.utils.CryptoUtils
 import invincible.privacy.joinstr.utils.Event
-import invincible.privacy.joinstr.utils.NostrUtil
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
 import org.jetbrains.compose.resources.painterResource
@@ -213,17 +216,17 @@ fun shrinkToCenter(): ExitTransition {
 }
 
 suspend fun sendTestEvent() {
-    val privateKey = CryptoUtils.generatePrivateKey()
-    val publicKey = CryptoUtils.getPublicKey(privateKey)
+    val privateKey = generatePrivateKey()
+    val publicKey = getPublicKey(privateKey)
     val sharedSecret = getSharedSecret(privateKey, publicKey)
     val message = "This is a secret message"
 
     // Encrypt the message
-    val encryptedMessage = CryptoUtils.encrypt(message, sharedSecret)
+    val encryptedMessage = encrypt(message, sharedSecret)
     println("Encrypted Message: $encryptedMessage")
 
     // Decrypt the message
-    val decryptedMessage = CryptoUtils.decrypt(encryptedMessage, sharedSecret)
+    val decryptedMessage = decrypt(encryptedMessage, sharedSecret)
     println("Decrypted Message: $decryptedMessage")
 
     // Verify that the decrypted message matches the original message
@@ -233,8 +236,7 @@ suspend fun sendTestEvent() {
         println("Decryption failed! The decrypted message does not match the original.")
     }
     val content = "This is a test Nostr event"
-    val nostrUtil = NostrUtil()
-    val nostrEvent = nostrUtil.createEvent(
+    val nostrEvent = createEvent(
         content,
         Event.NOTE,
         privateKey,
