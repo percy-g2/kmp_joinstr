@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import invincible.privacy.joinstr.theme.red
+import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
 import invincible.privacy.joinstr.ui.components.tagcloud.math.Vector3
 import invincible.privacy.joinstr.ui.components.tagcloud.rememberTagCloudState
@@ -124,7 +124,7 @@ fun RegisterInputScreen(
                                             modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
                                         ) {
                                             val color = if (item.txid == selectedTxId) {
-                                                red
+                                                redDark
                                             } else Color.Transparent
 
                                             CustomOutlinedButton(

@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,14 @@ import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
 import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.theme.SettingsManager
+import invincible.privacy.joinstr.theme.Theme
+import invincible.privacy.joinstr.theme.greenDark
+import invincible.privacy.joinstr.theme.greenLight
+import invincible.privacy.joinstr.theme.orangeLight
+import invincible.privacy.joinstr.theme.redDark
+import invincible.privacy.joinstr.theme.redLight
+import invincible.privacy.joinstr.theme.yellowDark
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.seconds
@@ -226,10 +235,27 @@ fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
         )
     }
 
+    val selectedTheme = SettingsManager.themeState.value
+    val isDark = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
+
+    val progressColors = object {
+        val green: Color
+            @Composable
+            get() = if (isDark) greenDark else greenLight
+
+        val middle: Color
+            @Composable
+            get() = if (isDark) yellowDark else orangeLight
+
+        val red: Color
+            @Composable
+            get() = if (isDark) redDark else redLight
+    }
+
     val timeColor = when {
-        progress.value > 0.6f -> Color.Green
-        progress.value > 0.3f -> Color.Yellow
-        else -> Color.Red
+        progress.value > 0.6f -> progressColors.green
+        progress.value > 0.3f -> progressColors.middle
+        else -> progressColors.red
     }
 
     Column {

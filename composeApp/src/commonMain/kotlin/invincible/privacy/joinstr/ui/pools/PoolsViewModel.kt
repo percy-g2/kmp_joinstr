@@ -31,6 +31,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.random.Random
 
 class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
@@ -61,7 +62,7 @@ class PoolsViewModel : ViewModel() {
             _isLoading.value = true
             _localPools.value = poolStore.get()?.
             sortedByDescending { it.timeout }?.
-          //      map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }?.
+                map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }?.
                 filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
@@ -147,8 +148,17 @@ class PoolsViewModel : ViewModel() {
                                 _isLoading.value = false
                             }
                         )
+                    } ?: run {
+                        _isLoading.value = false
+                        SnackbarController.showMessage("Unable to generate new address. Please try again.")
                     }
+                } ?: run {
+                    _isLoading.value = false
+                    SnackbarController.showMessage("Failed to retrieve current fee rate. Please check your connection.")
                 }
+            } ?: run {
+                _isLoading.value = false
+                SnackbarController.showMessage("Nostr relay settings missing. Please configure in Settings.")
             }
         }
     }

@@ -80,18 +80,24 @@ fun SettingsScreen(
         }
     }
 
+    val isDarkTheme = (uiState.selectedTheme == Theme.DARK.id || (uiState.selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme()))
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (uiState.selectedTheme == Theme.DARK.id || (uiState.selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())) {
+                    containerColor = if (isDarkTheme) {
                         MaterialTheme.colorScheme.surface.copy(alpha = if (hasScrolled) 1f else 0f)
                     } else {
                         MaterialTheme.colorScheme.surface
                     },
+                    scrolledContainerColor =  MaterialTheme.colorScheme.surface
                 ),
-                modifier = Modifier.shadow(appBarElevation),
+                modifier = Modifier.shadow(
+                    elevation = appBarElevation,
+                    spotColor = if (isDarkTheme) Color.Gray else Color.Black
+                ),
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
