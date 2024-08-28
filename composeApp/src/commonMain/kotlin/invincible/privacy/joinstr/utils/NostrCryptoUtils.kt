@@ -33,13 +33,13 @@ object NostrCryptoUtils {
         return pubkeyCreate(privateKey)
     }
 
-    fun sha256Hash(content: String): String {
+    private fun sha256Hash(content: String): String {
         val byteString = content.encodeUtf8()
         val hash = byteString.sha256()
         return hash.hex()
     }
 
-    suspend fun signContent(content: ByteArray, privateKey: ByteArray): ByteArray {
+    private suspend fun signContent(content: ByteArray, privateKey: ByteArray): ByteArray {
         val freshRandomBytes = ByteArray(32)
         CryptographyRandom.nextBytes(freshRandomBytes)
         return signSchnorr(content, privateKey, freshRandomBytes)
