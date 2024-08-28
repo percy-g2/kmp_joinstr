@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
+import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.Methods
-import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.PoolCreationContent
 import invincible.privacy.joinstr.model.RpcRequestBody
@@ -14,13 +14,13 @@ import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
-import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
+import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +31,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlin.random.Random
 
 class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
@@ -41,8 +40,8 @@ class PoolsViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _events = MutableStateFlow<List<NostrEvent>?>(null)
-    val events: StateFlow<List<NostrEvent>?> = _events
+    private val _otherPoolEvents = MutableStateFlow<List<PoolCreationContent>?>(null)
+    val otherPoolEvents: StateFlow<List<PoolCreationContent>?> = _otherPoolEvents
 
     private val _localPools = MutableStateFlow<List<PoolContent>?>(null)
     val localPools: StateFlow<List<PoolContent>?> = _localPools
@@ -61,7 +60,7 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _localPools.value = poolStore.get()?.sortedByDescending { it.timeout }
-            //    ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+              //  ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
@@ -70,12 +69,12 @@ class PoolsViewModel : ViewModel() {
     fun fetchOtherPools() {
         viewModelScope.launch {
             _isLoading.value = true
-            _events.value = null
+            _otherPoolEvents.value = null
             nostrClient.fetchOtherPools(
                 onSuccess = { nostrEvents ->
-                    _events.value = nostrEvents.sortedByDescending { it.createdAt }.filter {
-                        json.decodeFromString<PoolCreationContent>(it.content).timeout > (Clock.System.now().toEpochMilliseconds() / 1000)
-                    }
+                    _otherPoolEvents.value = nostrEvents.sortedByDescending { it.timeout }
+           //             .map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+                        .filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                     _isLoading.value = false
                 },
                 onError = { error ->
@@ -177,6 +176,44 @@ class PoolsViewModel : ViewModel() {
         }
     }
 
+    fun joinRequest(
+        replay: String,
+        poolPublicKey: String,
+        denomination: Float,
+        peers: Int,
+        showJoinDialog: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val jsonObject = buildJsonObject {
+                put("type", JsonPrimitive("join_pool"))
+            }
+            val privateKey = generatePrivateKey()
+            val publicKey = getPublicKey(privateKey)
+            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+            val sharedSecret = getSharedSecret(privateKey, poolPublicKey.hexToByteArray())
+            val encryptedMessage = encrypt(data, sharedSecret)
+            val nostrEvent = createEvent(
+                content = encryptedMessage,
+                event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                privateKey = privateKey,
+                publicKey = publicKey,
+                tagPubKey = poolPublicKey
+            )
+            nostrClient.joinRequestEvent(
+                event = nostrEvent,
+                onSuccess = {
+                    _isLoading.value = false
+                    SnackbarController.showMessage("Join request sent.\nEvent ID: ${nostrEvent.id}")
+                    showJoinDialog.invoke()
+                },
+                onError = { error ->
+                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                    SnackbarController.showMessage(msg)
+                }
+            )
+        }
+    }
+
     private fun registerOutput(
         address: String,
         privateKey: ByteArray,
@@ -195,7 +232,8 @@ class PoolsViewModel : ViewModel() {
                 content = encryptedMessage,
                 event = Event.ENCRYPTED_DIRECT_MESSAGE,
                 privateKey = privateKey,
-                publicKey = publicKey
+                publicKey = publicKey,
+                tagPubKey = publicKey.toHexString()
             )
             nostrClient.sendEvent(
                 event = nostrEvent,
@@ -215,6 +253,12 @@ class PoolsViewModel : ViewModel() {
     fun removeLocalPool(id: String) {
         viewModelScope.launch {
             _localPools.value = _localPools.value?.filter { it.id != id }
+        }
+    }
+
+    fun removeOtherPool(id: String) {
+        viewModelScope.launch {
+            _otherPoolEvents.value = _otherPoolEvents.value?.filter { it.id != id }
         }
     }
 

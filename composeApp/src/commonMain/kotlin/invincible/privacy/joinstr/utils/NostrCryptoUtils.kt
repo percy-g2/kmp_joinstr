@@ -14,7 +14,6 @@ import io.ktor.utils.io.core.*
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import okio.ByteString.Companion.encodeUtf8
@@ -91,7 +90,8 @@ object NostrCryptoUtils {
         content: String,
         event: Event,
         privateKey: ByteArray,
-        publicKey: ByteArray
+        publicKey: ByteArray,
+        tagPubKey: String? = null
     ): NostrEvent {
         val createdAt = Clock.System.now().epochSeconds
 
@@ -100,7 +100,20 @@ object NostrCryptoUtils {
             add(publicKey.toHexString())
             add(createdAt)
             add(event.kind)
-            add(JsonArray(emptyList<JsonElement>()))
+
+            // Determine tags based on the event type
+            val tags = if (event == Event.ENCRYPTED_DIRECT_MESSAGE && tagPubKey != null) {
+                buildJsonArray {
+                    add(buildJsonArray {
+                        add("p")
+                        add(tagPubKey)
+                    })
+                }
+            } else {
+                JsonArray(emptyList())
+            }
+
+            add(tags)
             add(content)
         }
 
@@ -113,11 +126,16 @@ object NostrCryptoUtils {
             pubKey = publicKey.toHexString(),
             createdAt = createdAt,
             kind = event.kind,
-            tags = emptyList(),
+            tags = if (event == Event.ENCRYPTED_DIRECT_MESSAGE && tagPubKey != null) {
+                listOf(listOf("p", tagPubKey))
+            } else {
+                emptyList()
+            },
             content = content,
             sig = signature
         )
     }
+
 
     private suspend fun signEvent(id: String, privateKey: ByteArray): String {
         return signContent(id.hexToByteArray(), privateKey).toHexString()

@@ -153,7 +153,10 @@ fun MyPoolsScreens(
 }
 
 @Composable
-fun PoolItem(poolContent: PoolContent, onTimeout: () -> Unit) {
+fun PoolItem(
+    poolContent: PoolContent,
+    onTimeout: () -> Unit
+) {
     var isTimedOut by remember { mutableStateOf(false) }
     val animatedProgress = remember { Animatable(0f) }
 
@@ -182,12 +185,12 @@ fun PoolItem(poolContent: PoolContent, onTimeout: () -> Unit) {
         ) {
             Text(
                 text = "Relay: ${poolContent.relay}",
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelSmall
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "Author: ${poolContent.publicKey}", style = MaterialTheme.typography.labelSmall)
+            Text(text = "PubKey: ${poolContent.publicKey}", style = MaterialTheme.typography.labelSmall)
 
             Spacer(modifier = Modifier.height(8.dp))
 

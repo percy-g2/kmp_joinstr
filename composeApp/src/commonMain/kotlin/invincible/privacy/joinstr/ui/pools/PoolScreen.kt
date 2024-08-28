@@ -134,7 +134,7 @@ fun PoolScreen(
             enter = expandIn(expandFrom = Alignment.Center),
             exit = shrinkOut(shrinkTowards = Alignment.Center)
         ) {
-            ListJoinStrEventsScreen(poolsViewModel = poolsViewModel)
+            OtherPoolsScreen(poolsViewModel = poolsViewModel)
         }
     }
 }
