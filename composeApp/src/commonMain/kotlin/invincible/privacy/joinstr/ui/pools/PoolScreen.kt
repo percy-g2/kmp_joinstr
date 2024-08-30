@@ -29,12 +29,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 
 @Composable
 fun PoolScreen(
-    poolsViewModel: PoolsViewModel = viewModel { PoolsViewModel() }
+    poolsViewModel: PoolsViewModel
 ) {
     val isLoading by poolsViewModel.isLoading.collectAsState()
 

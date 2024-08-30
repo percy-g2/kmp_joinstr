@@ -143,7 +143,7 @@ class PoolsViewModel : ViewModel() {
                                     }
                                     onSuccess.invoke()
                                     _isLoading.value = false
-                                    SnackbarController.showMessage("New pool created\nEvent ID: ${nostrEvent.id}")
+                                    SnackbarController.showMessage("New pool created!\nEvent ID: ${nostrEvent.id}")
                                     registerOutput(
                                         address = address,
                                         publicKey = publicKey,
@@ -170,7 +170,7 @@ class PoolsViewModel : ViewModel() {
                 }
             }.getOrElse {
                 _isLoading.value = false
-                val msg = it.message ?: "Something went wrong!.\nPlease try again."
+                val msg = it.message ?: "Something went wrong!\nPlease try again."
                 SnackbarController.showMessage(msg)
             }
         }
@@ -261,6 +261,8 @@ class PoolsViewModel : ViewModel() {
             _otherPoolEvents.value = _otherPoolEvents.value?.filter { it.id != id }
         }
     }
+
+
 
     override fun onCleared() {
         super.onCleared()

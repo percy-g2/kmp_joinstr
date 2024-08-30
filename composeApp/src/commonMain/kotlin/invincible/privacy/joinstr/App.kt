@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -44,12 +45,10 @@ import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
-import invincible.privacy.joinstr.utils.Settings
-import invincible.privacy.joinstr.utils.SettingsManager
-import invincible.privacy.joinstr.utils.Theme
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.pools.PoolScreen
+import invincible.privacy.joinstr.ui.pools.PoolsViewModel
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
 import invincible.privacy.joinstr.utils.Event
@@ -58,6 +57,9 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
+import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
 import org.jetbrains.compose.resources.painterResource
@@ -65,7 +67,9 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
-fun App() {
+fun App(
+    poolsViewModel: PoolsViewModel = viewModel { PoolsViewModel() }
+) {
     val themeState by SettingsManager.themeState.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -171,7 +175,9 @@ fun App() {
                         RegisterInputScreen()
                     }
                     animatedComposable(NavItem.Pools.path) {
-                        PoolScreen()
+                        PoolScreen(
+                            poolsViewModel = poolsViewModel
+                        )
                     }
                     animatedComposable(NavItem.Settings.path) {
                         SettingsScreen {
