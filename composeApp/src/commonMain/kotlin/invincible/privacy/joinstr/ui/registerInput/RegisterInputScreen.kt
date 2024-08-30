@@ -37,11 +37,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.theme.redDark
+import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
 import invincible.privacy.joinstr.ui.components.tagcloud.math.Vector3
 import invincible.privacy.joinstr.ui.components.tagcloud.rememberTagCloudState
+import joinstr.composeapp.generated.resources.Res
+import joinstr.composeapp.generated.resources.input_registration
+import joinstr.composeapp.generated.resources.no_amount_found_to_spend
+import joinstr.composeapp.generated.resources.register
+import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RegisterInputScreen(
@@ -75,7 +82,7 @@ fun RegisterInputScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Input Registration".uppercase(),
+                            text = stringResource(Res.string.input_registration).uppercase(),
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -139,21 +146,9 @@ fun RegisterInputScreen(
                                         }
                                     }
                                 }
-                            } else {
-                                Text(
-                                    text = "No amount found to spend",
-                                    fontSize = 18.sp,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            }
+                            } else CenterColumnText(Res.string.no_amount_found_to_spend)
                         } ?: run {
-                            Text(
-                                text = "Something went wrong!\nCheck your settings",
-                                fontSize = 18.sp,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                            CenterColumnText(Res.string.something_went_wrong)
                         }
                     }
 
@@ -167,7 +162,7 @@ fun RegisterInputScreen(
                         }
                     ) {
                         Text(
-                            text = "Register",
+                            text = stringResource(Res.string.register),
                             fontSize = 16.sp,
                             modifier = Modifier.padding(4.dp)
                         )

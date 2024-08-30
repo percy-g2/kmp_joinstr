@@ -2,7 +2,7 @@ package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.getWebSocketClient
 import invincible.privacy.joinstr.model.NostrEvent
-import invincible.privacy.joinstr.model.PoolCreationContent
+import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.SettingsManager
@@ -11,6 +11,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -24,7 +25,9 @@ class NostrClient {
         SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     val json = Json {
+        explicitNulls = false
         isLenient = true
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -35,7 +38,7 @@ class NostrClient {
     private val mutex = Mutex()
 
     suspend fun fetchOtherPools(
-        onSuccess: (List<PoolCreationContent>) -> Unit,
+        onSuccess: (List<PoolContent>) -> Unit,
         onError: (String?) -> Unit
     ) {
         mutex.withLock {
@@ -45,7 +48,7 @@ class NostrClient {
                 }
 
                 wsSession?.let { session ->
-                    var events: List<PoolCreationContent> = emptyList()
+                    var events: List<PoolContent> = emptyList()
                     val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}]}]"""
                     session.send(Frame.Text(subscribeMessage))
 
@@ -56,7 +59,7 @@ class NostrClient {
                             if (elem[0].jsonPrimitive.content == "EVENT") {
                                 runCatching {
                                     val nostrEventContent = json.decodeFromJsonElement<NostrEvent>(elem[2]).content
-                                    val event = json.decodeFromString<PoolCreationContent>(nostrEventContent)
+                                    val event = json.decodeFromString<PoolContent>(nostrEventContent)
                                     events = listOf(event) + events
                                 }.getOrElse {
                                     it.printStackTrace()

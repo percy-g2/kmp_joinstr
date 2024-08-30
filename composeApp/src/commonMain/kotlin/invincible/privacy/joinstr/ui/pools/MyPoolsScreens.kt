@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -48,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
@@ -60,10 +61,16 @@ import invincible.privacy.joinstr.theme.orangeLight
 import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.theme.redLight
 import invincible.privacy.joinstr.theme.yellowDark
+import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
+import joinstr.composeapp.generated.resources.Res
+import joinstr.composeapp.generated.resources.join
+import joinstr.composeapp.generated.resources.no_active_pools
+import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
+import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -111,6 +118,7 @@ fun MyPoolsScreens(
                                 exit = fadeOut() + shrinkVertically()
                             ) {
                                 PoolItem(
+                                    isInternal = true,
                                     poolContent = event,
                                     onTimeout = {
                                         isVisible = false
@@ -120,32 +128,10 @@ fun MyPoolsScreens(
                             }
                         }
                     }
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No pools available, please create one!",
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                } else CenterColumnText(Res.string.no_active_pools)
             } ?: run {
                 if (isLoading.not()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Something went wrong!\nCheck your settings",
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    CenterColumnText(Res.string.something_went_wrong)
                 }
             }
         }
@@ -155,6 +141,8 @@ fun MyPoolsScreens(
 @Composable
 fun PoolItem(
     poolContent: PoolContent,
+    isInternal: Boolean = false,
+    onJoinRequest: (() -> Unit)? = null,
     onTimeout: () -> Unit
 ) {
     var isTimedOut by remember { mutableStateOf(false) }
@@ -183,14 +171,21 @@ fun PoolItem(
         Column(
             modifier = Modifier.padding(16.dp),
         ) {
-            Text(
-                text = "Relay: ${poolContent.relay}",
-                style = MaterialTheme.typography.labelSmall
-            )
+            SelectionContainer {
+                Text(
+                    text = "Relay: ${poolContent.relay}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "PubKey: ${poolContent.publicKey}", style = MaterialTheme.typography.labelSmall)
+            SelectionContainer {
+                Text(
+                    text = "PubKey: ${poolContent.publicKey}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -216,6 +211,28 @@ fun PoolItem(
                 targetTime = poolContent.timeout,
                 onTimeout = { isTimedOut = true }
             )
+
+            if (isInternal.not()) {
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (onJoinRequest != null) {
+                        Button(
+                            shape = RoundedCornerShape(8.dp),
+                            onClick = onJoinRequest
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.join),
+                                fontSize = 16.sp,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

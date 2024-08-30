@@ -1,7 +1,6 @@
 package invincible.privacy.joinstr.ui.pools
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,15 +48,17 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
-import invincible.privacy.joinstr.convertFloatExponentialToString
-import invincible.privacy.joinstr.ktx.displayDateTime
-import invincible.privacy.joinstr.model.PoolCreationContent
+import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
+import joinstr.composeapp.generated.resources.Res
+import joinstr.composeapp.generated.resources.no_active_pools
+import joinstr.composeapp.generated.resources.pool_request
+import joinstr.composeapp.generated.resources.something_went_wrong
+import joinstr.composeapp.generated.resources.waiting_for_pool_credentials
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,14 +98,14 @@ fun OtherPoolsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Pool Request",
+                            text = stringResource(Res.string.pool_request),
                             style = MaterialTheme.typography.labelMedium
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "Waiting for pool credentials...",
+                            text = stringResource(Res.string.waiting_for_pool_credentials),
                             style = MaterialTheme.typography.labelSmall
                         )
 
@@ -146,7 +145,7 @@ fun OtherPoolsScreen(
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
-                                EventItem(
+                                PoolItem(
                                     poolContent = poolContent,
                                     onJoinRequest = {
                                         poolsViewModel.joinRequest(
@@ -166,114 +165,9 @@ fun OtherPoolsScreen(
                             }
                         }
                     }
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No pools available",
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                } else CenterColumnText(Res.string.no_active_pools)
             } ?: run {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Something went wrong!\nCheck your settings",
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun EventItem(
-    poolContent: PoolCreationContent,
-    onJoinRequest: () -> Unit,
-    onTimeout: () -> Unit
-) {
-    var isTimedOut by remember { mutableStateOf(false) }
-    val animatedProgress = remember { Animatable(0f) }
-
-    LaunchedEffect(isTimedOut) {
-        if (isTimedOut) {
-            animatedProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
-            )
-            onTimeout()
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-        ) {
-            Text(
-                text = "Relay: ${poolContent.relay}",
-                style = MaterialTheme.typography.labelSmall
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(text = "PubKey: ${poolContent.publicKey}", style = MaterialTheme.typography.labelSmall)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Denomination: ${poolContent.denomination.convertFloatExponentialToString()}",
-                style = MaterialTheme.typography.labelSmall
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(text = "Peers: ${poolContent.peers}", style = MaterialTheme.typography.labelSmall)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Timeout at: ${poolContent.timeout.displayDateTime()}",
-                style = MaterialTheme.typography.labelSmall
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            CountdownTimer(
-                targetTime = poolContent.timeout,
-                onTimeout = { isTimedOut = true }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Button(
-                    shape = RoundedCornerShape(8.dp),
-                    onClick = onJoinRequest
-                ) {
-                    Text(
-                        text = "Join",
-                        fontSize = 16.sp,
-                    )
-                }
+                CenterColumnText(Res.string.something_went_wrong)
             }
         }
     }

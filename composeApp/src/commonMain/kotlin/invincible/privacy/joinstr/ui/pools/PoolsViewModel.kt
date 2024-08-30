@@ -8,7 +8,6 @@ import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.model.PoolCreationContent
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
@@ -31,6 +30,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.random.Random
 
 class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
@@ -40,8 +40,8 @@ class PoolsViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _otherPoolEvents = MutableStateFlow<List<PoolCreationContent>?>(null)
-    val otherPoolEvents: StateFlow<List<PoolCreationContent>?> = _otherPoolEvents
+    private val _otherPoolEvents = MutableStateFlow<List<PoolContent>?>(null)
+    val otherPoolEvents: StateFlow<List<PoolContent>?> = _otherPoolEvents
 
     private val _localPools = MutableStateFlow<List<PoolContent>?>(null)
     val localPools: StateFlow<List<PoolContent>?> = _localPools
@@ -60,7 +60,7 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _localPools.value = poolStore.get()?.sortedByDescending { it.timeout }
-              //  ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+                ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
@@ -73,7 +73,7 @@ class PoolsViewModel : ViewModel() {
             nostrClient.fetchOtherPools(
                 onSuccess = { nostrEvents ->
                     _otherPoolEvents.value = nostrEvents.sortedByDescending { it.timeout }
-           //             .map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+                        .map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
                         .filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                     _isLoading.value = false
                 },
@@ -105,7 +105,7 @@ class PoolsViewModel : ViewModel() {
                             val publicKey = if (PlatformUtils.IS_BROWSER) {
                                 getPublicKey(privateKey).drop(1).take(32).toByteArray()
                             } else getPublicKey(privateKey)
-                            val poolCreationContent = PoolCreationContent(
+                            val poolContent = PoolContent(
                                 id = generatePoolId(),
                                 type = "new_pool",
                                 peers = peers.toInt(),
@@ -115,7 +115,7 @@ class PoolsViewModel : ViewModel() {
                                 timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
                                 publicKey = publicKey.toHexString()
                             )
-                            val content = nostrClient.json.encodeToString(poolCreationContent)
+                            val content = nostrClient.json.encodeToString(poolContent)
                             val nostrEvent = createEvent(
                                 content = content,
                                 event = Event.TEST_JOIN_STR,
