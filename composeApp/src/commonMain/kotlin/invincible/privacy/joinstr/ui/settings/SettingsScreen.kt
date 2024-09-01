@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +54,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Theme
@@ -64,8 +64,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel { SettingsViewModel() },
     onBackPress: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val saveOperation by viewModel.saveOperation.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
+    val saveOperation by viewModel.saveOperation.collectAsState()
     val listState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val hasScrolled by remember {
