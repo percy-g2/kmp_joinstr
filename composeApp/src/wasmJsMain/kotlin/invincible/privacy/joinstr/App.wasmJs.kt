@@ -1,6 +1,6 @@
 package invincible.privacy.joinstr
 
-import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.Theme
@@ -136,8 +136,8 @@ actual fun getSettingsStore(): KStore<Settings> {
     )
 }
 
-actual fun getPoolsStore(): KStore<List<PoolContent>> {
-    return storeOf<List<PoolContent>>(
+actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
+    return storeOf<List<LocalPoolContent>>(
         key = "pools",
         default = emptyList()
     )

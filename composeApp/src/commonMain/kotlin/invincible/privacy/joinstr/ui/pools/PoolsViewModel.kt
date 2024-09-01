@@ -7,6 +7,7 @@ import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
+import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.RpcRequestBody
@@ -44,8 +45,8 @@ class PoolsViewModel : ViewModel() {
     private val _otherPoolEvents = MutableStateFlow<List<PoolContent>?>(null)
     val otherPoolEvents: StateFlow<List<PoolContent>?> = _otherPoolEvents.asStateFlow()
 
-    private val _localPools = MutableStateFlow<List<PoolContent>?>(null)
-    val localPools: StateFlow<List<PoolContent>?> = _localPools.asStateFlow()
+    private val _localPools = MutableStateFlow<List<LocalPoolContent>?>(null)
+    val localPools: StateFlow<List<LocalPoolContent>?> = _localPools.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -141,7 +142,7 @@ class PoolsViewModel : ViewModel() {
                                 onSuccess = {
                                     viewModelScope.launch {
                                         poolStore.update {
-                                            val pool = PoolContent(
+                                            val pool = LocalPoolContent(
                                                 id = poolId,
                                                 type = "new_pool",
                                                 peers = peers.toInt(),
@@ -214,7 +215,7 @@ class PoolsViewModel : ViewModel() {
                 publicKey = publicKey,
                 tagPubKey = poolPublicKey
             )
-            nostrClient.joinRequestEvent(
+            nostrClient.sendEvent(
                 event = nostrEvent,
                 onSuccess = {
                     SnackbarController.showMessage("Join request sent.\nEvent ID: ${nostrEvent.id}")

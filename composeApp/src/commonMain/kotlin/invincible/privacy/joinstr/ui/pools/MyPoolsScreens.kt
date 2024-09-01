@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
 import invincible.privacy.joinstr.ktx.displayDateTime
-import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.theme.greenDark
 import invincible.privacy.joinstr.theme.greenLight
 import invincible.privacy.joinstr.theme.orangeLight
@@ -140,7 +140,7 @@ fun MyPoolsScreens(
 
 @Composable
 fun PoolItem(
-    poolContent: PoolContent,
+    poolContent: LocalPoolContent,
     isInternal: Boolean = false,
     onJoinRequest: (() -> Unit)? = null,
     onTimeout: () -> Unit

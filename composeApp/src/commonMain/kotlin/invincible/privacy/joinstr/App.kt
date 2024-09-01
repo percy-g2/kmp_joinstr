@@ -39,6 +39,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.NavItem
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.network.NostrClient
@@ -263,7 +264,7 @@ suspend fun sendTestEvent() {
 expect fun getWebSocketClient(): HttpClient
 
 expect fun getSettingsStore(): KStore<Settings>
-expect fun getPoolsStore(): KStore<List<PoolContent>>
+expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 
 expect fun Float.convertFloatExponentialToString(): String
 

@@ -14,3 +14,32 @@ data class PoolContent(
     val relay: String,
     val feeRate: Int
 )
+
+@Serializable
+data class LocalPoolContent(
+    val type: String,
+    val id: String,
+    val publicKey: String,
+    val privateKey: String,
+    val denomination: Float,
+    val peers: Int,
+    val timeout: Long,
+    val relay: String,
+    val feeRate: Int,
+    val peersPublicKeys: List<String> = emptyList()
+)
+
+fun copyToLocalPoolContent(poolContent: PoolContent): LocalPoolContent {
+    return LocalPoolContent(
+        type = poolContent.type,
+        id = poolContent.id,
+        publicKey = poolContent.publicKey,
+        privateKey = "", // Keeping privateKey empty
+        denomination = poolContent.denomination,
+        peers = poolContent.peers,
+        timeout = poolContent.timeout,
+        relay = poolContent.relay,
+        feeRate = poolContent.feeRate,
+        peersPublicKeys = emptyList() // Keeping peersPublicKeys empty
+    )
+}

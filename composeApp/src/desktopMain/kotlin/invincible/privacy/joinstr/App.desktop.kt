@@ -3,7 +3,7 @@ package invincible.privacy.joinstr
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
-import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.Theme
@@ -38,13 +38,13 @@ actual fun getSettingsStore(): KStore<Settings> {
     )
 }
 
-actual fun getPoolsStore(): KStore<List<PoolContent>> {
+actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
     val directory = AppDirsFactory.getInstance()
         .getUserDataDir("invincible.privacy.joinstr", "1.0.0", "invincible")
     if (File(directory).exists().not()) {
         File(directory).mkdirs()
     }
-    return storeOf<List<PoolContent>>(
+    return storeOf<List<LocalPoolContent>>(
         file = "${directory}/pools.json".toPath(),
         default = emptyList()
     )

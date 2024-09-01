@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import invincible.privacy.joinstr.model.copyToLocalPoolContent
 import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
@@ -146,7 +148,7 @@ fun OtherPoolsScreen(
                                 exit = fadeOut() + shrinkVertically()
                             ) {
                                 PoolItem(
-                                    poolContent = poolContent,
+                                    poolContent = copyToLocalPoolContent(poolContent),
                                     onJoinRequest = {
                                         poolsViewModel.joinRequest(
                                             relay = poolContent.relay,
@@ -220,6 +222,7 @@ fun ShimmerEventItem() {
         Column(
             modifier = Modifier.padding(16.dp),
         ) {
+            // Relay
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -230,21 +233,80 @@ fun ShimmerEventItem() {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // PubKey
             Box(
                 modifier = Modifier
-                    .width(100.dp)
-                    .height(12.dp)
+                    .fillMaxWidth()
+                    .height(16.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .background(brush)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            // Denomination
+            Box(
+                modifier = Modifier
+                    .width(200.dp)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Peers
+            Box(
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Timeout
             Box(
                 modifier = Modifier
                     .width(150.dp)
-                    .height(12.dp)
+                    .height(16.dp)
                     .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Countdown Timer
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Progress Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
                     .background(brush)
             )
         }

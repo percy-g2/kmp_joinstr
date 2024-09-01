@@ -14,12 +14,11 @@ import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -47,13 +46,11 @@ class NostrClient {
     private val client = lazy { getWebSocketClient() }
     private var wsSession: DefaultClientWebSocketSession? = null
     private var wsActivePoolsCredentialsSender: DefaultClientWebSocketSession? = null
-    private val mutex = Mutex()
 
     suspend fun fetchOtherPools(
         onSuccess: (List<PoolContent>) -> Unit,
         onError: (String?) -> Unit
     ) {
-        mutex.withLock {
             runCatching {
                 if (wsSession?.isActive != true) {
                     wsSession = client.value.webSocketSession(nostrRelay.invoke())
@@ -95,7 +92,6 @@ class NostrClient {
                 onError(error.message)
                 closeSession()
             }
-        }
     }
 
 
@@ -105,7 +101,6 @@ class NostrClient {
         onSuccess: () -> Unit,
         onError: (String?) -> Unit
     ) {
-        mutex.withLock {
             runCatching {
                 if (wsSession?.isActive != true) {
                     wsSession = client.value.webSocketSession(nostrRelay.invoke())
@@ -169,79 +164,6 @@ class NostrClient {
                 onError(error.message)
                 closeSession()
             }
-        }
-    }
-
-    suspend fun joinRequestEvent(
-        event: NostrEvent,
-        onSuccess: () -> Unit,
-        onError: (String?) -> Unit
-    ) {
-        mutex.withLock {
-            runCatching {
-                if (wsSession?.isActive != true) {
-                    wsSession = client.value.webSocketSession(nostrRelay.invoke())
-                }
-
-                wsSession?.let { session ->
-                    val eventJson = json.encodeToString(event)
-                    val sendMessage = """["EVENT", $eventJson]"""
-                    session.send(Frame.Text(sendMessage))
-
-                    println("Sent event: $sendMessage")
-
-                    for (frame in session.incoming) {
-                        when (frame) {
-                            is Frame.Text -> {
-                                val response = frame.readText()
-                                println("Received raw response: $response")
-                                try {
-                                    val responseArray = json.decodeFromString<List<JsonElement>>(response)
-                                    println("Parsed response: $responseArray")
-                                    when (responseArray[0].jsonPrimitive.content) {
-                                        "OK" -> {
-                                            if (responseArray[2].jsonPrimitive.boolean) {
-                                                onSuccess()
-                                                println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
-                                            } else {
-                                                onError("Error: ${responseArray[3].jsonPrimitive.content}")
-                                            }
-                                            break
-                                        }
-                                        "NOTICE" -> {
-                                            onError("Received notice: ${responseArray[1].jsonPrimitive.content}")
-                                        }
-                                        else -> {
-                                            onError("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
-                                        }
-                                    }
-                                    if (responseArray.size > 2) {
-                                        onError("Additional information: ${responseArray.subList(2, responseArray.size)}")
-                                    }
-                                    closeSession()
-                                } catch (e: Exception) {
-                                    onError("Failed to parse response: ${e.message}")
-                                    e.printStackTrace()
-                                    closeSession()
-                                }
-                            }
-                            else -> {
-                                onError("Received non-text frame: $frame")
-                                closeSession()
-                            }
-                        }
-                    }
-                } ?: run {
-                    onError("Failed to establish WebSocket connection")
-                    closeSession()
-                    throw IllegalStateException("Failed to establish WebSocket connection")
-                }
-            }.getOrElse { error ->
-                error.printStackTrace()
-                onError(error.message)
-                closeSession()
-            }
-        }
     }
 
     suspend fun requestPoolCredentials(
@@ -250,7 +172,6 @@ class NostrClient {
         onSuccess: (NostrEvent) -> Unit,
         onError: (String?) -> Unit
     ) {
-         mutex.withLock {
             runCatching {
                 if (wsSession?.isActive != true) {
                     wsSession = client.value.webSocketSession(nostrRelay.invoke())
@@ -304,7 +225,6 @@ class NostrClient {
                 onError(error.message)
                 closeSession()
             }
-        }
     }
 
     suspend fun activePoolsCredentialsSender() {
@@ -345,7 +265,9 @@ class NostrClient {
                                             val poolPublicKey = findMatchingPublicKey(activePoolsPublicKeys, nostrEvent.tags)
                                             if (poolPublicKey != null) {
                                                 getPoolsStore().get().orEmpty().find { it.publicKey == poolPublicKey }?.let { pool ->
-                                                    if (nostrEvent.pubKey != pool.publicKey) {
+                                                    if (nostrEvent.pubKey != pool.publicKey &&
+                                                        pool.peersPublicKeys.contains(nostrEvent.pubKey).not()
+                                                    ) {
                                                         val credentials = Credentials(
                                                             id = pool.id,
                                                             publicKey = pool.publicKey,
@@ -354,9 +276,9 @@ class NostrClient {
                                                             timeout = pool.timeout,
                                                             relay = pool.relay,
                                                             feeRate = pool.feeRate,
-                                                            privateKey = pool.privateKey ?: ""
+                                                            privateKey = pool.privateKey
                                                         )
-                                                        val privateKey = pool.privateKey?.hexToByteArray() ?: ByteArray(0)
+                                                        val privateKey = pool.privateKey.hexToByteArray()
                                                         val publicKey = pool.publicKey.hexToByteArray()
                                                         val data = json.encodeToString(credentials)
                                                         val sharedSecret = getSharedSecret(privateKey, nostrEvent.pubKey.hexToByteArray())
@@ -372,6 +294,15 @@ class NostrClient {
                                                             event = credentialEvent,
                                                             onSuccess = {
                                                                 println("Credentials sent successfully")
+                                                                CoroutineScope(Dispatchers.Default).launch {
+                                                                    getPoolsStore().update { existingPools ->
+                                                                        existingPools?.map {
+                                                                            if (it.id == pool.id) {
+                                                                                it.copy(peersPublicKeys = pool.peersPublicKeys.plus(nostrEvent.pubKey))
+                                                                            } else it
+                                                                        } ?: emptyList()
+                                                                    }
+                                                                }
                                                             },
                                                             onError = { error ->
                                                                 println("Error sending credentials: $error")
@@ -406,12 +337,10 @@ class NostrClient {
     }
 
     suspend fun close() {
-        mutex.withLock {
-            closeSession()
-        }
+        closeSession()
     }
 
-    fun findMatchingPublicKey(publicKeysList: List<String>, tags: List<List<String>>): String? {
+    private fun findMatchingPublicKey(publicKeysList: List<String>, tags: List<List<String>>): String? {
         return publicKeysList.find { publicKey ->
             tags.any { tag ->
                 tag.size == 2 && tag[0] == "p" && tag[1] == publicKey
