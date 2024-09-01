@@ -1,8 +1,6 @@
 package invincible.privacy.joinstr.ui.pools
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -19,7 +17,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,10 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -45,27 +40,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.ui.components.SnackbarController
-import invincible.privacy.joinstr.utils.SettingsManager
-import invincible.privacy.joinstr.utils.Theme
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CreateNewPoolScreen(
     poolsViewModel: PoolsViewModel
 ) {
-    val selectedTheme = SettingsManager.themeState.value
-    val isDarkTheme = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
-
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(4.dp),
-                ambientColor = if (isDarkTheme) Color.White else Color.Black,
-                spotColor = if (isDarkTheme) Color.White else Color.Black
-            )
-            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {
         val (focusRequester) = FocusRequester.createRefs()

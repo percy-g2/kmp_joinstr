@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -53,8 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import invincible.privacy.joinstr.model.copyToLocalPoolContent
 import invincible.privacy.joinstr.ui.components.CenterColumnText
-import invincible.privacy.joinstr.utils.SettingsManager
-import invincible.privacy.joinstr.utils.Theme
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.no_active_pools
 import joinstr.composeapp.generated.resources.pool_request
@@ -74,9 +70,6 @@ fun OtherPoolsScreen(
     LaunchedEffect(Unit) {
         poolsViewModel.fetchOtherPools()
     }
-
-    val selectedTheme = SettingsManager.themeState.value
-    val isDarkTheme = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
 
     if (showJoinDialog.value) {
         BasicAlertDialog(
@@ -121,15 +114,6 @@ fun OtherPoolsScreen(
     }
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(4.dp),
-                ambientColor = if (isDarkTheme) Color.White else Color.Black,
-                spotColor = if (isDarkTheme) Color.White else Color.Black
-            )
-            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.TopCenter
     ) {
         if (isLoading) {

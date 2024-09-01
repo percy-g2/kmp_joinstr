@@ -41,7 +41,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.NavItem
-import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
@@ -131,7 +130,9 @@ fun App(
                         actions = {
                             val navItems = listOf(NavItem.Home, NavItem.Pools, NavItem.Settings)
 
-                            NavigationBar {
+                            NavigationBar(
+                                tonalElevation = 0.dp
+                            ) {
                                 navItems.forEachIndexed { index, item ->
                                     NavigationBarItem(
                                         alwaysShowLabel = true,
