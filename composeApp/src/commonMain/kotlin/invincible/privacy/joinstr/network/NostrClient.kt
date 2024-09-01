@@ -239,12 +239,68 @@ class NostrClient {
         }
     }
 
-    suspend fun sendCredentialsForActivePools(
+    suspend fun requestPoolCredentials(
+        requestPublicKey: String,
         intervalSeconds: Long = 30,
         onSuccess: () -> Unit,
         onError: (String?) -> Unit
     ) {
          mutex.withLock {
+            runCatching {
+                if (wsSession?.isActive != true) {
+                    wsSession = client.value.webSocketSession(nostrRelay.invoke())
+                }
+
+                wsSession?.let { session ->
+                    withContext(Dispatchers.Default) {
+                        while (isActive) {
+                            val subscribeMessage = """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}], 
+                                |"#p":["$requestPublicKey"]}]""".trimMargin()
+                            launch {
+                                session.send(Frame.Text(subscribeMessage))
+                                println("Sent message: $subscribeMessage")
+                            }
+
+                            val responseJob = launch {
+                                for (frame in session.incoming) {
+                                    if (frame is Frame.Text) {
+                                        val response = frame.readText()
+                                        println("Received response: $response")
+                                        if (response.contains(requestPublicKey)) {
+                                            onSuccess()
+                                            closeSession()
+                                            this@withContext.cancel()
+                                            break
+                                        } else {
+                                            println("waiting for response")
+                                        }
+                                    }
+                                }
+                            }
+
+                            delay(intervalSeconds * 1000)
+                            responseJob.cancel()
+                        }
+                    }
+                } ?: run {
+                    onError("Failed to establish WebSocket connection")
+                    closeSession()
+                    throw IllegalStateException("Failed to establish WebSocket connection")
+                }
+            }.getOrElse { error ->
+                error.printStackTrace()
+                onError(error.message)
+                closeSession()
+            }
+        }
+    }
+
+    suspend fun activePoolsCredentialsSender(
+        intervalSeconds: Long = 30,
+        onSuccess: () -> Unit,
+        onError: (String?) -> Unit
+    ) {
+        mutex.withLock {
             runCatching {
                 if (wsSession?.isActive != true) {
                     wsSession = client.value.webSocketSession(nostrRelay.invoke())
@@ -259,10 +315,13 @@ class NostrClient {
                             val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}], 
                                 |"#p":[${activePoolsPublicKey.joinToString(",")}]}]""".trimMargin()
                             launch {
-                                if (activePoolsPublicKey.isNotEmpty()) {
-                                    session.send(Frame.Text(subscribeMessage))
-                                    println("Sent message: $subscribeMessage")
-                                }
+                                // if (activePoolsPublicKey.isNotEmpty()) {
+                                //      session.send(Frame.Text(subscribeMessage))
+                                //      println("Sent message: $subscribeMessage")
+                                //  }
+
+                                session.send(Frame.Text(subscribeMessage))
+                                println("Sent message: $subscribeMessage")
                             }
 
                             val responseJob = launch {
@@ -270,7 +329,7 @@ class NostrClient {
                                     if (frame is Frame.Text) {
                                         val response = frame.readText()
                                         println("Received response: $response")
-                                        if (response.contains("")) {
+                                        if (response.contains("requestPublicKey")) {
                                             onSuccess()
                                             closeSession()
                                             this@withContext.cancel()

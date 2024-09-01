@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr.ui.pools
 
+import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.getPoolsStore
@@ -41,10 +42,10 @@ class PoolsViewModel : ViewModel() {
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _otherPoolEvents = MutableStateFlow<List<PoolContent>?>(null)
-    val otherPoolEvents: StateFlow<List<PoolContent>?> = _otherPoolEvents
+    val otherPoolEvents: StateFlow<List<PoolContent>?> = _otherPoolEvents.asStateFlow()
 
     private val _localPools = MutableStateFlow<List<PoolContent>?>(null)
-    val localPools: StateFlow<List<PoolContent>?> = _localPools
+    val localPools: StateFlow<List<PoolContent>?> = _localPools.asStateFlow()
 
 
     private fun generatePoolId(): String {
@@ -181,7 +182,7 @@ class PoolsViewModel : ViewModel() {
         poolPublicKey: String,
         denomination: Float,
         peers: Int,
-        showJoinDialog: () -> Unit
+        showJoinDialog: MutableState<Boolean>
     ) {
         viewModelScope.launch {
             val jsonObject = buildJsonObject {
@@ -204,7 +205,20 @@ class PoolsViewModel : ViewModel() {
                 onSuccess = {
                     _isLoading.value = false
                     SnackbarController.showMessage("Join request sent.\nEvent ID: ${nostrEvent.id}")
-                    showJoinDialog.invoke()
+                    showJoinDialog.value = true
+                    viewModelScope.launch {
+                        nostrClient.requestPoolCredentials(
+                            requestPublicKey = publicKey.toHexString(),
+                            onSuccess = {
+                                showJoinDialog.value = false
+                            },
+                            onError = { error ->
+                                val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                                SnackbarController.showMessage(msg)
+                                showJoinDialog.value = false
+                            }
+                        )
+                    }
                 },
                 onError = { error ->
                     val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."

@@ -67,7 +67,7 @@ fun OtherPoolsScreen(
 ) {
     val poolContents by poolsViewModel.otherPoolEvents.collectAsState(initial = null)
     val isLoading by poolsViewModel.isLoading.collectAsState()
-    var showJoinDialog by remember { mutableStateOf(false) }
+    val showJoinDialog = remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         poolsViewModel.fetchOtherPools()
@@ -76,10 +76,10 @@ fun OtherPoolsScreen(
     val selectedTheme = SettingsManager.themeState.value
     val isDarkTheme = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
 
-    if (showJoinDialog) {
+    if (showJoinDialog.value) {
         BasicAlertDialog(
             onDismissRequest = {
-                showJoinDialog = false
+                showJoinDialog.value = false
             },
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
             content = {
@@ -152,10 +152,9 @@ fun OtherPoolsScreen(
                                             replay = poolContent.relay,
                                             poolPublicKey = poolContent.publicKey,
                                             denomination = poolContent.denomination,
-                                            peers = poolContent.peers
-                                        ) {
-                                            showJoinDialog = true
-                                        }
+                                            peers = poolContent.peers,
+                                            showJoinDialog = showJoinDialog
+                                        )
                                     },
                                     onTimeout = {
                                         isVisible = false
