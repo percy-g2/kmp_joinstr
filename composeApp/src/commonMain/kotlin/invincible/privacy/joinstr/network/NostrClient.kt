@@ -1,16 +1,20 @@
 package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.getWebSocketClient
+import invincible.privacy.joinstr.ktx.hexToByteArray
+import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.utils.Event
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -42,6 +46,7 @@ class NostrClient {
 
     private val client = lazy { getWebSocketClient() }
     private var wsSession: DefaultClientWebSocketSession? = null
+    private var wsActivePoolsCredentialsSender: DefaultClientWebSocketSession? = null
     private val mutex = Mutex()
 
     suspend fun fetchOtherPools(
@@ -242,7 +247,7 @@ class NostrClient {
     suspend fun requestPoolCredentials(
         requestPublicKey: String,
         intervalSeconds: Long = 30,
-        onSuccess: () -> Unit,
+        onSuccess: (NostrEvent) -> Unit,
         onError: (String?) -> Unit
     ) {
          mutex.withLock {
@@ -254,8 +259,8 @@ class NostrClient {
                 wsSession?.let { session ->
                     withContext(Dispatchers.Default) {
                         while (isActive) {
-                            val subscribeMessage = """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}], 
-                                |"#p":["$requestPublicKey"]}]""".trimMargin()
+                            val subscribeMessage =
+                                """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$requestPublicKey"]}]""".trimMargin()
                             launch {
                                 session.send(Frame.Text(subscribeMessage))
                                 println("Sent message: $subscribeMessage")
@@ -267,12 +272,19 @@ class NostrClient {
                                         val response = frame.readText()
                                         println("Received response: $response")
                                         if (response.contains(requestPublicKey)) {
-                                            onSuccess()
-                                            closeSession()
-                                            this@withContext.cancel()
-                                            break
+                                            runCatching {
+                                                val elem = json.parseToJsonElement(frame.readText()).jsonArray
+                                                if (elem[0].jsonPrimitive.content == "EVENT") {
+                                                    val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                                    onSuccess(nostrEvent)
+                                                    closeSession()
+                                                   // this@withContext.cancel()
+                                                }
+                                            }.getOrElse {
+                                                it.printStackTrace()
+                                            }
                                         } else {
-                                            println("waiting for response")
+                                            println("waiting for response from server")
                                         }
                                     }
                                 }
@@ -295,64 +307,96 @@ class NostrClient {
         }
     }
 
-    suspend fun activePoolsCredentialsSender(
-        intervalSeconds: Long = 30,
-        onSuccess: () -> Unit,
-        onError: (String?) -> Unit
-    ) {
-        mutex.withLock {
-            runCatching {
-                if (wsSession?.isActive != true) {
-                    wsSession = client.value.webSocketSession(nostrRelay.invoke())
-                }
+    suspend fun activePoolsCredentialsSender() {
+        runCatching {
+            if (wsActivePoolsCredentialsSender?.isActive != true) {
+                wsActivePoolsCredentialsSender = client.value.webSocketSession(nostrRelay.invoke())
+            }
 
-                wsSession?.let { session ->
-                    withContext(Dispatchers.Default) {
-                        while (isActive) {
-                            val activePools = getPoolsStore().get()?.sortedByDescending { it.timeout }
-                                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-                            val activePoolsPublicKey = activePools?.map { it.publicKey } ?: emptyList()
-                            val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}], 
-                                |"#p":[${activePoolsPublicKey.joinToString(",")}]}]""".trimMargin()
-                            launch {
-                                // if (activePoolsPublicKey.isNotEmpty()) {
-                                //      session.send(Frame.Text(subscribeMessage))
-                                //      println("Sent message: $subscribeMessage")
-                                //  }
-
+            wsActivePoolsCredentialsSender?.let { session ->
+                withContext(Dispatchers.Default) {
+                    while (isActive) {
+                        val activePools = getPoolsStore().get()?.sortedByDescending { it.timeout }
+                            ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                        val activePoolsPublicKeys = activePools?.map { it.publicKey } ?: emptyList()
+                        val formattedKeys = activePoolsPublicKeys.joinToString(
+                            separator = ", ",
+                            prefix = "[\"",
+                            postfix = "\"]",
+                        ) { it }
+                        val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],
+                            |"#p":$formattedKeys}]""".trimMargin()
+                        launch {
+                            if (activePoolsPublicKeys.isNotEmpty()) {
                                 session.send(Frame.Text(subscribeMessage))
                                 println("Sent message: $subscribeMessage")
                             }
+                        }
 
-                            val responseJob = launch {
-                                for (frame in session.incoming) {
-                                    if (frame is Frame.Text) {
-                                        val response = frame.readText()
-                                        println("Received response: $response")
-                                        if (response.contains("requestPublicKey")) {
-                                            onSuccess()
-                                            closeSession()
-                                            this@withContext.cancel()
-                                            break
+                        val responseJob = launch {
+                            for (frame in session.incoming) {
+                                if (frame is Frame.Text) {
+                                    val response = frame.readText()
+                                    println("Received response: $response")
+                                    runCatching {
+                                        val elem = json.parseToJsonElement(frame.readText()).jsonArray
+                                        if (elem[0].jsonPrimitive.content == "EVENT") {
+                                            val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                            val poolPublicKey = findMatchingPublicKey(activePoolsPublicKeys, nostrEvent.tags)
+                                            if (poolPublicKey != null) {
+                                                getPoolsStore().get().orEmpty().find { it.publicKey == poolPublicKey }?.let { pool ->
+                                                    if (nostrEvent.pubKey != pool.publicKey) {
+                                                        val credentials = Credentials(
+                                                            id = pool.id,
+                                                            publicKey = pool.publicKey,
+                                                            denomination = pool.denomination,
+                                                            peers = pool.peers,
+                                                            timeout = pool.timeout,
+                                                            relay = pool.relay,
+                                                            feeRate = pool.feeRate,
+                                                            privateKey = pool.privateKey ?: ""
+                                                        )
+                                                        val privateKey = pool.privateKey?.hexToByteArray() ?: ByteArray(0)
+                                                        val publicKey = pool.publicKey.hexToByteArray()
+                                                        val data = json.encodeToString(credentials)
+                                                        val sharedSecret = getSharedSecret(privateKey, nostrEvent.pubKey.hexToByteArray())
+                                                        val encryptedMessage = encrypt(data, sharedSecret)
+                                                        val credentialEvent = createEvent(
+                                                            content = encryptedMessage,
+                                                            event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                                                            privateKey = privateKey,
+                                                            publicKey = publicKey,
+                                                            tagPubKey = nostrEvent.pubKey
+                                                        )
+                                                        sendEvent(
+                                                            event = credentialEvent,
+                                                            onSuccess = {
+                                                                println("Credentials sent successfully")
+                                                            },
+                                                            onError = { error ->
+                                                                println("Error sending credentials: $error")
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
+                                    }.getOrElse {
+                                        it.printStackTrace()
                                     }
                                 }
                             }
-
-                            delay(intervalSeconds * 1000)
-                            responseJob.cancel()
                         }
+
+                        delay(30 * 1000) // 30 secs repeat logic
+                        responseJob.cancel()
                     }
-                } ?: run {
-                    onError("Failed to establish WebSocket connection")
-                    closeSession()
-                    throw IllegalStateException("Failed to establish WebSocket connection")
                 }
-            }.getOrElse { error ->
-                error.printStackTrace()
-                onError(error.message)
-                closeSession()
+            } ?: run {
+                throw IllegalStateException("Failed to establish WebSocket connection")
             }
+        }.getOrElse { error ->
+            error.printStackTrace()
         }
     }
 
@@ -364,6 +408,14 @@ class NostrClient {
     suspend fun close() {
         mutex.withLock {
             closeSession()
+        }
+    }
+
+    fun findMatchingPublicKey(publicKeysList: List<String>, tags: List<List<String>>): String? {
+        return publicKeysList.find { publicKey ->
+            tags.any { tag ->
+                tag.size == 2 && tag[0] == "p" && tag[1] == publicKey
+            }
         }
     }
 }

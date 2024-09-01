@@ -31,7 +31,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlin.random.Random
 
 class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
@@ -47,6 +46,12 @@ class PoolsViewModel : ViewModel() {
     private val _localPools = MutableStateFlow<List<PoolContent>?>(null)
     val localPools: StateFlow<List<PoolContent>?> = _localPools.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            nostrClient.activePoolsCredentialsSender()
+        }
+    }
+
 
     private fun generatePoolId(): String {
         val letters = ('a'..'z').toList()
@@ -61,7 +66,7 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _localPools.value = poolStore.get()?.sortedByDescending { it.timeout }
-                ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+        //        ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
@@ -73,10 +78,14 @@ class PoolsViewModel : ViewModel() {
             _otherPoolEvents.value = null
             nostrClient.fetchOtherPools(
                 onSuccess = { nostrEvents ->
-                    _otherPoolEvents.value = nostrEvents.sortedByDescending { it.timeout }
-                        .map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
-                        .filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-                    _isLoading.value = false
+                    viewModelScope.launch {
+                        val pools = getPoolsStore().get()
+                        val activePoolsIds = pools?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }?.map { it.id }
+                        _otherPoolEvents.value = nostrEvents.sortedByDescending { it.timeout }
+                            //                       .map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+                            .filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) && it.id !in activePoolsIds.orEmpty() }
+                        _isLoading.value = false
+                    }
                 },
                 onError = { error ->
                     _isLoading.value = false
@@ -209,8 +218,9 @@ class PoolsViewModel : ViewModel() {
                     viewModelScope.launch {
                         nostrClient.requestPoolCredentials(
                             requestPublicKey = publicKey.toHexString(),
-                            onSuccess = {
+                            onSuccess = { event ->
                                 showJoinDialog.value = false
+                                SnackbarController.showMessage("Received credentials")
                             },
                             onError = { error ->
                                 val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
