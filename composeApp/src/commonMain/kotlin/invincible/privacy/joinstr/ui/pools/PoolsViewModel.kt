@@ -17,6 +17,7 @@ import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
@@ -65,8 +66,8 @@ class PoolsViewModel : ViewModel() {
     fun fetchLocalPools() {
         viewModelScope.launch {
             _isLoading.value = true
-            _localPools.value = poolStore.get()?.sortedByDescending { it.timeout }
-        //        ?.map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
+            _localPools.value = poolStore.get()
+                ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _isLoading.value = false
         }
@@ -79,11 +80,12 @@ class PoolsViewModel : ViewModel() {
             nostrClient.fetchOtherPools(
                 onSuccess = { nostrEvents ->
                     viewModelScope.launch {
+                        val currentTime = (Clock.System.now().toEpochMilliseconds() / 1000)
                         val pools = getPoolsStore().get()
-                        val activePoolsIds = pools?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }?.map { it.id }
-                        _otherPoolEvents.value = nostrEvents.sortedByDescending { it.timeout }
-                            //                       .map { it.copy(timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + Random.nextInt(0, 601)) }
-                            .filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) && it.id !in activePoolsIds.orEmpty() }
+                        val activePoolsIds = pools?.filter { it.timeout > currentTime }?.map { it.id }
+                        _otherPoolEvents.value = nostrEvents
+                            .sortedByDescending { it.timeout }
+                            .filter { it.timeout > currentTime && it.id !in activePoolsIds.orEmpty() }
                         _isLoading.value = false
                     }
                 },
@@ -115,14 +117,16 @@ class PoolsViewModel : ViewModel() {
                             val publicKey = if (PlatformUtils.IS_BROWSER) {
                                 getPublicKey(privateKey).drop(1).take(32).toByteArray()
                             } else getPublicKey(privateKey)
+                            val poolId = generatePoolId()
+                            val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
                             val poolContent = PoolContent(
-                                id = generatePoolId(),
+                                id = poolId,
                                 type = "new_pool",
                                 peers = peers.toInt(),
                                 denomination = denomination.toFloat(),
                                 relay = nostrRelay,
                                 feeRate = hourFee,
-                                timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                timeout = timeout,
                                 publicKey = publicKey.toHexString()
                             )
                             val content = nostrClient.json.encodeToString(poolContent)
@@ -138,13 +142,13 @@ class PoolsViewModel : ViewModel() {
                                     viewModelScope.launch {
                                         poolStore.update {
                                             val pool = PoolContent(
-                                                id = generatePoolId(),
+                                                id = poolId,
                                                 type = "new_pool",
                                                 peers = peers.toInt(),
                                                 denomination = denomination.toFloat(),
                                                 relay = nostrRelay,
                                                 feeRate = hourFee,
-                                                timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600,
+                                                timeout = timeout,
                                                 publicKey = publicKey.toHexString(),
                                                 privateKey = privateKey.toHexString()
                                             )
@@ -187,13 +191,14 @@ class PoolsViewModel : ViewModel() {
     }
 
     fun joinRequest(
-        replay: String,
+        relay: String,
         poolPublicKey: String,
         denomination: Float,
         peers: Int,
         showJoinDialog: MutableState<Boolean>
     ) {
         viewModelScope.launch {
+            showJoinDialog.value = true
             val jsonObject = buildJsonObject {
                 put("type", JsonPrimitive("join_pool"))
             }
@@ -212,15 +217,17 @@ class PoolsViewModel : ViewModel() {
             nostrClient.joinRequestEvent(
                 event = nostrEvent,
                 onSuccess = {
-                    _isLoading.value = false
                     SnackbarController.showMessage("Join request sent.\nEvent ID: ${nostrEvent.id}")
-                    showJoinDialog.value = true
                     viewModelScope.launch {
                         nostrClient.requestPoolCredentials(
                             requestPublicKey = publicKey.toHexString(),
-                            onSuccess = { event ->
-                                showJoinDialog.value = false
-                                SnackbarController.showMessage("Received credentials")
+                            onSuccess = { eventWithCredentials ->
+                                viewModelScope.launch {
+                                    val credentials = decrypt(eventWithCredentials.content, sharedSecret)
+                                    println(credentials)
+                                    showJoinDialog.value = false
+                                    SnackbarController.showMessage("Received credentials")
+                                }
                             },
                             onError = { error ->
                                 val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
@@ -285,7 +292,6 @@ class PoolsViewModel : ViewModel() {
             _otherPoolEvents.value = _otherPoolEvents.value?.filter { it.id != id }
         }
     }
-
 
 
     override fun onCleared() {

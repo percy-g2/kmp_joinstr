@@ -149,7 +149,7 @@ fun OtherPoolsScreen(
                                     poolContent = poolContent,
                                     onJoinRequest = {
                                         poolsViewModel.joinRequest(
-                                            replay = poolContent.relay,
+                                            relay = poolContent.relay,
                                             poolPublicKey = poolContent.publicKey,
                                             denomination = poolContent.denomination,
                                             peers = poolContent.peers,
