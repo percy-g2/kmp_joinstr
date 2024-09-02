@@ -7,6 +7,7 @@ import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
+import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
@@ -224,10 +225,44 @@ class PoolsViewModel : ViewModel() {
                             requestPublicKey = publicKey.toHexString(),
                             onSuccess = { eventWithCredentials ->
                                 viewModelScope.launch {
-                                    val credentials = decrypt(eventWithCredentials.content, sharedSecret)
-                                    println(credentials)
-                                    showJoinDialog.value = false
-                                    SnackbarController.showMessage("Received credentials")
+                                    runCatching {
+                                        val addressBody = RpcRequestBody(
+                                            method = Methods.NEW_ADDRESS.value,
+                                            params = listOf("coin_join", "bech32")
+                                        )
+                                        httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
+                                            val decryptedContent = decrypt(eventWithCredentials.content, sharedSecret)
+                                            val credentials = json.decodeFromString<Credentials>(decryptedContent)
+                                            poolStore.update {
+                                                val pool = LocalPoolContent(
+                                                    id = credentials.id,
+                                                    type = "new_pool",
+                                                    peers = credentials.peers,
+                                                    denomination = credentials.denomination,
+                                                    relay = credentials.relay,
+                                                    feeRate = credentials.feeRate,
+                                                    timeout = credentials.timeout,
+                                                    publicKey = credentials.publicKey,
+                                                    privateKey = credentials.privateKey
+                                                )
+                                                it?.plus(pool) ?: listOf(pool)
+                                            }
+                                            showJoinDialog.value = false
+                                            SnackbarController.showMessage("Credentials have been received and securely saved!")
+
+                                            registerOutput(
+                                                address = address,
+                                                publicKey = credentials.publicKey.hexToByteArray(),
+                                                privateKey = credentials.privateKey.hexToByteArray()
+                                            )
+                                        } ?: run {
+                                            showJoinDialog.value = false
+                                            SnackbarController.showMessage("Unable to generate new address.\nPlease try again.")
+                                        }
+                                    }.getOrElse {
+                                        showJoinDialog.value = false
+                                        SnackbarController.showMessage("Something went wrong!\nPlease try again.")
+                                    }
                                 }
                             },
                             onError = { error ->

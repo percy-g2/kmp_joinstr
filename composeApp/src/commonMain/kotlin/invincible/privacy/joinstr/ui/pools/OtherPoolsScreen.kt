@@ -122,7 +122,7 @@ fun OtherPoolsScreen(
                             .padding(vertical = 24.dp)
                             .wrapContentSize()
                             .background(
-                                color = MaterialTheme.colorScheme.background,
+                                color = MaterialTheme.colorScheme.surfaceContainer,
                                 shape = RoundedCornerShape(8.dp)
                             )
                     ) {
@@ -208,7 +208,7 @@ fun OtherPoolsScreen(
                 Box(
                     modifier = Modifier
                         .background(
-                            color = MaterialTheme.colorScheme.background,
+                            color = MaterialTheme.colorScheme.surfaceContainer,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(16.dp),
