@@ -26,7 +26,8 @@ data class LocalPoolContent(
     val timeout: Long,
     val relay: String,
     val feeRate: Int,
-    val peersPublicKeys: List<String> = emptyList()
+    val peersPublicKeys: List<String> = emptyList(),
+    val peersData: List<RegisterAddress> = emptyList()
 )
 
 fun copyToLocalPoolContent(poolContent: PoolContent): LocalPoolContent {
@@ -34,12 +35,12 @@ fun copyToLocalPoolContent(poolContent: PoolContent): LocalPoolContent {
         type = poolContent.type,
         id = poolContent.id,
         publicKey = poolContent.publicKey,
-        privateKey = "", // Keeping privateKey empty
+        privateKey = "",
         denomination = poolContent.denomination,
         peers = poolContent.peers,
         timeout = poolContent.timeout,
         relay = poolContent.relay,
         feeRate = poolContent.feeRate,
-        peersPublicKeys = emptyList() // Keeping peersPublicKeys empty
+        peersPublicKeys = emptyList()
     )
 }

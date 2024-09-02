@@ -63,10 +63,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.copyToLocalPoolContent
 import invincible.privacy.joinstr.ui.components.CenterColumnText
+import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import joinstr.composeapp.generated.resources.Res
@@ -83,11 +85,13 @@ import qrgenerator.qrkitpainter.solidBrush
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtherPoolsScreen(
-    poolsViewModel: PoolsViewModel
+    poolsViewModel: PoolsViewModel,
+    onSuccess: () -> Unit
 ) {
     val poolContents by poolsViewModel.otherPoolEvents.collectAsState(initial = null)
     val isLoading by poolsViewModel.isLoading.collectAsState()
     val showJoinDialog = remember { mutableStateOf(false) }
+    val showWaitingDialog = remember { mutableStateOf(false) }
     val showQrCodeDialog = remember { mutableStateOf(Pair<PoolContent?, Boolean>(null, false)) }
 
     LaunchedEffect(Unit) {
@@ -160,12 +164,20 @@ fun OtherPoolsScreen(
                                     poolsViewModel.joinRequest(
                                         publicKey = publicKey,
                                         privateKey = privateKey,
-                                        relay = poolContent.relay,
                                         poolPublicKey = poolContent.publicKey,
-                                        denomination = poolContent.denomination,
-                                        peers = poolContent.peers,
                                         showJoinDialog = showJoinDialog
-                                    )
+                                    ) { pool ->
+                                        showWaitingDialog.value = true
+                                        poolsViewModel.checkRegisteredOutputs(
+                                            poolId = pool.id,
+                                            privateKey = pool.privateKey.hexToByteArray(),
+                                            publicKey = pool.publicKey.hexToByteArray(),
+                                            showWaitingDialog = showWaitingDialog
+                                        ) {
+                                            SnackbarController.showMessage(message = "You can register your input now!")
+                                            onSuccess.invoke()
+                                        }
+                                    }
                                 }
                             ) {
                                 Text(
@@ -229,6 +241,41 @@ fun OtherPoolsScreen(
                         Text(
                             text = stringResource(Res.string.waiting_for_pool_credentials),
                             style = MaterialTheme.typography.labelSmall
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+        )
+    }
+
+    if (showWaitingDialog.value) {
+        BasicAlertDialog(
+            onDismissRequest = {
+                showWaitingDialog.value = false
+            },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            content = {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier.wrapContentSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Waiting for other users to register outputs...",
+                            style = MaterialTheme.typography.labelLarge
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))

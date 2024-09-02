@@ -4,11 +4,14 @@ import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.getWebSocketClient
 import invincible.privacy.joinstr.ktx.hexToByteArray
+import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.model.RegisterAddress
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.SettingsManager
@@ -51,49 +54,48 @@ class NostrClient {
         onSuccess: (List<PoolContent>) -> Unit,
         onError: (String?) -> Unit
     ) {
-            runCatching {
-                if (wsSession?.isActive != true) {
-                    wsSession = client.value.webSocketSession(nostrRelay.invoke())
-                }
+        runCatching {
+            if (wsSession?.isActive != true) {
+                wsSession = client.value.webSocketSession(nostrRelay.invoke())
+            }
 
-                wsSession?.let { session ->
-                    var events: List<PoolContent> = emptyList()
-                    val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}]}]"""
-                    session.send(Frame.Text(subscribeMessage))
+            wsSession?.let { session ->
+                var events: List<PoolContent> = emptyList()
+                val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}]}]"""
+                session.send(Frame.Text(subscribeMessage))
 
-                    for (frame in session.incoming) {
-                        if (frame is Frame.Text) {
-                            println(frame.readText())
-                            val elem = json.parseToJsonElement(frame.readText()).jsonArray
-                            if (elem[0].jsonPrimitive.content == "EVENT") {
-                                runCatching {
-                                    val nostrEventContent = json.decodeFromJsonElement<NostrEvent>(elem[2]).content
-                                    val event = json.decodeFromString<PoolContent>(nostrEventContent)
-                                    events = listOf(event) + events
-                                }.getOrElse {
-                                    it.printStackTrace()
-                                    closeSession()
-                                }
-                            }
-                            if (elem[0].jsonPrimitive.content == "EOSE") {
-                                onSuccess(events)
+                for (frame in session.incoming) {
+                    if (frame is Frame.Text) {
+                        println(frame.readText())
+                        val elem = json.parseToJsonElement(frame.readText()).jsonArray
+                        if (elem[0].jsonPrimitive.content == "EVENT") {
+                            runCatching {
+                                val nostrEventContent = json.decodeFromJsonElement<NostrEvent>(elem[2]).content
+                                val event = json.decodeFromString<PoolContent>(nostrEventContent)
+                                events = listOf(event) + events
+                            }.getOrElse {
+                                it.printStackTrace()
                                 closeSession()
-                                break
                             }
                         }
+                        if (elem[0].jsonPrimitive.content == "EOSE") {
+                            onSuccess(events)
+                            closeSession()
+                            break
+                        }
                     }
-                } ?: run {
-                    onError("Failed to establish WebSocket connection")
-                    closeSession()
-                    throw IllegalStateException("Failed to establish WebSocket connection")
                 }
-            }.getOrElse { error ->
-                error.printStackTrace()
-                onError(error.message)
+            } ?: run {
+                onError("Failed to establish WebSocket connection")
                 closeSession()
+                throw IllegalStateException("Failed to establish WebSocket connection")
             }
+        }.getOrElse { error ->
+            error.printStackTrace()
+            onError(error.message)
+            closeSession()
+        }
     }
-
 
 
     suspend fun sendEvent(
@@ -101,69 +103,146 @@ class NostrClient {
         onSuccess: () -> Unit,
         onError: (String?) -> Unit
     ) {
-            runCatching {
-                if (wsSession?.isActive != true) {
-                    wsSession = client.value.webSocketSession(nostrRelay.invoke())
-                }
+        runCatching {
+            if (wsSession?.isActive != true) {
+                wsSession = client.value.webSocketSession(nostrRelay.invoke())
+            }
 
-                wsSession?.let { session ->
-                    val eventJson = json.encodeToString(event)
-                    val sendMessage = """["EVENT", $eventJson]"""
-                    session.send(Frame.Text(sendMessage))
+            wsSession?.let { session ->
+                val eventJson = json.encodeToString(event)
+                val sendMessage = """["EVENT", $eventJson]"""
+                session.send(Frame.Text(sendMessage))
 
-                    println("Sent event: $sendMessage")
+                println("Sent event: $sendMessage")
 
-                    for (frame in session.incoming) {
-                        when (frame) {
-                            is Frame.Text -> {
-                                val response = frame.readText()
-                                println("Received raw response: $response")
-                                try {
-                                    val responseArray = json.decodeFromString<List<JsonElement>>(response)
-                                    println("Parsed response: $responseArray")
-                                    when (responseArray[0].jsonPrimitive.content) {
-                                        "OK" -> {
-                                            if (responseArray[2].jsonPrimitive.boolean) {
-                                                onSuccess()
-                                                println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
-                                            } else {
-                                                onError("Error: ${responseArray[3].jsonPrimitive.content}")
-                                            }
-                                            break
+                for (frame in session.incoming) {
+                    when (frame) {
+                        is Frame.Text -> {
+                            val response = frame.readText()
+                            println("Received raw response: $response")
+                            try {
+                                val responseArray = json.decodeFromString<List<JsonElement>>(response)
+                                println("Parsed response: $responseArray")
+                                when (responseArray[0].jsonPrimitive.content) {
+                                    "OK" -> {
+                                        if (responseArray[2].jsonPrimitive.boolean) {
+                                            onSuccess()
+                                            println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
+                                        } else {
+                                            onError("Error: ${responseArray[3].jsonPrimitive.content}")
                                         }
-                                        "NOTICE" -> {
-                                            onError("Received notice: ${responseArray[1].jsonPrimitive.content}")
-                                        }
-                                        else -> {
-                                            onError("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
-                                        }
+                                        break
                                     }
-                                    if (responseArray.size > 2) {
-                                        onError("Additional information: ${responseArray.subList(2, responseArray.size)}")
+
+                                    "NOTICE" -> {
+                                        onError("Received notice: ${responseArray[1].jsonPrimitive.content}")
                                     }
-                                    closeSession()
-                                } catch (e: Exception) {
-                                    onError("Failed to parse response: ${e.message}")
-                                    e.printStackTrace()
-                                    closeSession()
+
+                                    else -> {
+                                        onError("Unexpected response type: ${responseArray[0].jsonPrimitive.content}")
+                                    }
                                 }
-                            }
-                            else -> {
-                                onError("Received non-text frame: $frame")
+                                if (responseArray.size > 2) {
+                                    onError("Additional information: ${responseArray.subList(2, responseArray.size)}")
+                                }
+                                closeSession()
+                            } catch (e: Exception) {
+                                onError("Failed to parse response: ${e.message}")
+                                e.printStackTrace()
                                 closeSession()
                             }
                         }
+
+                        else -> {
+                            onError("Received non-text frame: $frame")
+                            closeSession()
+                        }
                     }
-                } ?: run {
-                    onError("Failed to establish WebSocket connection")
-                    closeSession()
-                    throw IllegalStateException("Failed to establish WebSocket connection")
                 }
-            }.getOrElse { error ->
-                error.printStackTrace()
-                onError(error.message)
+            } ?: run {
+                onError("Failed to establish WebSocket connection")
                 closeSession()
+                throw IllegalStateException("Failed to establish WebSocket connection")
             }
+        }.getOrElse { error ->
+            error.printStackTrace()
+            onError(error.message)
+            closeSession()
+        }
+    }
+
+    suspend fun checkRegisteredOutputs(
+        publicKey: ByteArray,
+        privateKey: ByteArray,
+        intervalSeconds: Long = 30,
+        onSuccess: (List<RegisterAddress>) -> Unit,
+        onError: (String?) -> Unit
+    ) {
+        runCatching {
+            if (wsSession?.isActive != true) {
+                wsSession = client.value.webSocketSession(nostrRelay.invoke())
+            }
+            val sharedSecret = getSharedSecret(privateKey, publicKey)
+            wsSession?.let { session ->
+                withContext(Dispatchers.Default) {
+                    while (isActive) {
+                        var registeredAddressList: MutableList<RegisterAddress> = mutableListOf()
+                        val poolPublicKey = publicKey.toHexString()
+                        val subscribeMessage =
+                            """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$poolPublicKey"]}]""".trimMargin()
+                        launch {
+                            registeredAddressList = mutableListOf()
+                            session.send(Frame.Text(subscribeMessage))
+                            println("Sent message: $subscribeMessage")
+                        }
+
+                        val responseJob = launch {
+                            for (frame in session.incoming) {
+                                if (frame is Frame.Text) {
+                                    val response = frame.readText()
+                                    println("Received response: $response")
+                                    if (response.contains(poolPublicKey)) {
+                                        runCatching {
+                                            val elem = json.parseToJsonElement(frame.readText()).jsonArray
+                                            if (elem[0].jsonPrimitive.content == "EVENT") {
+                                                val activePools = getPoolsStore().get()
+                                                    ?.sortedByDescending { it.timeout }
+                                                    ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                                                val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
+                                                val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                                val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
+                                                val registeredAddress = json.decodeFromString<RegisterAddress>(decryptedContent)
+                                                registeredAddressList += registeredAddress
+                                                if (registeredAddressList.size == totalPeers) {
+                                                    onSuccess(registeredAddressList.toList())
+                                                    closeSession()
+                                                }
+                                                // this@withContext.cancel()
+                                            }
+                                        }.getOrElse {
+                                            it.printStackTrace()
+                                        }
+                                    } else {
+                                        println("waiting for response from server")
+                                    }
+                                }
+                            }
+                        }
+
+                        delay(intervalSeconds * 1000)
+                        responseJob.cancel()
+                    }
+                }
+            } ?: run {
+                onError("Failed to establish WebSocket connection")
+                closeSession()
+                throw IllegalStateException("Failed to establish WebSocket connection")
+            }
+        }.getOrElse { error ->
+            error.printStackTrace()
+            onError(error.message)
+            closeSession()
+        }
     }
 
     suspend fun requestPoolCredentials(
@@ -172,59 +251,59 @@ class NostrClient {
         onSuccess: (NostrEvent) -> Unit,
         onError: (String?) -> Unit
     ) {
-            runCatching {
-                if (wsSession?.isActive != true) {
-                    wsSession = client.value.webSocketSession(nostrRelay.invoke())
-                }
+        runCatching {
+            if (wsSession?.isActive != true) {
+                wsSession = client.value.webSocketSession(nostrRelay.invoke())
+            }
 
-                wsSession?.let { session ->
-                    withContext(Dispatchers.Default) {
-                        while (isActive) {
-                            val subscribeMessage =
-                                """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$requestPublicKey"]}]""".trimMargin()
-                            launch {
-                                session.send(Frame.Text(subscribeMessage))
-                                println("Sent message: $subscribeMessage")
-                            }
+            wsSession?.let { session ->
+                withContext(Dispatchers.Default) {
+                    while (isActive) {
+                        val subscribeMessage =
+                            """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$requestPublicKey"]}]""".trimMargin()
+                        launch {
+                            session.send(Frame.Text(subscribeMessage))
+                            println("Sent message: $subscribeMessage")
+                        }
 
-                            val responseJob = launch {
-                                for (frame in session.incoming) {
-                                    if (frame is Frame.Text) {
-                                        val response = frame.readText()
-                                        println("Received response: $response")
-                                        if (response.contains(requestPublicKey)) {
-                                            runCatching {
-                                                val elem = json.parseToJsonElement(frame.readText()).jsonArray
-                                                if (elem[0].jsonPrimitive.content == "EVENT") {
-                                                    val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
-                                                    onSuccess(nostrEvent)
-                                                    closeSession()
-                                                   // this@withContext.cancel()
-                                                }
-                                            }.getOrElse {
-                                                it.printStackTrace()
+                        val responseJob = launch {
+                            for (frame in session.incoming) {
+                                if (frame is Frame.Text) {
+                                    val response = frame.readText()
+                                    println("Received response: $response")
+                                    if (response.contains(requestPublicKey)) {
+                                        runCatching {
+                                            val elem = json.parseToJsonElement(frame.readText()).jsonArray
+                                            if (elem[0].jsonPrimitive.content == "EVENT") {
+                                                val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                                onSuccess(nostrEvent)
+                                                closeSession()
+                                                // this@withContext.cancel()
                                             }
-                                        } else {
-                                            println("waiting for response from server")
+                                        }.getOrElse {
+                                            it.printStackTrace()
                                         }
+                                    } else {
+                                        println("waiting for response from server")
                                     }
                                 }
                             }
-
-                            delay(intervalSeconds * 1000)
-                            responseJob.cancel()
                         }
+
+                        delay(intervalSeconds * 1000)
+                        responseJob.cancel()
                     }
-                } ?: run {
-                    onError("Failed to establish WebSocket connection")
-                    closeSession()
-                    throw IllegalStateException("Failed to establish WebSocket connection")
                 }
-            }.getOrElse { error ->
-                error.printStackTrace()
-                onError(error.message)
+            } ?: run {
+                onError("Failed to establish WebSocket connection")
                 closeSession()
+                throw IllegalStateException("Failed to establish WebSocket connection")
             }
+        }.getOrElse { error ->
+            error.printStackTrace()
+            onError(error.message)
+            closeSession()
+        }
     }
 
     suspend fun activePoolsCredentialsSender() {
@@ -241,9 +320,9 @@ class NostrClient {
                         val activePoolsPublicKeys = activePools?.map { it.publicKey } ?: emptyList()
                         val formattedKeys = activePoolsPublicKeys.joinToString(
                             separator = ", ",
-                            prefix = "[\"",
-                            postfix = "\"]",
-                        ) { it }
+                            prefix = "[",
+                            postfix = "]",
+                        ){ "\"$it\"" }
                         val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],
                             |"#p":$formattedKeys}]""".trimMargin()
                         launch {

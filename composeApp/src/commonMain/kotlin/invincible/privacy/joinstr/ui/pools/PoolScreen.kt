@@ -35,7 +35,8 @@ import invincible.privacy.joinstr.ui.components.ProgressDialog
 
 @Composable
 fun PoolScreen(
-    poolsViewModel: PoolsViewModel
+    poolsViewModel: PoolsViewModel,
+    onSuccess: () -> Unit
 ) {
     val isLoading by poolsViewModel.isLoading.collectAsState()
 
@@ -145,7 +146,10 @@ fun PoolScreen(
             enter = expandIn(expandFrom = Alignment.Center),
             exit = shrinkOut(shrinkTowards = Alignment.Center)
         ) {
-            OtherPoolsScreen(poolsViewModel = poolsViewModel)
+            OtherPoolsScreen(
+                poolsViewModel = poolsViewModel,
+                onSuccess = onSuccess
+            )
         }
     }
 }

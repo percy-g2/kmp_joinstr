@@ -179,7 +179,9 @@ fun App(
                     animatedComposable(NavItem.Pools.path) {
                         PoolScreen(
                             poolsViewModel = poolsViewModel
-                        )
+                        ) {
+                            navController.navigate(NavItem.Home.path)
+                        }
                     }
                     animatedComposable(NavItem.Settings.path) {
                         SettingsScreen {

@@ -11,6 +11,7 @@ import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
+import invincible.privacy.joinstr.model.RegisterAddress
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
@@ -25,6 +26,7 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.util.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -192,14 +194,47 @@ class PoolsViewModel : ViewModel() {
         }
     }
 
+    fun checkRegisteredOutputs(
+        poolId: String,
+        publicKey: ByteArray,
+        privateKey: ByteArray,
+        showWaitingDialog: MutableState<Boolean>,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            nostrClient.checkRegisteredOutputs(
+                publicKey = publicKey,
+                privateKey = privateKey,
+                onSuccess = { registeredAddressList ->
+                    viewModelScope.launch {
+                        getPoolsStore().update { existingPools ->
+                            existingPools?.map {
+                                if (it.id == poolId) {
+                                    it.copy(peersData = registeredAddressList)
+                                } else it
+                            } ?: emptyList()
+                        }
+                    }
+                    showWaitingDialog.value = false
+                    viewModelScope.launch(Dispatchers.Main) {
+                        onSuccess.invoke()
+                    }
+                },
+                onError = { error ->
+                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                    SnackbarController.showMessage(msg)
+                    showWaitingDialog.value = false
+                }
+            )
+        }
+    }
+
     fun joinRequest(
         publicKey: ByteArray,
         privateKey: ByteArray,
-        relay: String,
         poolPublicKey: String,
-        denomination: Float,
-        peers: Int,
-        showJoinDialog: MutableState<Boolean>
+        showJoinDialog: MutableState<Boolean>,
+        onSuccess: (LocalPoolContent) -> Unit
     ) {
         viewModelScope.launch {
             showJoinDialog.value = true
@@ -233,18 +268,18 @@ class PoolsViewModel : ViewModel() {
                                         httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                                             val decryptedContent = decrypt(eventWithCredentials.content, sharedSecret)
                                             val credentials = json.decodeFromString<Credentials>(decryptedContent)
+                                            val pool = LocalPoolContent(
+                                                id = credentials.id,
+                                                type = "new_pool",
+                                                peers = credentials.peers,
+                                                denomination = credentials.denomination,
+                                                relay = credentials.relay,
+                                                feeRate = credentials.feeRate,
+                                                timeout = credentials.timeout,
+                                                publicKey = credentials.publicKey,
+                                                privateKey = credentials.privateKey
+                                            )
                                             poolStore.update {
-                                                val pool = LocalPoolContent(
-                                                    id = credentials.id,
-                                                    type = "new_pool",
-                                                    peers = credentials.peers,
-                                                    denomination = credentials.denomination,
-                                                    relay = credentials.relay,
-                                                    feeRate = credentials.feeRate,
-                                                    timeout = credentials.timeout,
-                                                    publicKey = credentials.publicKey,
-                                                    privateKey = credentials.privateKey
-                                                )
                                                 it?.plus(pool) ?: listOf(pool)
                                             }
                                             showJoinDialog.value = false
@@ -253,7 +288,10 @@ class PoolsViewModel : ViewModel() {
                                             registerOutput(
                                                 address = address,
                                                 publicKey = credentials.publicKey.hexToByteArray(),
-                                                privateKey = credentials.privateKey.hexToByteArray()
+                                                privateKey = credentials.privateKey.hexToByteArray(),
+                                                onSuccess = {
+                                                    onSuccess.invoke(pool)
+                                                }
                                             )
                                         } ?: run {
                                             showJoinDialog.value = false
@@ -284,15 +322,16 @@ class PoolsViewModel : ViewModel() {
     private fun registerOutput(
         address: String,
         privateKey: ByteArray,
-        publicKey: ByteArray
+        publicKey: ByteArray,
+        onSuccess: (() -> Unit)? = null
     ) {
         viewModelScope.launch {
-            _isLoading.value = true
-            val jsonObject = buildJsonObject {
-                put("address", JsonPrimitive(address))
-                put("type", JsonPrimitive("output"))
-            }
-            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+            if (onSuccess == null) _isLoading.value = true
+            val registerOutput = RegisterAddress(
+                address = address,
+                type = "output"
+            )
+            val data = json.encodeToString(registerOutput)
             val sharedSecret = getSharedSecret(privateKey, publicKey)
             val encryptedMessage = encrypt(data, sharedSecret)
             val nostrEvent = createEvent(
@@ -305,11 +344,12 @@ class PoolsViewModel : ViewModel() {
             nostrClient.sendEvent(
                 event = nostrEvent,
                 onSuccess = {
-                    _isLoading.value = false
+                    if (onSuccess == null) _isLoading.value = false
+                    onSuccess?.invoke()
                     SnackbarController.showMessage("Output registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
                 },
                 onError = { error ->
-                    _isLoading.value = false
+                    if (onSuccess == null) _isLoading.value = false
                     val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
                     SnackbarController.showMessage(msg)
                 }
