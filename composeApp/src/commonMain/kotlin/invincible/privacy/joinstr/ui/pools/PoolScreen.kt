@@ -117,12 +117,10 @@ fun PoolScreen(
         HorizontalDivider(
             modifier = Modifier
                 .shadow(
-                    elevation = 3.dp,
-                    shape = RoundedCornerShape(3.dp),
-                    ambientColor = MaterialTheme.colorScheme.onBackground.copy(alpha = .2f),
-                    spotColor = MaterialTheme.colorScheme.onBackground.copy(alpha = .2f)
+                    elevation = 1.dp,
+                    spotColor = MaterialTheme.colorScheme.onSurface
                 ),
-            color = MaterialTheme.colorScheme.background.copy(alpha = .5f),
+            color = MaterialTheme.colorScheme.surface,
             thickness = 1.dp
         )
 

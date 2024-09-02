@@ -106,7 +106,7 @@ fun SettingsScreen(
                 ),
                 modifier = Modifier.shadow(
                     elevation = appBarElevation,
-                    spotColor = if (isDarkTheme) Color.Gray else Color.Black
+                    spotColor = if (isDarkTheme) Color.White else Color.Black
                 ),
                 title = { Text("Settings") },
                 navigationIcon = {
