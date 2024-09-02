@@ -27,9 +27,11 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
@@ -51,9 +53,36 @@ class PoolsViewModel : ViewModel() {
     private val _localPools = MutableStateFlow<List<LocalPoolContent>?>(null)
     val localPools: StateFlow<List<LocalPoolContent>?> = _localPools.asStateFlow()
 
+    private val _activePoolReady = MutableStateFlow(false)
+    val activePoolReady: StateFlow<Boolean> = _activePoolReady.asStateFlow()
+
     init {
         viewModelScope.launch {
             nostrClient.activePoolsCredentialsSender()
+        }
+        viewModelScope.launch {
+            runCatching {
+                checkForReadyActivePools()
+            }.getOrElse {
+                it.printStackTrace()
+            }
+        }
+    }
+
+    fun resetActivePoolReady() {
+        viewModelScope.launch {
+            _activePoolReady.value = false
+        }
+    }
+
+    private suspend fun checkForReadyActivePools() {
+        while (viewModelScope.isActive) {
+            val activePools = getPoolsStore().get()
+                ?.sortedByDescending { it.timeout }
+                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+            _activePoolReady.value = (activePools?.count { it.peersData.size == it.peers } ?: 0) > 0
+            // Delay for 30 seconds
+            delay(30_000L)
         }
     }
 

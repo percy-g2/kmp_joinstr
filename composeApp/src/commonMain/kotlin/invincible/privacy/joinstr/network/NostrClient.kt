@@ -315,6 +315,7 @@ class NostrClient {
             wsActivePoolsCredentialsSender?.let { session ->
                 withContext(Dispatchers.Default) {
                     while (isActive) {
+                        var registeredAddressList: MutableList<RegisterAddress> = mutableListOf()
                         val activePools = getPoolsStore().get()?.sortedByDescending { it.timeout }
                             ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                         val activePoolsPublicKeys = activePools?.map { it.publicKey } ?: emptyList()
@@ -327,6 +328,7 @@ class NostrClient {
                             |"#p":$formattedKeys}]""".trimMargin()
                         launch {
                             if (activePoolsPublicKeys.isNotEmpty()) {
+                                registeredAddressList = mutableListOf()
                                 session.send(Frame.Text(subscribeMessage))
                                 println("Sent message: $subscribeMessage")
                             }
@@ -344,6 +346,32 @@ class NostrClient {
                                             val poolPublicKey = findMatchingPublicKey(activePoolsPublicKeys, nostrEvent.tags)
                                             if (poolPublicKey != null) {
                                                 getPoolsStore().get().orEmpty().find { it.publicKey == poolPublicKey }?.let { pool ->
+                                                    val privateKey = pool.privateKey.hexToByteArray()
+                                                    val publicKey = pool.publicKey.hexToByteArray()
+                                                    runCatching {
+                                                        val sharedSecret = getSharedSecret(
+                                                            privateKey = privateKey,
+                                                            pubKey = publicKey
+                                                        )
+                                                        val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
+                                                        val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
+                                                        val registeredAddress = json.decodeFromString<RegisterAddress>(decryptedContent)
+                                                        registeredAddressList += registeredAddress
+                                                        println("registeredAddressList >> " + registeredAddressList.joinToString(","))
+                                                        if (registeredAddressList.size == totalPeers && pool.peersData.isEmpty()) {
+                                                            getPoolsStore().update { existingPools ->
+                                                                existingPools?.map {
+                                                                    if (it.id == pool.id) {
+                                                                        it.copy(peersData = registeredAddressList)
+                                                                    } else it
+                                                                } ?: emptyList()
+                                                            }
+                                                            println("registeredAddressList >> Updated")
+                                                        }
+                                                    }.getOrElse {
+                                                        it.printStackTrace()
+                                                    }
+
                                                     if (nostrEvent.pubKey != pool.publicKey &&
                                                         pool.peersPublicKeys.contains(nostrEvent.pubKey).not()
                                                     ) {
@@ -357,8 +385,6 @@ class NostrClient {
                                                             feeRate = pool.feeRate,
                                                             privateKey = pool.privateKey
                                                         )
-                                                        val privateKey = pool.privateKey.hexToByteArray()
-                                                        val publicKey = pool.publicKey.hexToByteArray()
                                                         val data = json.encodeToString(credentials)
                                                         val sharedSecret = getSharedSecret(privateKey, nostrEvent.pubKey.hexToByteArray())
                                                         val encryptedMessage = encrypt(data, sharedSecret)
