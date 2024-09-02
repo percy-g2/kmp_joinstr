@@ -207,7 +207,8 @@ fun CustomOutlinedButton(
             onTextLayout = { textLayoutResult: TextLayoutResult ->
                 textWidth = with(density) { textLayoutResult.size.width.toDp() }
             },
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(8.dp),
+            textAlign = TextAlign.Center
         )
     }
 }

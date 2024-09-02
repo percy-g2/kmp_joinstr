@@ -6,6 +6,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.utils.SettingsManager
@@ -37,16 +39,19 @@ class MainActivity : ComponentActivity() {
 
                 // Set the system UI bar colors based on the app and system theme
                 val barColor = colorScheme.background.toArgb()
+                val navBarColor = colorScheme.surfaceColorAtElevation(3.dp).toArgb()
 
                 val isSystemInDarkTheme = isSystemInDarkTheme()
                 LaunchedEffect(themeState) {
                     if (themeState == Theme.LIGHT.id || (!isSystemInDarkTheme && themeState == Theme.SYSTEM.id)) {
                         enableEdgeToEdge(
-                            statusBarStyle = SystemBarStyle.light(barColor, barColor)
+                            statusBarStyle = SystemBarStyle.light(barColor, barColor),
+                            navigationBarStyle = SystemBarStyle.light(navBarColor, navBarColor)
                         )
                     } else {
                         enableEdgeToEdge(
-                            statusBarStyle = SystemBarStyle.dark(barColor)
+                            statusBarStyle = SystemBarStyle.dark(barColor),
+                            navigationBarStyle = SystemBarStyle.dark(navBarColor)
                         )
                     }
                 }
