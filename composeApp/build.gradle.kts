@@ -118,6 +118,8 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
 
             implementation(libs.okio)
+
+            implementation(libs.qr.kit)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -176,6 +178,7 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
+            isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         getByName("release") {

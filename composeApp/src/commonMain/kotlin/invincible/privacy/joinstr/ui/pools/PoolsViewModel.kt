@@ -192,6 +192,8 @@ class PoolsViewModel : ViewModel() {
     }
 
     fun joinRequest(
+        publicKey: ByteArray,
+        privateKey: ByteArray,
         relay: String,
         poolPublicKey: String,
         denomination: Float,
@@ -203,8 +205,6 @@ class PoolsViewModel : ViewModel() {
             val jsonObject = buildJsonObject {
                 put("type", JsonPrimitive("join_pool"))
             }
-            val privateKey = generatePrivateKey()
-            val publicKey = getPublicKey(privateKey)
             val data = json.encodeToString(JsonObject.serializer(), jsonObject)
             val sharedSecret = getSharedSecret(privateKey, poolPublicKey.hexToByteArray())
             val encryptedMessage = encrypt(data, sharedSecret)
