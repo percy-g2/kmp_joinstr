@@ -36,10 +36,16 @@ sealed class NavItem {
             title = NavTitle.SETTINGS,
             icon = Icons.Default.Settings
         )
+
+    object InputRegistration :
+        Item(
+            path = NavPath.INPUT_REGISTRATION.toString(),
+            title = ""
+        )
 }
 
 enum class NavPath {
-    HOME, POOLS, SETTINGS
+    HOME, POOLS, SETTINGS, INPUT_REGISTRATION
 }
 
 object NavTitle {

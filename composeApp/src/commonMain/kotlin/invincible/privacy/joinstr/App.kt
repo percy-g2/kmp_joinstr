@@ -47,6 +47,7 @@ import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
+import invincible.privacy.joinstr.ui.home.HomeScreen
 import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.ui.pools.PoolsViewModel
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
@@ -172,8 +173,8 @@ fun App(
                 }
             ) { innerPadding ->
 
-                if (activePoolReady && navBackStackEntry?.destination?.route != NavItem.Home.path) {
-                    navController.navigate(NavItem.Home.path)
+                if (activePoolReady && navBackStackEntry?.destination?.route != NavItem.InputRegistration.path) {
+                    navController.navigate(NavItem.InputRegistration.path)
                 }
 
                 NavHost(
@@ -184,13 +185,19 @@ fun App(
                     startDestination = NavItem.Home.path
                 ) {
                     animatedComposable(NavItem.Home.path) {
+                        HomeScreen()
+                    }
+
+                    animatedComposable(NavItem.InputRegistration.path) {
                         RegisterInputScreen()
                     }
+
                     animatedComposable(NavItem.Pools.path) {
                         PoolScreen(
                             poolsViewModel = poolsViewModel
                         )
                     }
+
                     animatedComposable(NavItem.Settings.path) {
                         SettingsScreen {
                             navController.popBackStack()

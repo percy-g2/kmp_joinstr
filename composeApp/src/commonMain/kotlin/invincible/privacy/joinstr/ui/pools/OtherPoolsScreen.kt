@@ -213,52 +213,14 @@ fun OtherPoolsScreen(
         )
     }
 
-    if (showJoinDialog.value) {
+    if (showJoinDialog.value || showWaitingDialog.value) {
         BasicAlertDialog(
             onDismissRequest = {
-                showJoinDialog.value = false
-            },
-            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-            content = {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier = Modifier.wrapContentSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.pool_request),
-                            style = MaterialTheme.typography.labelMedium
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = stringResource(Res.string.waiting_for_pool_credentials),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        CircularProgressIndicator()
-                    }
+                if (showJoinDialog.value) {
+                    showJoinDialog.value = false
+                } else {
+                    showWaitingDialog.value = false
                 }
-            }
-        )
-    }
-
-    if (showWaitingDialog.value) {
-        BasicAlertDialog(
-            onDismissRequest = {
-                showWaitingDialog.value = false
             },
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
             content = {
@@ -276,12 +238,29 @@ fun OtherPoolsScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "Waiting for other users to register outputs...",
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                        if (showJoinDialog.value) {
+                            Text(
+                                text = stringResource(Res.string.pool_request),
+                                style = MaterialTheme.typography.labelMedium
+                            )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(Res.string.waiting_for_pool_credentials),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                        } else {
+
+                            Text(
+                                text = "Waiting for other users to register outputs...",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
                         CircularProgressIndicator()
                     }
