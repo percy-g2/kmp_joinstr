@@ -41,7 +41,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.NavItem
-import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -52,12 +51,6 @@ import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.ui.pools.PoolsViewModel
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
-import invincible.privacy.joinstr.utils.Event
-import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
-import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
-import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
-import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
-import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
@@ -75,11 +68,6 @@ fun App(
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
 
     LaunchedEffect(Unit) {
-        /*runCatching {
-            sendTestEvent()
-        }.getOrElse {
-            it.printStackTrace()
-        }*/
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
         }
@@ -238,45 +226,6 @@ fun shrinkToCenter(): ExitTransition {
         targetScale = 0.8f,
         transformOrigin = TransformOrigin.Center
     ) + fadeOut(animationSpec = tween(300))
-}
-
-suspend fun sendTestEvent() {
-    val privateKey = generatePrivateKey()
-    val publicKey = getPublicKey(privateKey)
-    val sharedSecret = getSharedSecret(privateKey, publicKey)
-    val message = "This is a secret message"
-
-    // Encrypt the message
-    val encryptedMessage = encrypt(message, sharedSecret)
-    println("Encrypted Message: $encryptedMessage")
-
-    // Decrypt the message
-    val decryptedMessage = decrypt(encryptedMessage, sharedSecret)
-    println("Decrypted Message: $decryptedMessage")
-
-    // Verify that the decrypted message matches the original message
-    if (message == decryptedMessage) {
-        println("Decryption successful! The decrypted message matches the original.")
-    } else {
-        println("Decryption failed! The decrypted message does not match the original.")
-    }
-    val content = "This is a test Nostr event"
-    val nostrEvent = createEvent(
-        content,
-        Event.NOTE,
-        privateKey,
-        publicKey
-    )
-    println("Event to be sent: $nostrEvent")
-    NostrClient().sendEvent(
-        event = nostrEvent,
-        onError = {
-            println("Error sending event")
-        },
-        onSuccess = {
-            println("Event sent successfully")
-        }
-    )
 }
 
 expect fun getWebSocketClient(): HttpClient

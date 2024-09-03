@@ -33,7 +33,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
-class NostrClient {
+open class NostrClient {
     private val nostrRelay = suspend {
         SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
     }
@@ -100,7 +100,7 @@ class NostrClient {
 
     suspend fun sendEvent(
         event: NostrEvent,
-        onSuccess: () -> Unit,
+        onSuccess: (String) -> Unit,
         onError: (String?) -> Unit
     ) {
         runCatching {
@@ -126,7 +126,7 @@ class NostrClient {
                                 when (responseArray[0].jsonPrimitive.content) {
                                     "OK" -> {
                                         if (responseArray[2].jsonPrimitive.boolean) {
-                                            onSuccess()
+                                            onSuccess(responseArray[1].jsonPrimitive.content)
                                             println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
                                         } else {
                                             onError("Error: ${responseArray[3].jsonPrimitive.content}")

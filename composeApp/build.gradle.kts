@@ -152,6 +152,12 @@ kotlin {
 
             implementation(npm("@noble/secp256k1", "1.7.1"))
         }
+
+        commonTest.dependencies {
+            implementation(libs.testng)
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+        }
     }
 }
 
