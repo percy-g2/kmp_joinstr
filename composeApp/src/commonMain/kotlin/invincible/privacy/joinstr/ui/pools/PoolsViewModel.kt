@@ -26,7 +26,6 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.util.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -227,8 +226,7 @@ class PoolsViewModel : ViewModel() {
         poolId: String,
         publicKey: ByteArray,
         privateKey: ByteArray,
-        showWaitingDialog: MutableState<Boolean>,
-        onSuccess: () -> Unit
+        showWaitingDialog: MutableState<Boolean>
     ) {
         viewModelScope.launch {
             nostrClient.checkRegisteredOutputs(
@@ -243,10 +241,6 @@ class PoolsViewModel : ViewModel() {
                                 } else it
                             } ?: emptyList()
                         }
-                    }
-                    showWaitingDialog.value = false
-                    viewModelScope.launch(Dispatchers.Main) {
-                        onSuccess.invoke()
                     }
                 },
                 onError = { error ->
