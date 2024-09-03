@@ -46,7 +46,6 @@ import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
-import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.ui.pools.PoolsViewModel
@@ -75,7 +74,11 @@ fun App(
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
 
     LaunchedEffect(Unit) {
-        //sendTestEvent()
+        /*runCatching {
+            sendTestEvent()
+        }.getOrElse {
+            it.printStackTrace()
+        }*/
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
         }
@@ -171,7 +174,6 @@ fun App(
 
                 if (activePoolReady && navBackStackEntry?.destination?.route != NavItem.Home.path) {
                     navController.navigate(NavItem.Home.path)
-                    SnackbarController.showMessage(message = "Pool joined!\nYou can register your input now!")
                 }
 
                 NavHost(

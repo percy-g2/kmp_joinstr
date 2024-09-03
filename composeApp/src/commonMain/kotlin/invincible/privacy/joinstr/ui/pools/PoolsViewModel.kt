@@ -25,7 +25,6 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
-import io.ktor.util.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -146,9 +145,7 @@ class PoolsViewModel : ViewModel() {
                         )
                         httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                             val privateKey = generatePrivateKey()
-                            val publicKey = if (PlatformUtils.IS_BROWSER) {
-                                getPublicKey(privateKey).drop(1).take(32).toByteArray()
-                            } else getPublicKey(privateKey)
+                            val publicKey = getPublicKey(privateKey)
                             val poolId = generatePoolId()
                             val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
                             val poolContent = PoolContent(

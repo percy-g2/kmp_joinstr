@@ -1,7 +1,9 @@
 package invincible.privacy.joinstr.ui.pools
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,12 +16,17 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,13 +46,56 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import invincible.privacy.joinstr.ui.components.SnackbarController
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CreateNewPoolScreen(
     poolsViewModel: PoolsViewModel
 ) {
+    val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
+    val showWaitingDialog = remember { mutableStateOf(false) }
+
+    if (showWaitingDialog.value && activePoolReady) {
+        showWaitingDialog.value = false
+    }
+
+    if (showWaitingDialog.value) {
+        BasicAlertDialog(
+            onDismissRequest = {
+                showWaitingDialog.value = false
+            },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            content = {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier.wrapContentSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Waiting for other users to register outputs...",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+        )
+    }
+
     BoxWithConstraints(
         contentAlignment = Alignment.TopCenter
     ) {
@@ -185,6 +235,7 @@ fun CreateNewPoolScreen(
                 poolsViewModel.createPool(denomination.text, peers) {
                     denomination = TextFieldValue("")
                     peers = ""
+                    showWaitingDialog.value = true
                 }
             }
         ) {

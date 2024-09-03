@@ -73,7 +73,7 @@ actual fun pubkeyCreate(privateKey: ByteArray): ByteArray {
         val byteArray = uint8PublicKey.toByteArray()
         println("Public key: ${byteArray.toHexString()}")
 
-        byteArray
+        byteArray.drop(1).take(32).toByteArray()
     } catch (e: Throwable) {
         println("Error in pubkeyCreate: ${e.message}")
         println("Stack trace: ${e.stackTraceToString()}")
@@ -82,17 +82,37 @@ actual fun pubkeyCreate(privateKey: ByteArray): ByteArray {
 }
 
 actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray {
-    val uint8PrivateKey = privateKey.toUint8Array()
-    val uint8PubKey = pubKey.toUint8Array()
-
     return try {
         println("Generating shared secret...")
-        val uint8SharedSecret = Secp256k1.getSharedSecret(uint8PrivateKey, uint8PubKey)
 
-        val byteArray = uint8SharedSecret.toByteArray()
-        println("Shared secret: ${byteArray.toHexString()}")
+        if (pubKey.isEmpty() || privateKey.isEmpty()) {
+            throw IllegalArgumentException("Public key or private key cannot be empty")
+        }
 
-        byteArray.copyOfRange(1, 33)
+        // Ensure the public key is in the correct format (33 or 65 bytes)
+        val adjustedPubKey = when (pubKey.size) {
+            32 -> byteArrayOf(0x02.toByte()) + pubKey // Assuming compressed key, prefix with 0x02
+            33, 65 -> pubKey // Already in correct format
+            else -> throw IllegalArgumentException("Invalid public key length: expected 32, 33, or 65 bytes, got ${pubKey.size}")
+        }
+
+        if (privateKey.size != 32) {
+            throw IllegalArgumentException("Invalid private key length: expected 32 bytes, got ${privateKey.size}")
+        }
+
+        // Convert ByteArray to Uint8Array
+        val privateKeyUint8 = privateKey.toUint8Array()
+        val pubKeyUint8 = adjustedPubKey.toUint8Array()
+
+        // Generate shared secret
+        val sharedSecretUint8 = Secp256k1.getSharedSecret(privateKeyUint8, pubKeyUint8)
+
+        // Convert Uint8Array to ByteArray
+        val sharedSecret = sharedSecretUint8.toByteArray()
+
+        println("Shared secret: ${sharedSecret.toHexString()}")
+
+        sharedSecret.copyOfRange(1,33)
     } catch (e: Throwable) {
         println("Error in getSharedSecret: ${e.message}")
         println("Stack trace: ${e.stackTraceToString()}")

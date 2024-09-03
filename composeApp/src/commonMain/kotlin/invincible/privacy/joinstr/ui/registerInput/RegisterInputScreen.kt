@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
@@ -48,6 +50,7 @@ import joinstr.composeapp.generated.resources.register
 import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -58,6 +61,7 @@ fun RegisterInputScreen(
     val listUnspent by viewModel.listUnspent
     val selectedTxId by viewModel.selectedTxId
     var autoRotation by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Surface(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
@@ -86,7 +90,13 @@ fun RegisterInputScreen(
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 12.dp),
+                            modifier = Modifier
+                                .padding(vertical = 12.dp)
+                                .clickable {
+                                    scope.launch {
+                                        getPoolsStore().reset()
+                                    }
+                                },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

@@ -119,7 +119,7 @@ kotlin {
 
             implementation(libs.okio)
 
-            implementation(libs.qr.kit)
+            implementation(libs.qrose)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -167,8 +167,8 @@ android {
         applicationId = "invincible.privacy.joinstr"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 5
-        versionName = "0.0.5"
+        versionCode = 6
+        versionName = "0.0.6"
     }
     packaging {
         resources {
@@ -177,7 +177,8 @@ android {
     }
     buildTypes {
         debug {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

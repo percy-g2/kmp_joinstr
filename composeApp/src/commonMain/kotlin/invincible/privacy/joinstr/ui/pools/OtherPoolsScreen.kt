@@ -70,16 +70,17 @@ import invincible.privacy.joinstr.model.copyToLocalPoolContent
 import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
+import io.github.alexzhirkevich.qrose.options.QrBrush
+import io.github.alexzhirkevich.qrose.options.QrColors
+import io.github.alexzhirkevich.qrose.options.solid
+import io.github.alexzhirkevich.qrose.rememberQrCodePainter
+import io.ktor.util.*
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.no_active_pools
 import joinstr.composeapp.generated.resources.pool_request
 import joinstr.composeapp.generated.resources.something_went_wrong
 import joinstr.composeapp.generated.resources.waiting_for_pool_credentials
 import org.jetbrains.compose.resources.stringResource
-import qrgenerator.qrkitpainter.QrKitBrush
-import qrgenerator.qrkitpainter.QrKitColors
-import qrgenerator.qrkitpainter.rememberQrKitPainter
-import qrgenerator.qrkitpainter.solidBrush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,13 +113,15 @@ fun OtherPoolsScreen(
                 showQrCodeDialog.value.first?.let { poolContent ->
 
                     val privateKey = generatePrivateKey()
-                    val publicKey = getPublicKey(privateKey)
+                    val publicKey = if (PlatformUtils.IS_BROWSER) {
+                        getPublicKey(privateKey).drop(1).take(32).toByteArray()
+                    } else getPublicKey(privateKey)
 
                     val qrCodeColor = MaterialTheme.colorScheme.onBackground
-                    val painter = rememberQrKitPainter(
+                    val painter = rememberQrCodePainter(
                         data = poolContent.publicKey,
-                        colors = QrKitColors(
-                            dark = QrKitBrush.solidBrush(
+                        colors = QrColors(
+                            dark = QrBrush.solid(
                                 color = qrCodeColor
                             )
                         )
