@@ -9,20 +9,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.capitalize
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import contentScale.ContentScale
+import invincible.privacy.joinstr.model.BlockchainInfo
+import invincible.privacy.joinstr.model.NetworkInfo
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.joinstr_logo
 import kottieComposition.KottieCompositionSpec
@@ -32,12 +42,41 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import utils.KottieConstants
 
+@Composable
+fun HomeScreen(
+    homeScreenViewModel: HomeScreenViewModel = viewModel{ HomeScreenViewModel() }
+) {
+    val networkInfo by homeScreenViewModel.networkInfo.collectAsState()
+    val blockchainInfo by homeScreenViewModel.blockchainInfo.collectAsState()
+    val isLoading by homeScreenViewModel.isLoading.collectAsState()
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        LogoAnimation()
+
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else {
+            blockchainInfo?.let { blockchain ->
+                networkInfo?.let { network ->
+                    BlockchainInfoDisplay(blockchain, network)
+                }
+            } ?: run {
+                ErrorMessage()
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun HomeScreen() {
+fun LogoAnimation() {
     var animation by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit){
+    LaunchedEffect(Unit) {
         animation = Res.readBytes("files/wave.json").decodeToString()
     }
 
@@ -51,7 +90,7 @@ fun HomeScreen() {
     )
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.padding(top = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         KottieAnimation(
@@ -83,4 +122,62 @@ fun HomeScreen() {
             )
         }
     }
+}
+
+@Composable
+fun BlockchainInfoDisplay(blockchain: BlockchainInfo, network: NetworkInfo) {
+    val version = Regex("\\d+\\.\\d+\\.\\d+").find(network.subversion)?.value ?: ""
+    val textInsideParentheses = Regex("\\((.*?)\\)").find(network.subversion)?.groupValues?.get(1) ?: ""
+
+    InfoTextField(
+        value = "Bitcoin Core v$version($textInsideParentheses)",
+        label = "Version"
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    InfoTextField(
+        value = blockchain.chain.capitalize(Locale.current),
+        label = "Network"
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    InfoTextField(
+        value = "${formatNumber(blockchain.blocks)} Blocks",
+        label = "Block Height"
+    )
+}
+
+@Composable
+fun InfoTextField(value: String, label: String) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { /* no-op */ },
+        textStyle = MaterialTheme.typography.bodyMedium,
+        enabled = false,
+        label = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            disabledTextColor = MaterialTheme.colorScheme.onBackground,
+            disabledLabelColor = MaterialTheme.colorScheme.onBackground
+        )
+    )
+}
+
+@Composable
+fun ErrorMessage() {
+    Text(
+        text = "Verify Your Node Configuration!",
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.errorContainer
+    )
+}
+
+fun formatNumber(input: Int): String {
+    return input.toString().reversed().chunked(3).joinToString(",").reversed()
 }

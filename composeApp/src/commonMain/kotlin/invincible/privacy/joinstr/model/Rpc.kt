@@ -13,6 +13,7 @@ data class RpcRequestBody(
 enum class Methods(val value: String) {
     LIST_UNSPENT("listunspent"),
     NEW_ADDRESS("getnewaddress"),
+    NETWORK_INFO("getnetworkinfo"),
     BLOCK_CHAIN_INFO("getblockchaininfo");
 }
 

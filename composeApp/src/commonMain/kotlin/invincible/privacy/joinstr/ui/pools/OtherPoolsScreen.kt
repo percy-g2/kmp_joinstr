@@ -87,7 +87,7 @@ import org.jetbrains.compose.resources.stringResource
 fun OtherPoolsScreen(
     poolsViewModel: PoolsViewModel
 ) {
-    val poolContents by poolsViewModel.otherPoolEvents.collectAsState(initial = null)
+    val poolContents by poolsViewModel.otherPoolEvents.collectAsState()
     val isLoading by poolsViewModel.isLoading.collectAsState()
     val showJoinDialog = remember { mutableStateOf(false) }
     val showWaitingDialog = remember { mutableStateOf(false) }
