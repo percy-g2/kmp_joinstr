@@ -120,6 +120,8 @@ kotlin {
             implementation(libs.okio)
 
             implementation(libs.qrose)
+
+            implementation(libs.kottie)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
