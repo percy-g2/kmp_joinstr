@@ -29,7 +29,7 @@ class HomeScreenViewModel : ViewModel() {
         fetchNetworkInfo()
     }
 
-    private fun fetchNetworkInfo() {
+    fun fetchNetworkInfo() {
         viewModelScope.launch {
             _isLoading.value = true
             _networkInfo.value = httpClient.fetchNodeData<RpcResponse<NetworkInfo>>(

@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -50,23 +54,37 @@ fun HomeScreen(
     val blockchainInfo by homeScreenViewModel.blockchainInfo.collectAsState()
     val isLoading by homeScreenViewModel.isLoading.collectAsState()
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        LogoAnimation()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            LogoAnimation()
 
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else {
-            blockchainInfo?.let { blockchain ->
-                networkInfo?.let { network ->
-                    BlockchainInfoDisplay(blockchain, network)
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                blockchainInfo?.let { blockchain ->
+                    networkInfo?.let { network ->
+                        BlockchainInfoDisplay(blockchain, network)
+                    }
+                } ?: run {
+                    ErrorMessage()
                 }
-            } ?: run {
-                ErrorMessage()
             }
+        }
+
+        FloatingActionButton(
+            onClick = { homeScreenViewModel.fetchNetworkInfo() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Refresh"
+            )
         }
     }
 }
