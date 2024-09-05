@@ -56,8 +56,18 @@ import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.native.concurrent.SharedImmutable
 
 @Composable
 @Preview
@@ -234,6 +244,27 @@ expect fun getSettingsStore(): KStore<Settings>
 expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 
 expect fun Float.convertFloatExponentialToString(): String
+
+/**
+ * Use this for running a background worker, to run your action in the background
+ * */
+expect object KmpBackgrounding {
+    fun createAndStartWorker(action: DefaultAction)
+}
+typealias DefaultAction = () -> Unit
+
+expect class KmpMainThread {
+    companion object {
+        /** Run any action inside the main thread.
+         * @param action the action that will be dispatched to the main thread
+         * */
+        fun runViaMainThread(action: DefaultAction)
+    }
+}
+
+expect object LocalNotification {
+    fun show(title: String, message: String)
+}
 
 expect fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray
 expect fun pubkeyCreate(privateKey: ByteArray): ByteArray

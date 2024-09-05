@@ -14,12 +14,162 @@ import io.ktor.client.engine.darwin.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import okio.Path.Companion.toPath
+import platform.BackgroundTasks.BGProcessingTaskRequest
+import platform.BackgroundTasks.BGTaskScheduler
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSCalendar
+import platform.Foundation.NSCalendarUnitDay
+import platform.Foundation.NSCalendarUnitHour
+import platform.Foundation.NSCalendarUnitMinute
+import platform.Foundation.NSCalendarUnitMonth
+import platform.Foundation.NSCalendarUnitSecond
+import platform.Foundation.NSCalendarUnitYear
+import platform.Foundation.NSDate
 import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.addTimeInterval
+import platform.Foundation.dateByAddingTimeInterval
+import platform.Foundation.timeIntervalSinceNow
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationBackgroundFetchIntervalNever
+import platform.UIKit.UIBackgroundFetchResult
+import platform.UserNotifications.UNAuthorizationOptionAlert
+import platform.UserNotifications.UNAuthorizationOptionSound
+import platform.UserNotifications.UNCalendarNotificationTrigger
+import platform.UserNotifications.UNMutableNotificationContent
+import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
+import platform.UserNotifications.UNNotificationPresentationOptionList
+import platform.UserNotifications.UNNotificationPresentationOptionSound
+import platform.UserNotifications.UNNotificationPresentationOptions
+import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationResponse
+import platform.UserNotifications.UNNotificationSound
+import platform.UserNotifications.UNUserNotificationCenter
+import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
+import platform.darwin.NSObject
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 import kotlin.time.Duration.Companion.seconds
+
+class NotificationDelegate : NSObject(), UNUserNotificationCenterDelegateProtocol {
+    override fun userNotificationCenter(
+        center: UNUserNotificationCenter,
+        willPresentNotification: UNNotification,
+        withCompletionHandler: (UNNotificationPresentationOptions) -> Unit
+    ) {
+        withCompletionHandler(UNNotificationPresentationOptionBanner or
+            UNNotificationPresentationOptionSound or
+            UNNotificationPresentationOptionList)
+    }
+
+    override fun userNotificationCenter(
+        center: UNUserNotificationCenter,
+        didReceiveNotificationResponse: UNNotificationResponse,
+        withCompletionHandler: () -> Unit
+    ) {
+        println("Received notification response: ${didReceiveNotificationResponse.notification.request.identifier}")
+        withCompletionHandler()
+    }
+}
+
+actual object LocalNotification {
+    private val delegate = NotificationDelegate()
+
+    init {
+        UNUserNotificationCenter.currentNotificationCenter().delegate = delegate
+    }
+
+    actual fun show(title: String, message: String) {
+        val center = UNUserNotificationCenter.currentNotificationCenter()
+
+        center.requestAuthorizationWithOptions(
+            UNAuthorizationOptionAlert or
+                UNAuthorizationOptionSound
+        ) { granted, error ->
+            if (granted) {
+                val content = UNMutableNotificationContent().apply {
+                    setTitle(title)
+                    setBody(message)
+                    setSound(UNNotificationSound.defaultSound())
+                }
+
+                val uuid = NSUUID.UUID().UUIDString
+                val date = NSDate().dateByAddingTimeInterval(1.0)
+                val components = NSCalendar.currentCalendar.components(
+                    NSCalendarUnitYear or NSCalendarUnitMonth or NSCalendarUnitDay or
+                        NSCalendarUnitHour or NSCalendarUnitMinute or NSCalendarUnitSecond,
+                    date
+                )
+                val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(components, false)
+
+                val request = UNNotificationRequest.requestWithIdentifier(
+                    uuid,
+                    content,
+                    trigger
+                )
+
+                center.addNotificationRequest(request) { requestError ->
+                    if (requestError != null) {
+                        println("Error showing notification: ${requestError.localizedDescription}")
+                    } else {
+                        println("Notification scheduled successfully with ID: $uuid")
+                    }
+                }
+                if (error != null) {
+                    println("Error notification: ${error.localizedDescription}")
+                }
+            } else {
+                println("Notification permission denied")
+            }
+        }
+    }
+}
+
+actual class KmpMainThread {
+    actual companion object {
+        actual fun runViaMainThread(action: DefaultAction) {
+            dispatch_async(dispatch_get_main_queue()) {
+                action()
+            }
+        }
+    }
+}
+actual object KmpBackgrounding {
+    private const val appleDefaultId = "invincible.privacy.joinstr.backgrounding"
+    lateinit var backgroundTask: DefaultAction
+
+    fun registerBackgroundService(){
+        KmpMainThread.runViaMainThread {
+            BGTaskScheduler.sharedScheduler.registerForTaskWithIdentifier(appleDefaultId, null){
+                backgroundTask()
+            }
+        }
+    }
+
+    fun cancel() {
+        KmpMainThread.runViaMainThread {
+            BGTaskScheduler.sharedScheduler.cancelAllTaskRequests()
+        }
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    actual fun createAndStartWorker(action: DefaultAction) {
+        action.invoke()
+        KmpMainThread.runViaMainThread {
+            // Schedule the background task
+            val processor = BGProcessingTaskRequest(appleDefaultId)
+
+            BGTaskScheduler.sharedScheduler.submitTaskRequest(processor, null)
+        }
+    }
+}
 
 actual fun getSettingsStore(): KStore<Settings> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)

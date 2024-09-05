@@ -35,10 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import contentScale.ContentScale
+import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.joinstr_logo
+import kotlinx.datetime.Clock
 import kottieComposition.KottieCompositionSpec
 import kottieComposition.animateKottieCompositionAsState
 import kottieComposition.rememberKottieComposition
@@ -76,7 +78,9 @@ fun HomeScreen(
         }
 
         FloatingActionButton(
-            onClick = { homeScreenViewModel.fetchNetworkInfo() },
+            onClick = {
+                LocalNotification.show("Joinstr","${Clock.System.now().toEpochMilliseconds()}")
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)

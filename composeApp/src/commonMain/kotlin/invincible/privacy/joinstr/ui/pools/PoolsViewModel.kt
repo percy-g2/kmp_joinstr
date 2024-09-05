@@ -3,6 +3,7 @@ package invincible.privacy.joinstr.ui.pools
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
@@ -25,6 +26,7 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +67,23 @@ class PoolsViewModel : ViewModel() {
                 it.printStackTrace()
             }
         }
+        GlobalScope.launch {
+            while (true) {
+                println("test ${Clock.System.now().toEpochMilliseconds()}")
+                LocalNotification.show("Joinstr", "${Clock.System.now().toEpochMilliseconds()}")
+                delay(3_000L)
+            }
+        }
+        /*
+        CoroutineScope(SupervisorJob()).launch {
+            while (true) {
+                KmpBackgrounding.createAndStartWorker {
+                    println("test ${Clock.System.now().toEpochMilliseconds()}")
+                    LocalNotification.show("Joinstr","${Clock.System.now().toEpochMilliseconds()}")
+                }
+                delay(3_000L)
+            }
+        }*/
     }
 
     fun resetActivePoolReady() {
