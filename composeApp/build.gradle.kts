@@ -34,7 +34,7 @@ kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     
@@ -124,8 +124,9 @@ kotlin {
             implementation(libs.kottie)
         }
         desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
-
+            implementation(compose.desktop.currentOs) {
+                exclude("org.jetbrains.compose.material")
+            }
             implementation(libs.ktor.client.cio)
 
             implementation(libs.kstore.file)
@@ -195,8 +196,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
@@ -216,11 +217,16 @@ android {
 
 compose.desktop {
     application {
+        buildTypes.release.proguard {
+            version.set("7.4.0")
+        }
         mainClass = "invincible.privacy.joinstr.MainKt"
-
+        buildTypes.release.proguard {
+            configurationFiles.from(files("compose-desktop.pro"))
+        }
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "invincible.privacy.joinstr"
+            packageName = "Joinstr"
             packageVersion = "1.0.0"
             macOS {
                 iconFile.set(project.file("src/macosMain/resources/AppIcon.icns"))

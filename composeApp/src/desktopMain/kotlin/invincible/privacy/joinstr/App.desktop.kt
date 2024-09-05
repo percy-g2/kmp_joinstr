@@ -16,11 +16,41 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import net.harawata.appdirs.AppDirsFactory
 import okio.Path.Companion.toPath
+import java.awt.SystemTray
+import java.awt.Toolkit
+import java.awt.TrayIcon
 import java.io.File
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import javax.swing.JOptionPane
 import kotlin.time.Duration.Companion.seconds
+
+actual object LocalNotification {
+
+    actual fun showNotification(title: String, message: String) {
+        if (SystemTray.isSupported()) {
+            val tray = SystemTray.getSystemTray()
+            val image = Toolkit.getDefaultToolkit().createImage("logo.webp")
+            val trayIcon = TrayIcon(image, title)
+            tray.add(trayIcon)
+            trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO)
+        } else {
+            // Fallback for systems that don't support SystemTray
+            JOptionPane.showMessageDialog(
+                null,
+                message,
+                title,
+                JOptionPane.INFORMATION_MESSAGE
+            )
+        }
+    }
+
+    actual suspend fun requestPermission(): Boolean {
+        // Desktop usually doesn't require explicit permission for notifications
+        return true
+    }
+}
 
 actual fun getSettingsStore(): KStore<Settings> {
     val directory = AppDirsFactory.getInstance()

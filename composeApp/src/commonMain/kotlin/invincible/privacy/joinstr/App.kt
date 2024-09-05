@@ -238,3 +238,16 @@ expect fun Float.convertFloatExponentialToString(): String
 expect fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray
 expect fun pubkeyCreate(privateKey: ByteArray): ByteArray
 expect suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshRandomBytes: ByteArray): ByteArray
+
+expect object LocalNotification {
+    fun showNotification(title: String, message: String)
+    suspend fun requestPermission(): Boolean
+}
+
+/* sample call
+scope.launch {
+    val result = LocalNotification.requestPermission()
+    if (result) {
+        LocalNotification.showNotification("title", "msg")
+    }
+}*/

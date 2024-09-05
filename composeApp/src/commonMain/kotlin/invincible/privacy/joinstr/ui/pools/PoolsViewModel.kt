@@ -25,6 +25,8 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +39,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
+@OptIn(DelicateCoroutinesApi::class)
 class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
     private val httpClient = HttpClient()
@@ -55,10 +58,10 @@ class PoolsViewModel : ViewModel() {
     val activePoolReady: StateFlow<Boolean> = _activePoolReady.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        GlobalScope.launch {
             nostrClient.activePoolsCredentialsSender()
         }
-        viewModelScope.launch {
+        GlobalScope.launch {
             runCatching {
                 checkForReadyActivePools()
             }.getOrElse {

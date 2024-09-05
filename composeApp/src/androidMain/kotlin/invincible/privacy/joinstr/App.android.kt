@@ -1,5 +1,16 @@
 package invincible.privacy.joinstr
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
@@ -14,6 +25,10 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import okio.Path.Companion.toPath
 import java.math.BigDecimal
 import java.math.MathContext
@@ -29,6 +44,55 @@ actual fun getSettingsStore(): KStore<Settings> {
             nodeConfig = NodeConfig()
         )
     )
+}
+
+actual object LocalNotification {
+    private val channelId = "joinstr"
+
+    init {
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Default Channel"
+            val descriptionText = "Default notification channel"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(channelId, name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                ContextProvider.getContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    actual fun showNotification(title: String, message: String) {
+        val context = ContextProvider.getContext()
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        with(NotificationManagerCompat.from(context)) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                CoroutineScope(Dispatchers.Default).launch {
+                    requestPermission()
+                }
+            }
+            notify(Clock.System.now().toEpochMilliseconds().toInt(), builder.build())
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    actual suspend fun requestPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            ContextProvider.getContext(),
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 }
 
 actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {

@@ -11,14 +11,68 @@ import io.ktor.client.engine.js.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import kotlinx.browser.window
 import kotlinx.coroutines.await
 import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
 import org.khronos.webgl.set
+import org.w3c.dom.events.Event
+import org.w3c.notifications.DENIED
+import org.w3c.notifications.GRANTED
+import org.w3c.notifications.Notification
+import org.w3c.notifications.NotificationOptions
+import org.w3c.notifications.NotificationPermission
 import kotlin.js.Promise
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.seconds
+
+actual object LocalNotification {
+    actual fun showNotification(title: String, message: String) {
+        println("Attempting to show notification")
+        try {
+            val options = NotificationOptions(
+                body = message,
+                icon = "icon-192.png",
+                badge = "icon-192.png",
+                silent = false,
+
+            )
+            val notification = Notification(title, options)
+            println("Notification created:"  + notification)
+
+            notification.onclick = { event: Event ->
+                event.preventDefault() // Prevent the default action
+                println("Notification clicked")
+                try {
+                    window.focus()
+                    notification.close()
+                } catch (e: Throwable) {
+                    println("Error handling notification click:" + e.printStackTrace())
+                }
+            }
+
+            notification.onerror = { error ->
+                println("Error showing notification:" + error)
+            }
+        } catch (e: Throwable) {
+            println("Error creating notification:"+ e.printStackTrace())
+            // Fallback to alert if notification creation fails
+            window.alert("Notification: $title\n$message")
+        }
+    }
+
+    actual suspend fun requestPermission(): Boolean {
+        return when (Notification.permission) {
+            NotificationPermission.Companion.GRANTED -> true
+            NotificationPermission.Companion.DENIED -> false
+            else -> {
+                val result = Notification.requestPermission().await<NotificationPermission>()
+                result == NotificationPermission.Companion.GRANTED
+            }
+        }
+    }
+}
 
 @JsModule("@noble/secp256k1")
 external object Secp256k1 {

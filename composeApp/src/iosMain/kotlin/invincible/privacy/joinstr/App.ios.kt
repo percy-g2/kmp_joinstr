@@ -14,11 +14,39 @@ import io.ktor.client.engine.darwin.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import kotlinx.coroutines.suspendCancellableCoroutine
 import okio.Path.Companion.toPath
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSCalendar
+import platform.Foundation.NSCalendarUnitDay
+import platform.Foundation.NSCalendarUnitHour
+import platform.Foundation.NSCalendarUnitMinute
+import platform.Foundation.NSCalendarUnitMonth
+import platform.Foundation.NSCalendarUnitSecond
+import platform.Foundation.NSCalendarUnitYear
+import platform.Foundation.NSDate
 import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.dateByAddingTimeInterval
+import platform.UserNotifications.UNAuthorizationOptionAlert
+import platform.UserNotifications.UNAuthorizationOptionBadge
+import platform.UserNotifications.UNAuthorizationOptionSound
+import platform.UserNotifications.UNCalendarNotificationTrigger
+import platform.UserNotifications.UNMutableNotificationContent
+import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
+import platform.UserNotifications.UNNotificationPresentationOptionList
+import platform.UserNotifications.UNNotificationPresentationOptionSound
+import platform.UserNotifications.UNNotificationPresentationOptions
+import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationResponse
+import platform.UserNotifications.UNNotificationSound
+import platform.UserNotifications.UNUserNotificationCenter
+import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
+import platform.darwin.NSObject
+import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.seconds
 
 actual fun getSettingsStore(): KStore<Settings> {
@@ -58,6 +86,80 @@ actual fun getWebSocketClient(): HttpClient {
         install(Logging) {
             logger = Logger.SIMPLE
             level = LogLevel.ALL
+        }
+    }
+}
+
+class NotificationDelegate : NSObject(), UNUserNotificationCenterDelegateProtocol {
+    override fun userNotificationCenter(
+        center: UNUserNotificationCenter,
+        willPresentNotification: UNNotification,
+        withCompletionHandler: (UNNotificationPresentationOptions) -> Unit
+    ) {
+        withCompletionHandler(UNNotificationPresentationOptionBanner or
+            UNNotificationPresentationOptionSound or
+            UNNotificationPresentationOptionList or
+            UNAuthorizationOptionBadge
+        )
+    }
+
+    override fun userNotificationCenter(
+        center: UNUserNotificationCenter,
+        didReceiveNotificationResponse: UNNotificationResponse,
+        withCompletionHandler: () -> Unit
+    ) {
+        println("Received notification response: ${didReceiveNotificationResponse.notification.request.identifier}")
+        withCompletionHandler()
+    }
+}
+
+actual object LocalNotification {
+    private val delegate = NotificationDelegate()
+
+    init {
+        UNUserNotificationCenter.currentNotificationCenter().delegate = delegate
+    }
+
+    actual fun showNotification(title: String, message: String) {
+        val content = UNMutableNotificationContent().apply {
+            setTitle(title)
+            setBody(message)
+            setSound(UNNotificationSound.defaultSound())
+            setBadge(badge = null)
+        }
+
+        val uuid = NSUUID.UUID().UUIDString
+        val date = NSDate().dateByAddingTimeInterval(1.0)
+        val components = NSCalendar.currentCalendar.components(
+            NSCalendarUnitYear or NSCalendarUnitMonth or NSCalendarUnitDay or
+                NSCalendarUnitHour or NSCalendarUnitMinute or NSCalendarUnitSecond,
+            date
+        )
+        val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(components, false)
+
+        val request = UNNotificationRequest.requestWithIdentifier(
+            uuid,
+            content,
+            trigger
+        )
+
+        UNUserNotificationCenter.currentNotificationCenter().addNotificationRequest(request) { requestError ->
+            if (requestError != null) {
+                println("Error showing notification: ${requestError.localizedDescription}")
+            } else {
+                println("Notification scheduled successfully with ID: $uuid")
+            }
+        }
+    }
+
+    actual suspend fun requestPermission(): Boolean = suspendCancellableCoroutine { continuation ->
+        UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
+            UNAuthorizationOptionAlert or UNAuthorizationOptionSound or UNAuthorizationOptionBadge
+        ) { granted, error ->
+            if (error != null) {
+                println("Error requesting notification permission: ${error.localizedDescription}")
+            }
+            continuation.resume(granted)
         }
     }
 }
