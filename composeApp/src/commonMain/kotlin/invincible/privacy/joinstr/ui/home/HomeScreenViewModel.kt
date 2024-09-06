@@ -8,9 +8,11 @@ import invincible.privacy.joinstr.model.NetworkInfo
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class HomeScreenViewModel : ViewModel() {
@@ -26,7 +28,12 @@ class HomeScreenViewModel : ViewModel() {
     val blockchainInfo: StateFlow<BlockchainInfo?> = _blockchainInfo.asStateFlow()
 
     init {
-        fetchNetworkInfo()
+        viewModelScope.launch {
+            while (isActive) {
+                fetchNetworkInfo()
+                delay(30 * 1000) // 30 seconds delay
+            }
+        }
     }
 
     fun fetchNetworkInfo() {
