@@ -1,6 +1,5 @@
 package invincible.privacy.joinstr.ui.home
 
-import KottieAnimation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,52 +22,69 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import contentScale.ContentScale
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
+import io.github.alexzhirkevich.compottie.Compottie
+import io.github.alexzhirkevich.compottie.CompottieException
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.joinstr_logo
-import kottieComposition.KottieCompositionSpec
-import kottieComposition.animateKottieCompositionAsState
-import kottieComposition.rememberKottieComposition
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import utils.KottieConstants
 
 @Composable
 fun HomeScreen(
-    homeScreenViewModel: HomeScreenViewModel = viewModel{ HomeScreenViewModel() }
+    homeScreenViewModel: HomeScreenViewModel = viewModel { HomeScreenViewModel() },
 ) {
-    val networkInfo by homeScreenViewModel.networkInfo.collectAsState()
-    val blockchainInfo by homeScreenViewModel.blockchainInfo.collectAsState()
-    val isLoading by homeScreenViewModel.isLoading.collectAsState()
+    val uiState by homeScreenViewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(Unit) {
+        val job = scope.launch {
+            while (true) {
+                homeScreenViewModel.fetchData()
+                delay(30 * 1000) // 30 seconds delay
+            }
+        }
+        onDispose {
+            job.cancel()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 24.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             LogoAnimation()
 
-            if (isLoading) {
+            if (uiState.isLoading) {
                 CircularProgressIndicator()
             } else {
-                blockchainInfo?.let { blockchain ->
-                    networkInfo?.let { network ->
+                uiState.blockchainInfo?.let { blockchain ->
+                    uiState.networkInfo?.let { network ->
                         BlockchainInfoDisplay(blockchain, network)
                     }
                 } ?: run {
@@ -76,7 +94,11 @@ fun HomeScreen(
         }
 
         FloatingActionButton(
-            onClick = { homeScreenViewModel.fetchNetworkInfo() },
+            onClick = {
+                scope.launch {
+                    homeScreenViewModel.fetchData()
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
@@ -92,32 +114,37 @@ fun HomeScreen(
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun LogoAnimation() {
-    var animation by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        animation = Res.readBytes("files/wave.json").decodeToString()
+    val composition = rememberLottieComposition {
+        LottieCompositionSpec.JsonString(Res.readBytes("files/wave.json").decodeToString())
     }
 
-    val composition = rememberKottieComposition(
-        spec = KottieCompositionSpec.File(animation)
-    )
+    LaunchedEffect(composition) {
+        try {
+            composition.await()
+        } catch (t: CompottieException) {
+            t.printStackTrace()
+        }
+    }
 
-    val animationState by animateKottieCompositionAsState(
-        composition = composition,
-        iterations = KottieConstants.IterateForever
+
+    val animationState by animateLottieCompositionAsState(
+        composition = composition.value,
+        iterations = Compottie.IterateForever
     )
 
     Box(
-        modifier = Modifier.padding(top = 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        KottieAnimation(
-            composition = composition,
-            progress = { animationState.progress },
+        Image(
+            painter = rememberLottiePainter(
+                composition = composition.value,
+                progress = { animationState },
+            ),
+            contentDescription = "Lottie animation",
             modifier = Modifier
                 .fillMaxWidth()
                 .zIndex(1f),
-            backgroundColor = MaterialTheme.colorScheme.background,
             contentScale = ContentScale.FillBounds
         )
 

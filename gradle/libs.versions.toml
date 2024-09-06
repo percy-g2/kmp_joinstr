@@ -6,10 +6,10 @@ android-targetSdk = "35"
 androidx-activityCompose = "1.9.2"
 androidx-lifecycle = "2.8.1"
 compose-plugin = "1.7.0-beta01"
+compottie = "2.0.0-beta02"
 kotlin = "2.0.20"
 kotlinx-coroutines = "1.9.0-RC.2"
 kotlinxDatetime = "0.6.1"
-kottie = "1.9.6"
 ktor = "3.0.0-beta-2"
 logbackAndroid = "3.0.0"
 logbackClassic = "1.5.6"
@@ -27,8 +27,8 @@ testng = "6.9.6"
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
-kottie = { module = "io.github.ismai117:kottie", version.ref = "kottie" }
 logback-android = { module = "com.github.tony19:logback-android", version.ref = "logbackAndroid" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logbackClassic" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }

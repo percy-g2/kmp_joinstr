@@ -121,7 +121,7 @@ kotlin {
 
             implementation(libs.qrose)
 
-            implementation(libs.kottie)
+            implementation(libs.compottie)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {

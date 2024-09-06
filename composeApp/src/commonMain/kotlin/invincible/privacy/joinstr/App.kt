@@ -153,13 +153,7 @@ fun App(
                                         onClick = {
                                             if (selectedItem != index) {
                                                 selectedItem = index
-                                                navController.navigate(item.path) {
-                                                    popUpTo(navController.graph.startDestinationId) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
+                                                navController.navigate(item.path)
                                             }
                                         }
                                     )
