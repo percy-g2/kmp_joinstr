@@ -4,6 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
+import joinstr.composeapp.generated.resources.Res
+import joinstr.composeapp.generated.resources.ostrich_logo
 import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.DrawableResource
 
@@ -24,7 +26,7 @@ sealed class NavItem {
     object PoolsScreen : Item<Pools>(
         path = Pools,
         title = "Pools",
-        icon = Icons.Default.Settings
+        drawableResource = Res.drawable.ostrich_logo
     )
 
     object SettingsScreen : Item<Settings>(
