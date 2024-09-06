@@ -11,7 +11,7 @@ object SettingsManager {
 
     suspend fun updateTheme(newTheme: Int) {
         themeState.value = newTheme
-        store.update { it?.copy(selectedTheme = newTheme) ?: Settings(selectedTheme = newTheme, nodeConfig = NodeConfig()) }
+        store.update { it?.copy(selectedTheme = newTheme) ?: SettingsStore(selectedTheme = newTheme, nodeConfig = NodeConfig()) }
     }
 
     suspend fun updateNodeConfig(
@@ -19,7 +19,7 @@ object SettingsManager {
         nostrRelay: String
     ) {
         store.set(
-            Settings(
+            SettingsStore(
                 selectedTheme = themeState.value,
                 nodeConfig = nodeConfig,
                 nostrRelay = nostrRelay
@@ -29,7 +29,7 @@ object SettingsManager {
 }
 
 @Serializable
-data class Settings(
+data class SettingsStore(
     val selectedTheme: Int = Theme.SYSTEM.id,
     val nodeConfig: NodeConfig = NodeConfig(),
     val nostrRelay: String = "wss://nostr.fmt.wiz.biz"

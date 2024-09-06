@@ -39,8 +39,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.serialization.generateHashCode
+import invincible.privacy.joinstr.model.Home
+import invincible.privacy.joinstr.model.InputRegistration
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.NavItem
+import invincible.privacy.joinstr.model.Pools
+import invincible.privacy.joinstr.model.Settings
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -51,8 +56,8 @@ import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.ui.pools.PoolsViewModel
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
-import invincible.privacy.joinstr.utils.Settings
 import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
@@ -85,17 +90,15 @@ fun App(
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         var selectedItem by rememberSaveable { mutableIntStateOf(0) }
 
-        LaunchedEffect(navBackStackEntry?.destination?.route) {
-            when (navBackStackEntry?.destination?.route) {
-                NavItem.Home.path -> {
+        LaunchedEffect(navBackStackEntry?.destination?.id) {
+            when (navBackStackEntry?.destination?.id) {
+                Home.serializer().generateHashCode() -> {
                     selectedItem = 0
                 }
-
-                NavItem.Pools.path -> {
+                Pools.serializer().generateHashCode() -> {
                     selectedItem = 1
                 }
-
-                NavItem.Settings.path -> {
+                Settings.serializer().generateHashCode() -> {
                     selectedItem = 2
                 }
             }
@@ -122,7 +125,7 @@ fun App(
                 bottomBar = {
                     BottomAppBar(
                         actions = {
-                            val navItems = listOf(NavItem.Home, NavItem.Pools, NavItem.Settings)
+                            val navItems = listOf(NavItem.HomeScreen, NavItem.PoolsScreen, NavItem.SettingsScreen)
 
                             NavigationBar(
                                 tonalElevation = 0.dp
@@ -150,7 +153,13 @@ fun App(
                                         onClick = {
                                             if (selectedItem != index) {
                                                 selectedItem = index
-                                                navController.navigate(item.path)
+                                                navController.navigate(item.path) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
                                             }
                                         }
                                     )
@@ -161,8 +170,8 @@ fun App(
                 }
             ) { innerPadding ->
 
-                if (activePoolReady && navBackStackEntry?.destination?.route != NavItem.InputRegistration.path) {
-                    navController.navigate(NavItem.InputRegistration.path)
+                if (activePoolReady && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
+                    navController.navigate(NavItem.InputRegistrationScreen.path)
                 }
 
                 NavHost(
@@ -170,23 +179,23 @@ fun App(
                         .fillMaxSize()
                         .padding(innerPadding),
                     navController = navController,
-                    startDestination = NavItem.Home.path
+                    startDestination = NavItem.HomeScreen.path
                 ) {
-                    animatedComposable(NavItem.Home.path) {
+                    animatedComposable<Home> {
                         HomeScreen()
                     }
 
-                    animatedComposable(NavItem.InputRegistration.path) {
+                    animatedComposable<InputRegistration> {
                         RegisterInputScreen()
                     }
 
-                    animatedComposable(NavItem.Pools.path) {
+                    animatedComposable<Pools> {
                         PoolScreen(
                             poolsViewModel = poolsViewModel
                         )
                     }
 
-                    animatedComposable(NavItem.Settings.path) {
+                    animatedComposable<Settings> {
                         SettingsScreen {
                             navController.popBackStack()
                         }
@@ -198,12 +207,10 @@ fun App(
 }
 
 @OptIn(ExperimentalAnimationApi::class)
-fun NavGraphBuilder.animatedComposable(
-    route: String,
-    content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
+inline fun <reified T : Any> NavGraphBuilder.animatedComposable(
+    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
 ) {
-    composable(
-        route = route,
+    composable<T>(
         enterTransition = { expandFromCenter() },
         exitTransition = { shrinkToCenter() },
         content = content
@@ -230,7 +237,7 @@ fun shrinkToCenter(): ExitTransition {
 
 expect fun getWebSocketClient(): HttpClient
 
-expect fun getSettingsStore(): KStore<Settings>
+expect fun getSettingsStore(): KStore<SettingsStore>
 expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 
 expect fun Float.convertFloatExponentialToString(): String

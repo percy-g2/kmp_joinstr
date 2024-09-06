@@ -13,7 +13,7 @@ import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
-import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
@@ -35,7 +35,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 open class NostrClient {
     private val nostrRelay = suspend {
-        SettingsManager.store.get()?.nostrRelay ?: Settings().nostrRelay
+        SettingsManager.store.get()?.nostrRelay ?: SettingsStore().nostrRelay
     }
 
     @OptIn(ExperimentalSerializationApi::class)

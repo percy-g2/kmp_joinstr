@@ -35,10 +35,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import contentScale.ContentScale
+import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.joinstr_logo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kottieComposition.KottieCompositionSpec
 import kottieComposition.animateKottieCompositionAsState
 import kottieComposition.rememberKottieComposition
@@ -76,7 +80,14 @@ fun HomeScreen(
         }
 
         FloatingActionButton(
-            onClick = { homeScreenViewModel.fetchNetworkInfo() },
+            onClick = {
+                CoroutineScope(Dispatchers.Default).launch {
+                    val result = LocalNotification.requestPermission()
+                    if (result) {
+                        LocalNotification.showNotification("title", "msg")
+                    }
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)

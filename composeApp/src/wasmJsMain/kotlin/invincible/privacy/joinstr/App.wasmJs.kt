@@ -2,7 +2,7 @@ package invincible.privacy.joinstr
 
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
-import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
@@ -200,10 +200,10 @@ private fun ByteArray.toHexString(): String {
     }
 }
 
-actual fun getSettingsStore(): KStore<Settings> {
-    return storeOf<Settings>(
+actual fun getSettingsStore(): KStore<SettingsStore> {
+    return storeOf<SettingsStore>(
         key = "settings",
-        default = Settings(
+        default = SettingsStore(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig()
         )

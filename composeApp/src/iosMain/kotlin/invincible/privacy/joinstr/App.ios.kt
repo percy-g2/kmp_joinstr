@@ -5,7 +5,7 @@ import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
-import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
@@ -49,11 +49,11 @@ import platform.darwin.NSObject
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.seconds
 
-actual fun getSettingsStore(): KStore<Settings> {
+actual fun getSettingsStore(): KStore<SettingsStore> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
-    return storeOf<Settings>(
+    return storeOf<SettingsStore>(
         file = "${paths.firstOrNull() as? String}/settings.json".toPath(),
-        default = Settings(
+        default = SettingsStore(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig()
         )

@@ -5,7 +5,7 @@ import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
-import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
@@ -52,15 +52,15 @@ actual object LocalNotification {
     }
 }
 
-actual fun getSettingsStore(): KStore<Settings> {
+actual fun getSettingsStore(): KStore<SettingsStore> {
     val directory = AppDirsFactory.getInstance()
         .getUserDataDir("invincible.privacy.joinstr", "1.0.0", "invincible")
     if (File(directory).exists().not()) {
         File(directory).mkdirs()
     }
-    return storeOf<Settings>(
+    return storeOf<SettingsStore>(
         file = "${directory}/settings.json".toPath(),
-        default = Settings(
+        default = SettingsStore(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig(),
             nostrRelay = "wss://nostr.fmt.wiz.biz"

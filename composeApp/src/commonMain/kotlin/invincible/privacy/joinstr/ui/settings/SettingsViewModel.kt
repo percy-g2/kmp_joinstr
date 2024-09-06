@@ -3,7 +3,7 @@ package invincible.privacy.joinstr.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.utils.NodeConfig
-import invincible.privacy.joinstr.utils.Settings
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import kotlinx.coroutines.delay
@@ -25,11 +25,11 @@ class SettingsViewModel : ViewModel() {
             SettingsManager.store.updates.collect { settings ->
                 _uiState.update { currentState ->
                     currentState.copy(
-                        nostrRelay = settings?.nostrRelay ?: Settings().nostrRelay,
-                        nodeUrl = settings?.nodeConfig?.url ?: Settings().nodeConfig.url,
-                        username = settings?.nodeConfig?.userName ?: Settings().nodeConfig.userName,
-                        password = settings?.nodeConfig?.password ?: Settings().nodeConfig.password,
-                        port = settings?.nodeConfig?.port?.toString() ?: Settings().nodeConfig.port.toString(),
+                        nostrRelay = settings?.nostrRelay ?: SettingsStore().nostrRelay,
+                        nodeUrl = settings?.nodeConfig?.url ?: SettingsStore().nodeConfig.url,
+                        username = settings?.nodeConfig?.userName ?: SettingsStore().nodeConfig.userName,
+                        password = settings?.nodeConfig?.password ?: SettingsStore().nodeConfig.password,
+                        port = settings?.nodeConfig?.port?.toString() ?: SettingsStore().nodeConfig.port.toString(),
                         selectedTheme = settings?.selectedTheme ?: Theme.SYSTEM.id
                     ).also { newState ->
                         validateAllFields(newState)
