@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -217,9 +218,12 @@ fun InfoTextField(value: String, label: String) {
 @Composable
 fun ErrorMessage() {
     Text(
-        text = "Verify Your Node Configuration!",
+        text = "It seems your node is not running.\n" +
+            "Please ensure it is active and verify your configuration in the settings, then try " +
+            "again.",
         style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.errorContainer
+        color = MaterialTheme.colorScheme.errorContainer,
+        textAlign = TextAlign.Center
     )
 }
 
