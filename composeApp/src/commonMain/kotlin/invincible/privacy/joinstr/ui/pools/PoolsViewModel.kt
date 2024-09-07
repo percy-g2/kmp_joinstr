@@ -26,6 +26,7 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
@@ -54,8 +56,8 @@ class PoolsViewModel : ViewModel() {
     private val _localPools = MutableStateFlow<List<LocalPoolContent>?>(null)
     val localPools: StateFlow<List<LocalPoolContent>?> = _localPools.asStateFlow()
 
-    private val _activePoolReady = MutableStateFlow(false)
-    val activePoolReady: StateFlow<Boolean> = _activePoolReady.asStateFlow()
+    private val _activePoolReady = MutableStateFlow(Pair(false, ""))
+    val activePoolReady: StateFlow<Pair<Boolean,String>> = _activePoolReady.asStateFlow()
 
     init {
         GlobalScope.launch {
@@ -72,16 +74,16 @@ class PoolsViewModel : ViewModel() {
 
     fun resetActivePoolReady() {
         viewModelScope.launch {
-            _activePoolReady.value = false
+            _activePoolReady.value = Pair(false, "")
         }
     }
 
-    private suspend fun checkForReadyActivePools() {
-        while (viewModelScope.isActive) {
+    private suspend fun checkForReadyActivePools() = withContext(Dispatchers.Default){
+        while (isActive) {
             val activePools = getPoolsStore().get()
                 ?.sortedByDescending { it.timeout }
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-            _activePoolReady.value = (activePools?.count { it.peersData.size == it.peers } ?: 0) > 0
+             //   ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+            _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it)} ?: Pair(false, "")
             // Delay for 30 seconds
             delay(30_000L)
         }

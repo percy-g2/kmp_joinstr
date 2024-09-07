@@ -40,6 +40,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.serialization.generateHashCode
+import androidx.navigation.toRoute
 import invincible.privacy.joinstr.model.Home
 import invincible.privacy.joinstr.model.InputRegistration
 import invincible.privacy.joinstr.model.LocalPoolContent
@@ -164,8 +165,9 @@ fun App(
                 }
             ) { innerPadding ->
 
-                if (activePoolReady && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
-                    navController.navigate(NavItem.InputRegistrationScreen.path)
+                if (activePoolReady.first && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
+                    val pool = InputRegistration(id = activePoolReady.second)
+                    navController.navigate(pool)
                 }
 
                 NavHost(
@@ -179,8 +181,9 @@ fun App(
                         HomeScreen()
                     }
 
-                    animatedComposable<InputRegistration> {
-                        RegisterInputScreen()
+                    animatedComposable<InputRegistration> { backStackEntry ->
+                        val poolId = backStackEntry.toRoute<InputRegistration>().id
+                        RegisterInputScreen(poolId = poolId)
                     }
 
                     animatedComposable<Pools> {

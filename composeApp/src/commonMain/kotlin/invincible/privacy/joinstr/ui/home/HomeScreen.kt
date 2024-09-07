@@ -4,16 +4,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -32,12 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
+import invincible.privacy.joinstr.theme.greenDark
+import invincible.privacy.joinstr.theme.redDark
 import io.github.alexzhirkevich.compottie.Compottie
 import io.github.alexzhirkevich.compottie.CompottieException
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
@@ -81,16 +85,18 @@ fun HomeScreen(
         ) {
             LogoAnimation()
 
-            if (uiState.isLoading) {
+            if (uiState.isLoading.not()) {
+                BlockchainInfoDisplay(uiState.blockchainInfo, uiState.networkInfo)
+            }
+        }
+
+        if (uiState.isLoading) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 CircularProgressIndicator()
-            } else {
-                uiState.blockchainInfo?.let { blockchain ->
-                    uiState.networkInfo?.let { network ->
-                        BlockchainInfoDisplay(blockchain, network)
-                    }
-                } ?: run {
-                    ErrorMessage()
-                }
             }
         }
 
@@ -137,17 +143,17 @@ fun LogoAnimation() {
     Box(
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = rememberLottiePainter(
-                composition = composition.value,
-                progress = { animationState },
-            ),
-            contentDescription = "Lottie animation",
-            modifier = Modifier
-                .fillMaxWidth()
-                .zIndex(1f),
-            contentScale = ContentScale.FillBounds
-        )
+         Image(
+             painter = rememberLottiePainter(
+                 composition = composition.value,
+                 progress = { animationState },
+             ),
+             contentDescription = "Lottie animation",
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .zIndex(1f),
+             contentScale = ContentScale.FillBounds
+         )
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -171,28 +177,27 @@ fun LogoAnimation() {
 }
 
 @Composable
-fun BlockchainInfoDisplay(blockchain: BlockchainInfo, network: NetworkInfo) {
-    val version = Regex("\\d+\\.\\d+\\.\\d+").find(network.subversion)?.value ?: ""
-    val textInsideParentheses = Regex("\\((.*?)\\)").find(network.subversion)?.groupValues?.get(1) ?: ""
+fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
+    val version = network?.subversion?.let { Regex("\\d+\\.\\d+\\.\\d+").find(network.subversion)?.value } ?: ""
+    val textInsideParentheses = network?.subversion?.let { Regex("\\((.*?)\\)").find(network.subversion)?.groupValues?.get(1) } ?: ""
 
-    InfoTextField(
-        value = "Bitcoin Core v$version($textInsideParentheses)",
-        label = "Version"
-    )
+    val chain = blockchain?.chain?.capitalize(Locale.current) ?: ""
 
-    Spacer(modifier = Modifier.height(8.dp))
+    Column(
+        modifier = Modifier.padding(top = 24.dp)
+    ) {
+        InfoTextField(
+            value = if (version.isEmpty() && textInsideParentheses.isEmpty() ) "" else "Bitcoin Core v$version($textInsideParentheses)",
+            label = "Node Version"
+        )
 
-    InfoTextField(
-        value = blockchain.chain.capitalize(Locale.current),
-        label = "Network"
-    )
+        Spacer(modifier = Modifier.height(8.dp))
 
-    Spacer(modifier = Modifier.height(8.dp))
-
-    InfoTextField(
-        value = "${formatNumber(blockchain.blocks)} Blocks",
-        label = "Block Height"
-    )
+        InfoTextField(
+            value = chain,
+            label = "Network"
+        )
+    }
 }
 
 @Composable
@@ -203,27 +208,24 @@ fun InfoTextField(value: String, label: String) {
         textStyle = MaterialTheme.typography.bodyMedium,
         enabled = false,
         label = {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-            )
+            Row(
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Badge(containerColor = if (value.isEmpty()) redDark else greenDark)
+            }
         },
         colors = OutlinedTextFieldDefaults.colors(
             disabledTextColor = MaterialTheme.colorScheme.onBackground,
             disabledLabelColor = MaterialTheme.colorScheme.onBackground
         )
-    )
-}
-
-@Composable
-fun ErrorMessage() {
-    Text(
-        text = "It seems your node is not running.\n" +
-            "Please ensure it is active and verify your configuration in the settings, then try " +
-            "again.",
-        style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.errorContainer,
-        textAlign = TextAlign.Center
     )
 }
 

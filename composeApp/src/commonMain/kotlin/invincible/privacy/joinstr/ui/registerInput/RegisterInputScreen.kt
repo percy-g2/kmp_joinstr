@@ -55,6 +55,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RegisterInputScreen(
+    poolId: String,
     viewModel: RegisterInputViewModel = viewModel { RegisterInputViewModel() }
 ) {
     val isLoading by viewModel.isLoading

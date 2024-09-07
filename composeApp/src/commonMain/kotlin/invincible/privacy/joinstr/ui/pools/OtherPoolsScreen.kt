@@ -98,7 +98,7 @@ fun OtherPoolsScreen(
         poolsViewModel.fetchOtherPools()
     }
 
-    if (showWaitingDialog.value && activePoolReady) {
+    if (showWaitingDialog.value && activePoolReady.first) {
         showWaitingDialog.value = false
     }
 

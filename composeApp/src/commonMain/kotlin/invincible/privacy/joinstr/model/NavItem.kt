@@ -36,7 +36,7 @@ sealed class NavItem {
     )
 
     object InputRegistrationScreen : Item<InputRegistration>(
-        path = InputRegistration,
+        path = InputRegistration(),
         title = "Input Registration"
     )
 }
@@ -51,4 +51,4 @@ object Pools
 object Settings
 
 @Serializable
-object InputRegistration
+data class InputRegistration(val id: String = "")

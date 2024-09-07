@@ -57,7 +57,7 @@ fun CreateNewPoolScreen(
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
     val showWaitingDialog = remember { mutableStateOf(false) }
 
-    if (showWaitingDialog.value && activePoolReady) {
+    if (showWaitingDialog.value && activePoolReady.first) {
         showWaitingDialog.value = false
     }
 
