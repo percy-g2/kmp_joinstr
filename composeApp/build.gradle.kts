@@ -122,6 +122,8 @@ kotlin {
             implementation(libs.qrose)
 
             implementation(libs.compottie)
+
+            implementation( libs.bitcoin.kmp)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {

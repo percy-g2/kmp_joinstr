@@ -227,7 +227,7 @@ fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
     val currentTime = remember { mutableStateOf(Clock.System.now().epochSeconds) }
     val remainingTime = remember { mutableStateOf(targetTime - currentTime.value) }
     val progress = remember { Animatable(1f) }
-    val totalDuration = 600f // 10 minutes in seconds
+    val totalDuration =  (600 * 6).toFloat() // 60 minutes in seconds
 
     LaunchedEffect(Unit) {
         while (remainingTime.value > 0) {

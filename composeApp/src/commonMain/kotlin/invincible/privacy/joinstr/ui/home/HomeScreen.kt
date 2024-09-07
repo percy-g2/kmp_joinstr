@@ -50,7 +50,6 @@ import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.joinstr_logo
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -64,10 +63,7 @@ fun HomeScreen(
 
     DisposableEffect(Unit) {
         val job = scope.launch {
-            while (true) {
-                homeScreenViewModel.fetchData()
-                delay(30 * 1000) // 30 seconds delay
-            }
+            homeScreenViewModel.fetchData()
         }
         onDispose {
             job.cancel()

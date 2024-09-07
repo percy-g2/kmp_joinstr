@@ -3,7 +3,6 @@ package invincible.privacy.joinstr.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -144,35 +143,30 @@ data class SnackbarAction(val title: String, val onActionPress: () -> Unit)
 @Composable
 fun CustomStackedSnackbar(
     snackbarData: SnackbarData,
-    onActionClicked: () -> Unit,
-    modifier: Modifier = Modifier,
+    onActionClicked: () -> Unit
 ) {
     CardSnackbarContainer(
-        modifier = modifier.clickable {
-            onActionClicked.invoke()
-        },
         content = {
-            Row(
-                modifier =
-                Modifier
+            Column(
+                modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
                     .clip(RoundedCornerShape(16.dp))
+                    .clickable {
+                        onActionClicked.invoke()
+                    }
                     .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-
-                Column {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = snackbarData.visuals.message,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = snackbarData.visuals.message,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
             }
         },
     )

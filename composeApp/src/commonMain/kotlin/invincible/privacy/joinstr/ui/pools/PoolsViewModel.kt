@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -82,7 +83,7 @@ class PoolsViewModel : ViewModel() {
         while (isActive) {
             val activePools = getPoolsStore().get()
                 ?.sortedByDescending { it.timeout }
-             //   ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it)} ?: Pair(false, "")
             // Delay for 30 seconds
             delay(30_000L)
@@ -144,15 +145,19 @@ class PoolsViewModel : ViewModel() {
                 _isLoading.value = true
                 SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
                     httpClient.fetchHourFee()?.let { hourFee ->
+                        val params = JsonArray(listOf(
+                            JsonPrimitive("coin_join"),
+                            JsonPrimitive("bech32")
+                        ))
                         val addressBody = RpcRequestBody(
                             method = Methods.NEW_ADDRESS.value,
-                            params = listOf("coin_join", "bech32")
+                            params = params
                         )
                         httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                             val privateKey = generatePrivateKey()
                             val publicKey = getPublicKey(privateKey)
                             val poolId = generatePoolId()
-                            val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
+                            val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + (600 * 6)
                             val poolContent = PoolContent(
                                 id = poolId,
                                 type = "new_pool",
@@ -286,9 +291,13 @@ class PoolsViewModel : ViewModel() {
                             onSuccess = { eventWithCredentials ->
                                 viewModelScope.launch {
                                     runCatching {
+                                        val params = JsonArray(listOf(
+                                            JsonPrimitive("coin_join"),
+                                            JsonPrimitive("bech32")
+                                        ))
                                         val addressBody = RpcRequestBody(
                                             method = Methods.NEW_ADDRESS.value,
-                                            params = listOf("coin_join", "bech32")
+                                            params = params
                                         )
                                         httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
                                             val decryptedContent = decrypt(eventWithCredentials.content, sharedSecret)

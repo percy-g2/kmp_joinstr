@@ -165,11 +165,6 @@ fun App(
                 }
             ) { innerPadding ->
 
-                if (activePoolReady.first && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
-                    val pool = InputRegistration(id = activePoolReady.second)
-                    navController.navigate(pool)
-                }
-
                 NavHost(
                     modifier = Modifier
                         .fillMaxSize()
@@ -177,6 +172,7 @@ fun App(
                     navController = navController,
                     startDestination = NavItem.HomeScreen.path
                 ) {
+
                     animatedComposable<Home> {
                         HomeScreen()
                     }
@@ -197,6 +193,11 @@ fun App(
                             navController.popBackStack()
                         }
                     }
+                }
+
+                if (activePoolReady.first && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
+                    val pool = InputRegistration(id = activePoolReady.second)
+                    navController.navigate(pool)
                 }
             }
         }

@@ -169,7 +169,7 @@ fun RegisterInputScreen(
                         shape = RoundedCornerShape(8.dp),
                         enabled = selectedTxId.isNotEmpty(),
                         onClick = {
-                            // TODO
+                            viewModel.registerInput(poolId)
                         }
                     ) {
                         Text(
