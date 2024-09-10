@@ -4,9 +4,20 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import fr.acinq.bitcoin.Base58Check
-import fr.acinq.bitcoin.ByteVector32
-import fr.acinq.bitcoin.PrivateKey
+import fr.acinq.bitcoin.Bitcoin
+import fr.acinq.bitcoin.Block
+import fr.acinq.bitcoin.ByteVector
+import fr.acinq.bitcoin.OutPoint
+import fr.acinq.bitcoin.Satoshi
+import fr.acinq.bitcoin.Script
+import fr.acinq.bitcoin.SigHash.SIGHASH_ALL
+import fr.acinq.bitcoin.SigHash.SIGHASH_ANYONECANPAY
+import fr.acinq.bitcoin.Transaction
+import fr.acinq.bitcoin.TxHash
+import fr.acinq.bitcoin.TxId
+import fr.acinq.bitcoin.TxIn
+import fr.acinq.bitcoin.TxOut
+import fr.acinq.bitcoin.psbt.Psbt
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.model.Input
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
@@ -20,6 +31,10 @@ import invincible.privacy.joinstr.ui.components.SnackbarController
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class RegisterInputViewModel : ViewModel() {
     private val httpClient = HttpClient()
@@ -60,197 +75,101 @@ class RegisterInputViewModel : ViewModel() {
         }
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     fun registerInput(
         poolId: String
     ) {
         viewModelScope.launch {
+
+
             val activePools = getPoolsStore().get()
-                ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.sortedByDescending { it.timeout }
 
             val selectedPool = activePools?.find { it.id == poolId }
-            val poolAmount = selectedPool?.denomination ?: 0f
-            val selectedTxAmount = _listUnspent.value?.find { it.txid == _selectedTxId.value }?.amount ?: 0.0
-            val estimatedVByteSize = 100 * (selectedPool?.peers ?: 0)
-            val estimatedBtcFee = ((selectedPool?.feeRate?.toFloat() ?: 0f) * estimatedVByteSize.toFloat()) / 100000000
-            println("estimatedBtcFee: $estimatedBtcFee")
-            if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount &&
-                    selectedTxAmount <= (poolAmount * 100_000_000) + 5000)
-            ) {
+                ?: throw IllegalStateException("Selected pool not found")
 
-                SnackbarController.showMessage("Error: Selected input value is not within the specified range for this pool " +
-                    "(denomination: $poolAmount BTC)")
-            }
-           /* val activePools = getPoolsStore().get()
-                ?.sortedByDescending { it.timeout }
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-
-            val selectedPool = activePools?.find { it.id == poolId }
-            val poolAmount = selectedPool?.denomination ?: 0f
-            val selectedTxAmount = _listUnspent.value?.find { it.txid == _selectedTxId.value }?.amount ?: 0.0
-            val estimatedVByteSize = 100 * (selectedPool?.peers ?: 0)
-            val estimatedBtcFee = ((selectedPool?.feeRate?.toFloat() ?: 0f) * estimatedVByteSize.toFloat()) / 100000000
-
+            val poolAmount = selectedPool.denomination
+            val selectedTx = _listUnspent.value?.find { it.txid == _selectedTxId.value }
+                ?: throw IllegalStateException("Selected transaction not found")
+            val selectedTxAmount = selectedTx.amount
+            val estimatedVByteSize = 100 * selectedPool.peers
+            val estimatedBtcFee = (selectedPool.feeRate.toFloat() * estimatedVByteSize.toFloat()) / 100000000
             println("estimatedBtcFee: $estimatedBtcFee")
 
-
+            val (txid, outputIndex) = getSelectedTxInfo() ?: throw IllegalStateException("No transaction selected")
             val outputAmount = poolAmount - estimatedBtcFee
             val sighashType = SIGHASH_ALL or SIGHASH_ANYONECANPAY
-            val (txid, outputIndex) = getSelectedTxInfo() ?: throw IllegalStateException("No transaction selected")
 
-// Define inputs with proper error checking
-            val inputs = try {
-                listOf(
-                    TxIn(
-                        outPoint = OutPoint(
-                            txid = TxId(ByteVector32.fromValidHex(txid)),
-                            index = outputIndex.toLong()
-                        ),
-                        signatureScript = ByteVector.empty,
-                        sequence = 0xffffffffL,
-                        witness = ScriptWitness.empty
+            val input = TxIn(
+                outPoint = OutPoint(TxId(TxHash(txid)), outputIndex.toLong()),
+                sequence = 0xFFFFFFFFL,
+                signatureScript = listOf()
+            )
+
+            val outputs = selectedPool.peersData
+                .filter { it.type == "output" }
+                .mapNotNull { peerData ->
+                    Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, peerData.address).fold(
+                        { error ->
+                            println("Error creating output script for address ${peerData.address}: ${error.message}")
+                            null
+                        },
+                        { scriptElts ->
+                            TxOut(
+                                amount = Satoshi((outputAmount * 100_000_000).toLong()),
+                                publicKeyScript = ByteVector(Script.write(scriptElts))
+                            )
+                        }
                     )
-                )
-            } catch (e: Exception) {
-                throw IllegalStateException("Failed to create input: ${e.message}")
+                }
+
+            if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
+                    selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
+            ) {
+                SnackbarController.showMessage("Error: Selected input value is not within the specified range for this pool " +
+                    "(denomination: $poolAmount BTC)")
+               // return@launch  // Exit the coroutine if the condition is not met
             }
 
-
-            val listOfOutputAddresses = selectedPool?.peersData
-                ?.filter { it.type == "output" }
-                ?.map { it.address }
-
-            val outputs = listOfOutputAddresses?.mapNotNull { address ->
-                Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, address).fold(
-                    { error ->
-                        println("Error creating output script for address $address: ${error.message}")
-                        null  // Skip this output if there's an error
-                    },
-                    { scriptElts ->
-                        val outputScript = Script.write(scriptElts)
-                        TxOut(
-                            amount = Satoshi((outputAmount * 100_000_000).toLong()),
-                            publicKeyScript = outputScript
-                        )
-                    }
-                )
-            } ?: emptyList()
-
-
-// Create PSBT
             val transaction = Transaction(
-                version = 2,
-                txIn = inputs,
+                version = 1L,
+                txIn = listOf(input),
                 txOut = outputs,
                 lockTime = 0
             )
 
+            val unsignedPsbt = Psbt(transaction)
 
+            val updatedPsbt = unsignedPsbt.updateWitnessInput(
+                outPoint = input.outPoint,
+                txOut = TxOut(
+                    Satoshi((selectedTxAmount * 100_000_000).toLong()),
+                    ByteVector(selectedTx.scriptPubKey)
+                ),
+                sighashType = sighashType
+            ).right ?: throw IllegalStateException("Failed to update PSBT")
 
-            val psbt = Psbt(transaction)
-
-
-            val signed = psbt.sign(getPrivateKeyFromString(selectedPool?.privateKey ?: ""),getSelectedTxInfo()?.second ?: 0)
-
-            println("Input TXID: ${inputs[0].outPoint.txid}")
-            println("Input Index: ${inputs[0].outPoint.index}")
-            println("Input Amount: $selectedTxAmount")
-            println("Output Amount: $outputAmount")
-
-            when (signed) {
-                is Either.Right -> println("Signed PSBT: ${signed.value.psbt}")
-                is Either.Left -> println("Signing failed: ${signed.left}")
-            }*/
-// Print PSBT
-         /*   println("PSBT (Base64): ${psbtBase64.sign(PrivateKey(ByteVector.fromHex(selectedPool?.privateKey ?: "")), getSelectedTxInfo()
-                ?.second ?: 0).left}")*/
-           /* val activePools = getPoolsStore().get()
-                ?.sortedByDescending { it.timeout }
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-
-            val selectedPool = activePools?.find { it.id == poolId }
-            val poolAmount = selectedPool?.denomination ?: 0f
-            val selectedTxAmount = _listUnspent.value?.find { it.txid == _selectedTxId.value }?.amount ?: 0.0
-            val estimatedVByteSize = 100 * (selectedPool?.peers ?: 0)
-            val estimatedBtcFee = ((selectedPool?.feeRate?.toFloat() ?: 0f) * estimatedVByteSize.toFloat()) / 100000000
-
-            println("estimatedBtcFee: $estimatedBtcFee")
-
-            val outputAmount = poolAmount - estimatedBtcFee
-
-            val input = Input(
-                txid = getSelectedTxInfo()?.first ?: "",
-                vout = getSelectedTxInfo()?.second ?: 0
-            )
-
-            val listOfOutputAddresses = selectedPool?.peersData
-                ?.filter { it.type == "output" }
-                ?.map { it.address }
-
-            val outputMap = listOfOutputAddresses?.associateWith { outputAmount } ?: emptyMap()
-
-            println(listOf(input, outputMap))
-
-// Constructing the PSBT request with raw inputs and outputs, not encoded JSON strings
-            val psbtRequest = PsbtRequest(
-                inputs = listOf(input),  // Passing raw object, not encoded string
-                outputs = outputMap      // Passing raw output map
-            )
-
-            val inputsJson = json.encodeToJsonElement(psbtRequest.inputs)
-            val outputsJson = json.encodeToJsonElement(psbtRequest.outputs)
-
-            // Construct params as a JsonArray containing the raw data
-            val params = JsonArray(listOf(inputsJson, outputsJson))
-
-            val rpcRequestBody = RpcRequestBody(
-                method = Methods.CREATE_PSBT.value,
-                params = params  // Raw data, no JSON encoding here
-            )
-
-            val rawTx = httpClient.fetchNodeData<RpcResponse<String>>(rpcRequestBody)?.result
+            // Encode PSBT to Base64
+            val psbtBytes = Psbt.write(updatedPsbt)
+            val psbtBase64 = Base64.encode(psbtBytes.toByteArray())
 
             val walletProcessPsbtParams = JsonArray(listOf(
-                JsonPrimitive(rawTx),
+                JsonPrimitive(psbtBase64),
                 JsonPrimitive(true),
-                JsonPrimitive("ALL|ANYONECANPAY")
+                JsonPrimitive("ALL|ANYONECANPAY"),
+                JsonPrimitive(true),
+                JsonPrimitive(false)
             ))
 
             val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
                 method = Methods.WALLET_PROCESS_PSBT.value,
-                params = walletProcessPsbtParams  // Raw data, no JSON encoding here
+                params = walletProcessPsbtParams
             )
 
             val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
 
-
-            println(rawTx)
-            println(json.encodeToString(processPsbt))*/
-           /* if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount &&
-                    selectedTxAmount <= (poolAmount * 100_000_000) + 5000)
-            ) {
-
-                SnackbarController.showMessage("Error: Selected input value is not within the specified range for this pool " +
-                    "(denomination: $poolAmount BTC)")
-                println(
-                    "Error: Selected input value is not within the specified range for this pool (denomination: ${poolAmount * 100_000_000}), selected input: ${_selectedTxId.value}"
-                )
-            }*/
-        }
-    }
-}
-
-fun getPrivateKeyFromString(privateKeyString: String): PrivateKey {
-    return try {
-        // First, try to parse as WIF
-        val (_, privKey) = Base58Check.decode(privateKeyString)
-        PrivateKey(privKey)
-    } catch (e: Exception) {
-        try {
-            // If WIF fails, try to parse as hex
-            PrivateKey(ByteVector32.fromValidHex(privateKeyString))
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Invalid private key format")
+            println(processPsbt?.hex)
         }
     }
 }
