@@ -13,8 +13,8 @@ import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
-import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.SettingsStore
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
@@ -331,6 +331,9 @@ open class NostrClient {
                                 registeredAddressList = mutableListOf()
                                 session.send(Frame.Text(subscribeMessage))
                                 println("Sent message: $subscribeMessage")
+                            } else {
+                                session.send(Frame.Ping(ByteArray(0)))
+                                println("Ping")
                             }
                         }
 
