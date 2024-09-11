@@ -41,6 +41,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(DelicateCoroutinesApi::class)
 class PoolsViewModel : ViewModel() {
@@ -60,7 +61,7 @@ class PoolsViewModel : ViewModel() {
     private val _activePoolReady = MutableStateFlow(Pair(false, ""))
     val activePoolReady: StateFlow<Pair<Boolean,String>> = _activePoolReady.asStateFlow()
 
-    init {
+    fun startInitialChecks() {
         GlobalScope.launch {
             nostrClient.activePoolsCredentialsSender()
         }
@@ -73,12 +74,6 @@ class PoolsViewModel : ViewModel() {
         }
     }
 
-    fun resetActivePoolReady() {
-        viewModelScope.launch {
-            _activePoolReady.value = Pair(false, "")
-        }
-    }
-
     private suspend fun checkForReadyActivePools() = withContext(Dispatchers.Default){
         while (isActive) {
             val activePools = getPoolsStore().get()
@@ -86,7 +81,7 @@ class PoolsViewModel : ViewModel() {
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it)} ?: Pair(false, "")
             // Delay for 30 seconds
-            delay(30_000L)
+            delay(30.seconds)
         }
     }
 

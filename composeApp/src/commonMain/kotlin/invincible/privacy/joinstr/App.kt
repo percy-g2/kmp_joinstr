@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
@@ -70,12 +74,27 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun App(
     poolsViewModel: PoolsViewModel = viewModel { PoolsViewModel() }
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val themeState by SettingsManager.themeState.collectAsState()
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
 
     LaunchedEffect(Unit) {
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                poolsViewModel.startInitialChecks()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -124,44 +143,46 @@ fun App(
                     )
                 },
                 bottomBar = {
-                    BottomAppBar(
-                        actions = {
-                            val navItems = listOf(NavItem.HomeScreen, NavItem.PoolsScreen, NavItem.SettingsScreen)
+                    if (navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
+                        BottomAppBar(
+                            actions = {
+                                val navItems = listOf(NavItem.HomeScreen, NavItem.PoolsScreen, NavItem.SettingsScreen)
 
-                            NavigationBar(
-                                tonalElevation = 0.dp
-                            ) {
-                                navItems.forEachIndexed { index, item ->
-                                    NavigationBarItem(
-                                        alwaysShowLabel = true,
-                                        icon = {
-                                            item.icon?.let { icon ->
-                                                Icon(
-                                                    imageVector = icon,
-                                                    contentDescription = item.title
-                                                )
+                                NavigationBar(
+                                    tonalElevation = 0.dp
+                                ) {
+                                    navItems.forEachIndexed { index, item ->
+                                        NavigationBarItem(
+                                            alwaysShowLabel = true,
+                                            icon = {
+                                                item.icon?.let { icon ->
+                                                    Icon(
+                                                        imageVector = icon,
+                                                        contentDescription = item.title
+                                                    )
+                                                }
+                                                item.drawableResource?.let { icon ->
+                                                    Icon(
+                                                        modifier = Modifier.size(24.dp),
+                                                        painter = painterResource(icon),
+                                                        contentDescription = item.title
+                                                    )
+                                                }
+                                            },
+                                            label = { if (selectedItem == index) Text(item.title) },
+                                            selected = selectedItem == index,
+                                            onClick = {
+                                                if (selectedItem != index) {
+                                                    selectedItem = index
+                                                    navController.navigate(item.path)
+                                                }
                                             }
-                                            item.drawableResource?.let { icon ->
-                                                Icon(
-                                                    modifier = Modifier.size(24.dp),
-                                                    painter = painterResource(icon),
-                                                    contentDescription = item.title
-                                                )
-                                            }
-                                        },
-                                        label = { if (selectedItem == index) Text(item.title) },
-                                        selected = selectedItem == index,
-                                        onClick = {
-                                            if (selectedItem != index) {
-                                                selectedItem = index
-                                                navController.navigate(item.path)
-                                            }
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             ) { innerPadding ->
 
