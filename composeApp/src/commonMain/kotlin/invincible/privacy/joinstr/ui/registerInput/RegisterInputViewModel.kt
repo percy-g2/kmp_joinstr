@@ -5,22 +5,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.createPsbt
-import invincible.privacy.joinstr.model.Input
+import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.getSharedSecret
+import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
+import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.network.test
 import invincible.privacy.joinstr.ui.components.SnackbarController
+import invincible.privacy.joinstr.utils.Event
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
+import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
 class RegisterInputViewModel : ViewModel() {
     private val httpClient = HttpClient()
+    private val nostrClient = NostrClient()
 
     private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
@@ -62,6 +72,10 @@ class RegisterInputViewModel : ViewModel() {
         poolId: String
     ) {
         viewModelScope.launch {
+            val activePools = getPoolsStore().get()
+                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.sortedByDescending { it.timeout }
+            val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
             val psbtBase64 = _listUnspent.value?.find { it.txid == selectedTxId.value }?.let {
                 createPsbt(
                     poolId = poolId,
@@ -87,15 +101,37 @@ class RegisterInputViewModel : ViewModel() {
             val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
 
             println(processPsbt?.hex)
+
+            val jsonObject = buildJsonObject {
+                put("hex", JsonPrimitive(processPsbt?.hex))
+                put("type", JsonPrimitive("input"))
+            }
+            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+            val sharedSecret = getSharedSecret(
+                selectedPool.privateKey.hexToByteArray(),
+                selectedPool.publicKey.hexToByteArray()
+            )
+            val encryptedMessage = encrypt(data, sharedSecret)
+            val nostrEvent = createEvent(
+                content = encryptedMessage,
+                event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                privateKey = selectedPool.privateKey.hexToByteArray(),
+                publicKey = selectedPool.publicKey.hexToByteArray(),
+                tagPubKey = selectedPool.publicKey
+            )
+            nostrClient.sendEvent(
+                event = nostrEvent,
+                onSuccess = {
+                    SnackbarController.showMessage("Successfully registered input!")
+                },
+                onError = { error ->
+                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                    SnackbarController.showMessage(msg)
+                }
+            )
         }
     }
 }
-
-@Serializable
-data class PsbtRequest(
-    val inputs: List<Input>,
-    val outputs: Map<String, Float>
-)
 
 @Serializable
 data class PsbtResponse(
