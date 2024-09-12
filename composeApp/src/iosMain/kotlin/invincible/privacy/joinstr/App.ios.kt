@@ -1,9 +1,25 @@
 package invincible.privacy.joinstr
 
+import fr.acinq.bitcoin.Bitcoin
+import fr.acinq.bitcoin.Block
+import fr.acinq.bitcoin.ByteVector
+import fr.acinq.bitcoin.OutPoint
+import fr.acinq.bitcoin.Satoshi
+import fr.acinq.bitcoin.Script
+import fr.acinq.bitcoin.SigHash.SIGHASH_ALL
+import fr.acinq.bitcoin.SigHash.SIGHASH_ANYONECANPAY
+import fr.acinq.bitcoin.Transaction
+import fr.acinq.bitcoin.TxHash
+import fr.acinq.bitcoin.TxId
+import fr.acinq.bitcoin.TxIn
+import fr.acinq.bitcoin.TxOut
+import fr.acinq.bitcoin.psbt.Psbt
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
+import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
+import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
@@ -15,6 +31,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.datetime.Clock
 import okio.Path.Companion.toPath
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSCalendar
@@ -47,6 +64,8 @@ import platform.UserNotifications.UNUserNotificationCenter
 import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
 import platform.darwin.NSObject
 import kotlin.coroutines.resume
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
 
 actual fun getSettingsStore(): KStore<SettingsStore> {
@@ -178,3 +197,78 @@ actual suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshR
 
 actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
     pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
+
+@OptIn(ExperimentalEncodingApi::class)
+actual suspend fun createPsbt(
+    poolId: String,
+    unspentItem: ListUnspentResponseItem
+): String {
+    val activePools = getPoolsStore().get()
+        ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+        ?.sortedByDescending { it.timeout }
+
+    val selectedPool = activePools?.find { it.id == poolId }
+        ?: throw IllegalStateException("Selected pool not found")
+
+    val poolAmount = selectedPool.denomination
+    val selectedTxAmount = unspentItem.amount
+    val estimatedVByteSize = 100 * selectedPool.peers
+    val estimatedBtcFee = (selectedPool.feeRate.toFloat() * estimatedVByteSize.toFloat()) / 100000000
+
+    val outputAmount = poolAmount - estimatedBtcFee
+    val sighashType = SIGHASH_ALL or SIGHASH_ANYONECANPAY
+
+    val input = TxIn(
+        outPoint = OutPoint(TxId(TxHash(unspentItem.txid)), unspentItem.vout.toLong()),
+        sequence = 0xFFFFFFFFL,
+        signatureScript = listOf()
+    )
+
+    val outputs = selectedPool.peersData
+        .filter { it.type == "output" }
+        .mapNotNull { peerData ->
+            Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, peerData.address).fold(
+                { error ->
+                    println("Error creating output script for address ${peerData.address}: ${error.message}")
+                    null
+                },
+                { scriptElts ->
+                    TxOut(
+                        amount = Satoshi((outputAmount * 100_000_000).toLong()),
+                        publicKeyScript = ByteVector(Script.write(scriptElts))
+                    )
+                }
+            )
+        }
+
+    if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
+            selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
+    ) {
+        SnackbarController.showMessage("Error: Selected input value is not within the specified range for this pool " +
+            "(denomination: $poolAmount BTC)")
+    }
+
+    val transaction = Transaction(
+        version = 1L,
+        txIn = listOf(input),
+        txOut = outputs,
+        lockTime = 0
+    )
+
+    val unsignedPsbt = Psbt(transaction)
+
+    val updatedPsbt = unsignedPsbt.updateWitnessInput(
+        outPoint = input.outPoint,
+        txOut = TxOut(
+            Satoshi((selectedTxAmount * 100_000_000).toLong()),
+            ByteVector(unspentItem.scriptPubKey)
+        ),
+        sighashType = sighashType
+    ).right ?: throw IllegalStateException("Failed to update PSBT")
+
+    // Encode PSBT to Base64
+    val psbtBytes = Psbt.write(updatedPsbt)
+    val psbtBase64 = Base64.encode(psbtBytes.toByteArray())
+
+    return psbtBase64
+}

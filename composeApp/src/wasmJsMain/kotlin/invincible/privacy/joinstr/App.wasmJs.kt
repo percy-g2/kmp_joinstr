@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr
 
+import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsStore
@@ -13,6 +14,7 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.browser.window
 import kotlinx.coroutines.await
+import kotlinx.datetime.Clock
 import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
 import org.khronos.webgl.set
@@ -266,4 +268,36 @@ actual fun getWebSocketClient(): HttpClient {
             level = LogLevel.ALL
         }
     }
+}
+
+actual suspend fun createPsbt(
+    poolId: String,
+    unspentItem: ListUnspentResponseItem
+): String {
+    val activePools = getPoolsStore().get()
+        ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+        ?.sortedByDescending { it.timeout }
+
+    val selectedPool = activePools?.find { it.id == poolId }
+        ?: throw IllegalStateException("Selected pool not found")
+
+    val poolAmount = selectedPool.denomination
+    val selectedTxAmount = unspentItem.amount
+    val estimatedVByteSize = 100 * selectedPool.peers
+    val estimatedBtcFee = (selectedPool.feeRate.toFloat() * estimatedVByteSize.toFloat()) / 100000000
+
+    val outputAmount = poolAmount - estimatedBtcFee
+
+    // Check if the selected input value is within the specified range
+    if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
+            selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
+    ) {
+        throw IllegalStateException("Error: Selected input value is not within the specified range for this pool (denomination: $poolAmount BTC)")
+    }
+
+
+    // TODO
+
+    // Convert PSBT to base64
+    return ""
 }

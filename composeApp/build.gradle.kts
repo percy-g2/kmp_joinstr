@@ -65,6 +65,8 @@ kotlin {
             implementation(libs.secp256k1.kmp)
 
             implementation(libs.logback.classic)
+
+            implementation(libs.bitcoin.kmp)
         }
 
         androidMain.dependencies {
@@ -87,6 +89,8 @@ kotlin {
             implementation(libs.slf4j.api)
 
             implementation(libs.logback.android)
+
+            implementation(libs.bitcoin.kmp)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -122,8 +126,6 @@ kotlin {
             implementation(libs.qrose)
 
             implementation(libs.compottie)
-
-            implementation( libs.bitcoin.kmp)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {
@@ -144,6 +146,8 @@ kotlin {
             implementation(libs.secp256k1.kmp)
 
             implementation(libs.logback.classic)
+
+            implementation(libs.bitcoin.kmp)
         }
 
         wasmJsMain.dependencies {

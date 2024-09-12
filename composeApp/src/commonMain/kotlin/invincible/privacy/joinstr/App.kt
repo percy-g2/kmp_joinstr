@@ -47,6 +47,7 @@ import androidx.navigation.serialization.generateHashCode
 import androidx.navigation.toRoute
 import invincible.privacy.joinstr.model.Home
 import invincible.privacy.joinstr.model.InputRegistration
+import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.NavItem
 import invincible.privacy.joinstr.model.Pools
@@ -260,6 +261,11 @@ expect fun getSettingsStore(): KStore<SettingsStore>
 expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 
 expect fun Float.convertFloatExponentialToString(): String
+
+expect suspend fun createPsbt(
+    poolId: String,
+    unspentItem: ListUnspentResponseItem
+): String
 
 expect fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray
 expect fun pubkeyCreate(privateKey: ByteArray): ByteArray
