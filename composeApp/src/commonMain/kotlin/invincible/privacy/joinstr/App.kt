@@ -265,14 +265,28 @@ expect fun Float.convertFloatExponentialToString(): String
 expect suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
-): String
+): String?
 
-expect fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray
-expect fun pubkeyCreate(privateKey: ByteArray): ByteArray
-expect suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshRandomBytes: ByteArray): ByteArray
+expect fun getSharedSecret(
+    privateKey: ByteArray,
+    pubKey: ByteArray
+): ByteArray
+
+expect fun pubkeyCreate(
+    privateKey: ByteArray
+): ByteArray
+
+expect suspend fun signSchnorr(
+    content: ByteArray,
+    privateKey: ByteArray,
+    freshRandomBytes: ByteArray
+): ByteArray
 
 expect object LocalNotification {
-    fun showNotification(title: String, message: String)
+    fun showNotification(
+        title: String,
+        message: String
+    )
     suspend fun requestPermission(): Boolean
 }
 

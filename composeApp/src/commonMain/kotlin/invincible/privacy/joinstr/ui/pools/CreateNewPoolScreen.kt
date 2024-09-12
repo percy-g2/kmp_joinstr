@@ -235,6 +235,7 @@ fun CreateNewPoolScreen(
                     denomination = TextFieldValue("")
                     peers = ""
                     showWaitingDialog.value = true
+                    focusManager.clearFocus()
                 }
             }
         ) {

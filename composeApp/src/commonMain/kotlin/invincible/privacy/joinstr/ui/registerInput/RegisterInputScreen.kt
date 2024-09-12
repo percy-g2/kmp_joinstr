@@ -6,14 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.theme.redDark
@@ -53,6 +59,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterInputScreen(
     poolId: String,
@@ -62,7 +69,43 @@ fun RegisterInputScreen(
     val listUnspent by viewModel.listUnspent
     val selectedTxId by viewModel.selectedTxId
     var autoRotation by remember { mutableStateOf(false) }
+    val showWaitingDialog = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    if (showWaitingDialog.value) {
+        BasicAlertDialog(
+            onDismissRequest = {
+                showWaitingDialog.value = false
+            },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            content = {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier.wrapContentSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Waiting for other users to register inputs...",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+        )
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
@@ -169,7 +212,9 @@ fun RegisterInputScreen(
                         shape = RoundedCornerShape(8.dp),
                         enabled = selectedTxId.isNotEmpty(),
                         onClick = {
-                            viewModel.registerInput(poolId)
+                            viewModel.registerInput(poolId) {
+                                showWaitingDialog.value = true
+                            }
                         }
                     ) {
                         Text(

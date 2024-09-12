@@ -24,7 +24,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -38,7 +37,6 @@ open class NostrClient {
         SettingsManager.store.get()?.nostrRelay ?: SettingsStore().nostrRelay
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     val json = Json {
         explicitNulls = false
         isLenient = true
@@ -331,9 +329,6 @@ open class NostrClient {
                                 registeredAddressList = mutableListOf()
                                 session.send(Frame.Text(subscribeMessage))
                                 println("Sent message: $subscribeMessage")
-                            } else {
-                                session.send(Frame.Ping(ByteArray(0)))
-                                println("Ping")
                             }
                         }
 

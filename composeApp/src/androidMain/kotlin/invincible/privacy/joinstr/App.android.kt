@@ -162,7 +162,7 @@ actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray 
 actual suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
-): String {
+): String? {
     val activePools = getPoolsStore().get()
         ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
         ?.sortedByDescending { it.timeout }

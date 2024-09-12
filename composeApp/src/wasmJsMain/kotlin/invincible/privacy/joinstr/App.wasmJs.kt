@@ -273,7 +273,7 @@ actual fun getWebSocketClient(): HttpClient {
 actual suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
-): String {
+): String? {
     val activePools = getPoolsStore().get()
         ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
         ?.sortedByDescending { it.timeout }
@@ -298,6 +298,5 @@ actual suspend fun createPsbt(
 
     // TODO
 
-    // Convert PSBT to base64
-    return ""
+    return null
 }

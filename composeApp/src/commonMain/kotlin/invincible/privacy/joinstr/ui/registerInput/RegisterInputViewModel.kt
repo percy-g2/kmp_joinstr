@@ -20,6 +20,7 @@ import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
+import io.ktor.util.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
@@ -69,7 +70,8 @@ class RegisterInputViewModel : ViewModel() {
     }
 
     fun registerInput(
-        poolId: String
+        poolId: String,
+        onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             val activePools = getPoolsStore().get()
@@ -82,7 +84,11 @@ class RegisterInputViewModel : ViewModel() {
                     unspentItem = it
                 )
             } ?: run {
-                SnackbarController.showMessage("Something went wrong while creating psbt!")
+                if (PlatformUtils.IS_WASM_JS) {
+                    SnackbarController.showMessage("PSBT creation is not yet supported for the web!")
+                } else {
+                    SnackbarController.showMessage("An error occurred during PSBT creation!")
+                }
                 return@launch
             }
             val walletProcessPsbtParams = JsonArray(listOf(
@@ -100,10 +106,10 @@ class RegisterInputViewModel : ViewModel() {
 
             val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
 
-            println(processPsbt?.hex)
+            println(processPsbt?.psbt)
 
             val jsonObject = buildJsonObject {
-                put("hex", JsonPrimitive(processPsbt?.hex))
+                put("hex", JsonPrimitive(processPsbt?.psbt))
                 put("type", JsonPrimitive("input"))
             }
             val data = json.encodeToString(JsonObject.serializer(), jsonObject)
@@ -119,10 +125,12 @@ class RegisterInputViewModel : ViewModel() {
                 publicKey = selectedPool.publicKey.hexToByteArray(),
                 tagPubKey = selectedPool.publicKey
             )
+
             nostrClient.sendEvent(
                 event = nostrEvent,
                 onSuccess = {
-                    SnackbarController.showMessage("Successfully registered input!")
+                    SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
+                    onSuccess.invoke()
                 },
                 onError = { error ->
                     val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
