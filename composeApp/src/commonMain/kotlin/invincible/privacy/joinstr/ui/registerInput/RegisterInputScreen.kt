@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.ktx.toExactString
 import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
@@ -145,14 +147,16 @@ fun RegisterInputScreen(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        Text(
-                            text = viewModel.getSelectedTxInfo()?.let { "${it.first}:${it.second}" } ?: "",
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = viewModel.getSelectedTxInfo()?.let { "${it.first}:${it.second}" } ?: "",
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
                     }
 
                     // TagCloud
@@ -189,7 +193,7 @@ fun RegisterInputScreen(
                                             } else Color.Transparent
 
                                             CustomOutlinedButton(
-                                                text = item.amount.toString(),
+                                                text = item.amount.toExactString(),
                                                 color = color,
                                                 isSelected = item.txid == selectedTxId,
                                                 onClick = {
