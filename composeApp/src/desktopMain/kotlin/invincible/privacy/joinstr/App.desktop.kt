@@ -6,15 +6,18 @@ import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.OutPoint
 import fr.acinq.bitcoin.Satoshi
 import fr.acinq.bitcoin.Script
+import fr.acinq.bitcoin.ScriptWitness
 import fr.acinq.bitcoin.SigHash.SIGHASH_ALL
 import fr.acinq.bitcoin.SigHash.SIGHASH_ANYONECANPAY
 import fr.acinq.bitcoin.Transaction
 import fr.acinq.bitcoin.TxId
 import fr.acinq.bitcoin.TxIn
 import fr.acinq.bitcoin.TxOut
+import fr.acinq.bitcoin.psbt.Input
 import fr.acinq.bitcoin.psbt.Psbt
 import fr.acinq.bitcoin.psbt.UpdateFailure
 import fr.acinq.bitcoin.utils.Either
+import fr.acinq.bitcoin.utils.flatMap
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
@@ -229,6 +232,22 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
             if (uniqueOutputs.size != uniqueOutputData.size) {
                 Either.Left(UpdateFailure.CannotJoin("mismatch between unique outputs and output data"))
             } else {
+                val mergedInputs = psbts.flatMap { psbt ->
+                    psbt.inputs.map { input ->
+                        when (input) {
+                            is Input.WitnessInput.PartiallySignedWitnessInput -> input.copy(
+                                partialSigs = psbts.flatMap { it.inputs }.filterIsInstance<Input.WitnessInput.PartiallySignedWitnessInput>()
+                                    .flatMap { it.partialSigs.entries }.associate { it.key to it.value }
+                            )
+                            is Input.NonWitnessInput.PartiallySignedNonWitnessInput -> input.copy(
+                                partialSigs = psbts.flatMap { it.inputs }.filterIsInstance<Input.NonWitnessInput.PartiallySignedNonWitnessInput>()
+                                    .flatMap { it.partialSigs.entries }.associate { it.key to it.value }
+                            )
+                            else -> input
+                        }
+                    }
+                }
+
                 val global = psbts[0].global.copy(
                     tx = psbts[0].global.tx.copy(
                         txIn = psbts.flatMap { it.global.tx.txIn },
@@ -237,24 +256,125 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
                     extendedPublicKeys = psbts.flatMap { it.global.extendedPublicKeys }.distinct(),
                     unknown = psbts.flatMap { it.global.unknown }.distinct()
                 )
-                Either.Right(psbts[0].copy(
-                    global = global,
-                    inputs = psbts.flatMap { it.inputs },
-                    outputs = uniqueOutputData
-                ))
+                Either.Right(Psbt(global, mergedInputs, uniqueOutputData))
             }
         }
     }
 }
 
 @OptIn(ExperimentalEncodingApi::class)
-actual suspend fun joinPsbts(
-    listOfPsbts: List<String>
-): String? {
+actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
     val psbts = listOfPsbts.mapNotNull { Psbt.read(Base64.decode(it.toByteArray())).right }
     val joinedPsbt = joinUniqueOutputs(*psbts.toTypedArray())
-    val psbtBytes = Psbt.write(joinedPsbt.right!!)
-    val psbtBase64 = Base64.encode(psbtBytes.toByteArray())
-    println("joined psbt>> $psbtBase64")
-    return joinedPsbt.right?.global?.tx.toString()
+
+    // Log information about the joined PSBT
+    joinedPsbt.fold(
+        { error -> println("Error joining PSBTs: $error") },
+        { psbt ->
+            println("Joined PSBT information:")
+            println("Number of inputs: ${psbt.inputs.size}")
+            println("Number of outputs: ${psbt.outputs.size}")
+            psbt.inputs.forEachIndexed { index, input ->
+                println("Input $index:")
+                when (input) {
+                    is Input.WitnessInput.PartiallySignedWitnessInput -> {
+                        println("  Type: Witness Input")
+                        println("  Partial signatures: ${input.partialSigs.size}")
+                        input.partialSigs.forEach { (pubKey, sig) ->
+                            println("    Public Key: ${pubKey.value.toHex()}")
+                            println("    Signature: ${sig.toHex()}")
+                        }
+                        println("  Witness UTXO: ${input.txOut}")
+                        println("  Redeem script: ${input.redeemScript}")
+                        println("  Witness script: ${input.witnessScript}")
+                    }
+                    else -> println("  Type: Other (${input.javaClass.simpleName})")
+                }
+            }
+        }
+    )
+
+    // Finalize inputs and preserve witness data
+    val finalizedPsbt = joinedPsbt.flatMap { psbt ->
+        psbt.inputs.foldIndexed(Either.Right(psbt) as Either<UpdateFailure, Psbt>) { index, accPsbt, input ->
+            accPsbt.flatMap { currentPsbt ->
+                when (input) {
+                    is Input.WitnessInput.PartiallySignedWitnessInput -> {
+                        val pubKeyHash = input.txOut.publicKeyScript.drop(2) // Remove the first two bytes (00 and 14)
+                        val matchingEntry = input.partialSigs.entries.find { (pubKey, _) ->
+                            val hash = pubKey.value.sha256().ripemd160()
+                            hash.contentEquals(pubKeyHash.toByteArray())
+                        }
+                        if (matchingEntry != null) {
+                            val (pubKey, sig) = matchingEntry
+                            val scriptWitness = ScriptWitness(listOf(sig, pubKey.value))
+                            currentPsbt.finalizeWitnessInput(index, scriptWitness)
+                        } else {
+                            Either.Left(UpdateFailure.CannotFinalizeInput(index, "No matching public key found for input"))
+                        }
+                    }
+                    else -> Either.Right(currentPsbt) // Already finalized or cannot be finalized
+                }
+            }
+        }
+    }
+
+    finalizedPsbt.fold(
+        { error ->
+            println("Error finalizing PSBT: $error")
+            null
+        },
+        { psbt ->
+            // Log information about the finalized PSBT
+            println("Finalized PSBT information:")
+            psbt.inputs.forEachIndexed { index, input ->
+                println("Input $index:")
+                when (input) {
+                    is Input.WitnessInput.FinalizedWitnessInput -> {
+                        println("  Type: Finalized Witness Input")
+                        println("  Script Witness: ${input.scriptWitness}")
+                        println("  Script Sig: ${input.scriptSig}")
+                    }
+                    else -> println("  Type: Other (${input.javaClass.simpleName})")
+                }
+            }
+
+            // Extract the final transaction
+            val extractedTx = psbt.extract()
+            extractedTx.fold(
+                { error ->
+                    println("Error extracting transaction: $error")
+                    null
+                },
+                { tx ->
+                    // Convert the transaction to hex string
+                    val txHex = Transaction.write(tx)
+                    println("Joined and finalized transaction: $txHex")
+                    // Log detailed information about the extracted transaction
+                    println("Extracted transaction information:")
+                    println("Version: ${tx.version}")
+                    println("Locktime: ${tx.lockTime}")
+                    tx.txIn.forEachIndexed { index, txIn ->
+                        println("Input $index:")
+                        println("  Outpoint: ${txIn.outPoint}")
+                        println("  Sequence: ${txIn.sequence}")
+                        println("  ScriptSig: ${txIn.signatureScript.toHex()}")
+                        println("  Witness: ${txIn.witness}")
+                    }
+                    tx.txOut.forEachIndexed { index, txOut ->
+                        println("Output $index:")
+                        println("  Amount: ${txOut.amount}")
+                        println("  ScriptPubKey: ${txOut.publicKeyScript.toHex()}")
+                    }
+                    txHex
+                }
+            )
+        }
+    )
+
+  //  println("joined psbt>> $psbtBase64")
+    println("joined psbt>> ${finalizedPsbt.right?.extract()?.left}")
+    println("joined psbt>> ${finalizedPsbt.right?.global?.tx.toString()}")
+    println("joined psbt>> ${finalizedPsbt.right?.extract()?.right}")
+    return finalizedPsbt.right?.extract()?.right.toString()
 }
