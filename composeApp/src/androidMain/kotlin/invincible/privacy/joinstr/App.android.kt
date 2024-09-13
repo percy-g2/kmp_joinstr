@@ -278,5 +278,5 @@ actual suspend fun joinPsbts(
     val psbtBytes = Psbt.write(joinedPsbt.right!!)
     val psbtBase64 = Base64.encode(psbtBytes.toByteArray())
     println("joined psbt>> $psbtBase64")
-    return psbtBase64
+    return joinedPsbt.right?.global?.tx.toString()
 }
