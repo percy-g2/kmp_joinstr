@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.createPsbt
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
+import invincible.privacy.joinstr.joinPsbts
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.Methods
@@ -78,11 +79,65 @@ class RegisterInputViewModel : ViewModel() {
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                 ?.sortedByDescending { it.timeout }
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
-            val psbtBase64 = _listUnspent.value?.find { it.txid == selectedTxId.value }?.let {
-                createPsbt(
-                    poolId = poolId,
-                    unspentItem = it
-                )
+            _listUnspent.value?.find { it.txid == selectedTxId.value }?.let {
+                viewModelScope.launch {
+                    val psbtBase64 = createPsbt(
+                        poolId = poolId,
+                        unspentItem = it
+                    )
+
+                    val walletProcessPsbtParams = JsonArray(listOf(
+                        JsonPrimitive(psbtBase64),
+                        JsonPrimitive(true),
+                        JsonPrimitive("ALL|ANYONECANPAY"),
+                        JsonPrimitive(true),
+                        JsonPrimitive(false)
+                    ))
+
+                    val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
+                        method = Methods.WALLET_PROCESS_PSBT.value,
+                        params = walletProcessPsbtParams
+                    )
+
+                    val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
+
+                    println(processPsbt?.psbt)
+
+                    val jsonObject = buildJsonObject {
+                        put("hex", JsonPrimitive(processPsbt?.psbt))
+                        put("type", JsonPrimitive("input"))
+                    }
+                    val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+                    val sharedSecret = getSharedSecret(
+                        selectedPool.privateKey.hexToByteArray(),
+                        selectedPool.publicKey.hexToByteArray()
+                    )
+                    val encryptedMessage = encrypt(data, sharedSecret)
+                    val nostrEvent = createEvent(
+                        content = encryptedMessage,
+                        event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                        privateKey = selectedPool.privateKey.hexToByteArray(),
+                        publicKey = selectedPool.publicKey.hexToByteArray(),
+                        tagPubKey = selectedPool.publicKey
+                    )
+
+                    nostrClient.sendEvent(
+                        event = nostrEvent,
+                        onSuccess = {
+                            SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
+                            onSuccess.invoke()
+                            checkRegisteredInputs(
+                                poolId = selectedPool.id,
+                                privateKey = selectedPool.privateKey.hexToByteArray(),
+                                publicKey = selectedPool.publicKey.hexToByteArray()
+                            )
+                        },
+                        onError = { error ->
+                            val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                            SnackbarController.showMessage(msg)
+                        }
+                    )
+                }
             } ?: run {
                 if (PlatformUtils.IS_WASM_JS) {
                     SnackbarController.showMessage("PSBT creation is not yet supported for the web!")
@@ -91,46 +146,34 @@ class RegisterInputViewModel : ViewModel() {
                 }
                 return@launch
             }
-            val walletProcessPsbtParams = JsonArray(listOf(
-                JsonPrimitive(psbtBase64),
-                JsonPrimitive(true),
-                JsonPrimitive("ALL|ANYONECANPAY"),
-                JsonPrimitive(true),
-                JsonPrimitive(false)
-            ))
+        }
+    }
 
-            val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
-                method = Methods.WALLET_PROCESS_PSBT.value,
-                params = walletProcessPsbtParams
-            )
-
-            val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
-
-            println(processPsbt?.psbt)
-
-            val jsonObject = buildJsonObject {
-                put("hex", JsonPrimitive(processPsbt?.psbt))
-                put("type", JsonPrimitive("input"))
-            }
-            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
-            val sharedSecret = getSharedSecret(
-                selectedPool.privateKey.hexToByteArray(),
-                selectedPool.publicKey.hexToByteArray()
-            )
-            val encryptedMessage = encrypt(data, sharedSecret)
-            val nostrEvent = createEvent(
-                content = encryptedMessage,
-                event = Event.ENCRYPTED_DIRECT_MESSAGE,
-                privateKey = selectedPool.privateKey.hexToByteArray(),
-                publicKey = selectedPool.publicKey.hexToByteArray(),
-                tagPubKey = selectedPool.publicKey
-            )
-
-            nostrClient.sendEvent(
-                event = nostrEvent,
-                onSuccess = {
-                    SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
-                    onSuccess.invoke()
+    fun checkRegisteredInputs(
+        poolId: String,
+        publicKey: ByteArray,
+        privateKey: ByteArray
+    ) {
+        viewModelScope.launch {
+            nostrClient.checkRegisteredInputs(
+                publicKey = publicKey,
+                privateKey = privateKey,
+                onSuccess = { registeredAddressList ->
+                    runCatching {
+                        viewModelScope.launch {
+                            getPoolsStore().update { existingPools ->
+                                existingPools?.map {
+                                    if (it.id == poolId) {
+                                        it.copy(peersData = registeredAddressList)
+                                    } else it
+                                } ?: emptyList()
+                            }
+                        }
+                        val listOfPsbts = registeredAddressList.mapNotNull { it.hex }
+                        viewModelScope.launch {
+                            joinPsbts(listOfPsbts)
+                        }
+                    }
                 },
                 onError = { error ->
                     val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."

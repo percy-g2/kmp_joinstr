@@ -15,7 +15,7 @@ import org.jetbrains.compose.resources.painterResource
 
 fun main() = application {
     var isVisible by remember { mutableStateOf(true) }
-    val state = rememberWindowState(placement = WindowPlacement.Maximized)
+    val state = rememberWindowState(placement = WindowPlacement.Floating)
 
     Window(
         onCloseRequest = { isVisible = false },

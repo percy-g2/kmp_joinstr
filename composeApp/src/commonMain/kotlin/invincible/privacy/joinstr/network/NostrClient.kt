@@ -6,9 +6,9 @@ import invincible.privacy.joinstr.getWebSocketClient
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.Credentials
+import invincible.privacy.joinstr.model.JoinedPoolContent
 import invincible.privacy.joinstr.model.NostrEvent
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.model.RegisterAddress
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
@@ -169,11 +169,11 @@ open class NostrClient {
         }
     }
 
-    suspend fun checkRegisteredOutputs(
+    suspend fun checkRegisteredInputs(
         publicKey: ByteArray,
         privateKey: ByteArray,
         intervalSeconds: Long = 30,
-        onSuccess: (List<RegisterAddress>) -> Unit,
+        onSuccess: (List<JoinedPoolContent>) -> Unit,
         onError: (String?) -> Unit
     ) {
         runCatching {
@@ -184,7 +184,7 @@ open class NostrClient {
             wsSession?.let { session ->
                 withContext(Dispatchers.Default) {
                     while (isActive) {
-                        var registeredAddressList: MutableList<RegisterAddress> = mutableListOf()
+                        var registeredAddressList: MutableList<JoinedPoolContent> = mutableListOf()
                         val poolPublicKey = publicKey.toHexString()
                         val subscribeMessage =
                             """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$poolPublicKey"]}]""".trimMargin()
@@ -209,11 +209,89 @@ open class NostrClient {
                                                 val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
                                                 val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
                                                 val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
-                                                val registeredAddress = json.decodeFromString<RegisterAddress>(decryptedContent)
-                                                registeredAddressList += registeredAddress
-                                                if (registeredAddressList.size == totalPeers) {
-                                                    onSuccess(registeredAddressList.toList())
-                                                    closeSession()
+                                                val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
+                                                if (registeredAddress.type == "input") {
+                                                    registeredAddressList += registeredAddress
+                                                    if (registeredAddressList.size == totalPeers) {
+                                                        onSuccess(registeredAddressList.toList())
+                                                        closeSession()
+                                                    }
+                                                }
+                                                // this@withContext.cancel()
+                                            }
+                                        }.getOrElse {
+                                            it.printStackTrace()
+                                        }
+                                    } else {
+                                        println("waiting for response from server")
+                                    }
+                                }
+                            }
+                        }
+
+                        delay(intervalSeconds * 1000)
+                        responseJob.cancel()
+                    }
+                }
+            } ?: run {
+                onError("Failed to establish WebSocket connection")
+                closeSession()
+                throw IllegalStateException("Failed to establish WebSocket connection")
+            }
+        }.getOrElse { error ->
+            error.printStackTrace()
+            onError(error.message)
+            closeSession()
+        }
+    }
+
+    suspend fun checkRegisteredOutputs(
+        publicKey: ByteArray,
+        privateKey: ByteArray,
+        intervalSeconds: Long = 30,
+        onSuccess: (List<JoinedPoolContent>) -> Unit,
+        onError: (String?) -> Unit
+    ) {
+        runCatching {
+            if (wsSession?.isActive != true) {
+                wsSession = client.value.webSocketSession(nostrRelay.invoke())
+            }
+            val sharedSecret = getSharedSecret(privateKey, publicKey)
+            wsSession?.let { session ->
+                withContext(Dispatchers.Default) {
+                    while (isActive) {
+                        var registeredAddressList: MutableList<JoinedPoolContent> = mutableListOf()
+                        val poolPublicKey = publicKey.toHexString()
+                        val subscribeMessage =
+                            """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$poolPublicKey"]}]""".trimMargin()
+                        launch {
+                            registeredAddressList = mutableListOf()
+                            session.send(Frame.Text(subscribeMessage))
+                            println("Sent message: $subscribeMessage")
+                        }
+
+                        val responseJob = launch {
+                            for (frame in session.incoming) {
+                                if (frame is Frame.Text) {
+                                    val response = frame.readText()
+                                    println("Received response: $response")
+                                    if (response.contains(poolPublicKey)) {
+                                        runCatching {
+                                            val elem = json.parseToJsonElement(frame.readText()).jsonArray
+                                            if (elem[0].jsonPrimitive.content == "EVENT") {
+                                                val activePools = getPoolsStore().get()
+                                                    ?.sortedByDescending { it.timeout }
+                                                    ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                                                val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
+                                                val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                                val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
+                                                val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
+                                                if (registeredAddress.type == "output") {
+                                                    registeredAddressList += registeredAddress
+                                                    if (registeredAddressList.size == totalPeers) {
+                                                        onSuccess(registeredAddressList.toList())
+                                                        closeSession()
+                                                    }
                                                 }
                                                 // this@withContext.cancel()
                                             }
@@ -313,7 +391,7 @@ open class NostrClient {
             wsActivePoolsCredentialsSender?.let { session ->
                 withContext(Dispatchers.Default) {
                     while (isActive) {
-                        var registeredAddressList: MutableList<RegisterAddress> = mutableListOf()
+                        var registeredAddressList: MutableList<JoinedPoolContent> = mutableListOf()
                         val activePools = getPoolsStore().get()?.sortedByDescending { it.timeout }
                             ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                         val activePoolsPublicKeys = activePools?.map { it.publicKey } ?: emptyList()
@@ -353,7 +431,7 @@ open class NostrClient {
                                                         )
                                                         val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
                                                         val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
-                                                        val registeredAddress = json.decodeFromString<RegisterAddress>(decryptedContent)
+                                                        val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
                                                         registeredAddressList += registeredAddress
                                                         println("registeredAddressList >> " + registeredAddressList.joinToString(","))
                                                         if (registeredAddressList.size == totalPeers && pool.peersData.isEmpty()) {

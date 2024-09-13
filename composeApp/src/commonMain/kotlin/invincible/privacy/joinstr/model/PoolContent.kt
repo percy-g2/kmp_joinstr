@@ -27,7 +27,7 @@ data class LocalPoolContent(
     val relay: String,
     val feeRate: Int,
     val peersPublicKeys: List<String> = emptyList(),
-    val peersData: List<RegisterAddress> = emptyList()
+    val peersData: List<JoinedPoolContent> = emptyList()
 )
 
 fun copyToLocalPoolContent(poolContent: PoolContent): LocalPoolContent {

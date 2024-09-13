@@ -44,8 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.convertFloatExponentialToString
 import invincible.privacy.joinstr.getPoolsStore
-import invincible.privacy.joinstr.ktx.toExactString
+import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.ui.components.tagcloud.TagCloud
@@ -59,6 +60,7 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +75,23 @@ fun RegisterInputScreen(
     var autoRotation by remember { mutableStateOf(false) }
     val showWaitingDialog = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val activePools = getPoolsStore().get()
+            ?.sortedByDescending { it.timeout }
+            ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+        showWaitingDialog.value =  activePools
+            ?.find { it.peersData.filter { it.type == "input" }.size == it.peers }?.id?.let { true } ?: false
+
+        if (showWaitingDialog.value) {
+            val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
+            viewModel.checkRegisteredInputs(
+                poolId = selectedPool.id,
+                privateKey = selectedPool.privateKey.hexToByteArray(),
+                publicKey = selectedPool.publicKey.hexToByteArray()
+            )
+        }
+    }
 
     if (showWaitingDialog.value) {
         BasicAlertDialog(
@@ -193,7 +212,7 @@ fun RegisterInputScreen(
                                             } else Color.Transparent
 
                                             CustomOutlinedButton(
-                                                text = item.amount.toExactString(),
+                                                text = item.amount.convertFloatExponentialToString(),
                                                 color = color,
                                                 isSelected = item.txid == selectedTxId,
                                                 onClick = {

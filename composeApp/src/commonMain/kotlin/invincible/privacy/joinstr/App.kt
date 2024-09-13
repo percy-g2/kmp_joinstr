@@ -267,6 +267,10 @@ expect suspend fun createPsbt(
     unspentItem: ListUnspentResponseItem
 ): String?
 
+expect suspend fun joinPsbts(
+    listOfPsbts: List<String>
+): String?
+
 expect fun getSharedSecret(
     privateKey: ByteArray,
     pubKey: ByteArray

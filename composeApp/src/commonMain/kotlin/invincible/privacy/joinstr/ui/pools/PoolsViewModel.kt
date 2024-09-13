@@ -8,10 +8,10 @@ import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.Credentials
+import invincible.privacy.joinstr.model.JoinedPoolContent
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
-import invincible.privacy.joinstr.model.RegisterAddress
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
@@ -152,7 +152,7 @@ class PoolsViewModel : ViewModel() {
                             val privateKey = generatePrivateKey()
                             val publicKey = getPublicKey(privateKey)
                             val poolId = generatePoolId()
-                            val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + (600 * 6)
+                            val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
                             val poolContent = PoolContent(
                                 id = poolId,
                                 type = "new_pool",
@@ -356,11 +356,11 @@ class PoolsViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             if (onSuccess == null) _isLoading.value = true
-            val registerOutput = RegisterAddress(
+            val joinedPoolContent = JoinedPoolContent(
                 address = address,
                 type = "output"
             )
-            val data = json.encodeToString(registerOutput)
+            val data = json.encodeToString(joinedPoolContent)
             val sharedSecret = getSharedSecret(privateKey, publicKey)
             val encryptedMessage = encrypt(data, sharedSecret)
             val nostrEvent = createEvent(
