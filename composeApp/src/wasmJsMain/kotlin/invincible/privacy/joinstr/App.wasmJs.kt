@@ -300,3 +300,11 @@ actual suspend fun createPsbt(
 
     return null
 }
+
+actual suspend fun joinPsbts(
+    listOfPsbts: List<String>
+): String? {
+    // TODO
+
+    return null
+}

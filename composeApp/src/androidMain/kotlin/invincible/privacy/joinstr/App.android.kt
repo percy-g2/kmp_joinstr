@@ -20,11 +20,12 @@ import fr.acinq.bitcoin.Script
 import fr.acinq.bitcoin.SigHash.SIGHASH_ALL
 import fr.acinq.bitcoin.SigHash.SIGHASH_ANYONECANPAY
 import fr.acinq.bitcoin.Transaction
-import fr.acinq.bitcoin.TxHash
 import fr.acinq.bitcoin.TxId
 import fr.acinq.bitcoin.TxIn
 import fr.acinq.bitcoin.TxOut
 import fr.acinq.bitcoin.psbt.Psbt
+import fr.acinq.bitcoin.psbt.UpdateFailure
+import fr.acinq.bitcoin.utils.Either
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
@@ -179,15 +180,16 @@ actual suspend fun createPsbt(
     val sighashType = SIGHASH_ALL or SIGHASH_ANYONECANPAY
 
     val input = TxIn(
-        outPoint = OutPoint(TxId(TxHash(unspentItem.txid)), unspentItem.vout.toLong()),
+        outPoint = OutPoint(TxId(unspentItem.txid), unspentItem.vout.toLong()),
         sequence = 0xFFFFFFFFL,
         signatureScript = listOf()
     )
 
     val outputs = selectedPool.peersData
         .filter { it.type == "output" }
+        .sortedWith(compareBy { it.address })
         .mapNotNull { peerData ->
-            Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, peerData.address).fold(
+            Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, peerData.address ?: "").fold(
                 { error ->
                     println("Error creating output script for address ${peerData.address}: ${error.message}")
                     null
@@ -230,5 +232,51 @@ actual suspend fun createPsbt(
     val psbtBytes = Psbt.write(updatedPsbt)
     val psbtBase64 = Base64.encode(psbtBytes.toByteArray())
 
+    return psbtBase64
+}
+
+fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
+    return when {
+        psbts.isEmpty() -> Either.Left(UpdateFailure.CannotJoin("no psbt provided"))
+        psbts.map { it.global.version }.toSet().size != 1 -> Either.Left(UpdateFailure.CannotJoin("cannot join psbts with different versions"))
+        psbts.map { it.global.tx.version }.toSet().size != 1 -> Either.Left(UpdateFailure.CannotJoin("cannot join psbts with different tx versions"))
+        psbts.map { it.global.tx.lockTime }.toSet().size != 1 -> Either.Left(UpdateFailure.CannotJoin("cannot join psbts with different tx lockTime"))
+        psbts.any { it.global.tx.txIn.size != it.inputs.size || it.global.tx.txOut.size != it.outputs.size } -> Either.Left(UpdateFailure.CannotJoin("some psbts have an invalid number of inputs/outputs"))
+        psbts.flatMap { it.global.tx.txIn.map { txIn -> txIn.outPoint } }.toSet().size != psbts.sumOf { it.global.tx.txIn.size } -> Either.Left(
+            UpdateFailure.CannotJoin("cannot join psbts that spend the same input"))
+        else -> {
+            val uniqueOutputs = psbts.flatMap { it.global.tx.txOut }.distinctBy { it.toString() }
+            val uniqueOutputData = psbts.flatMap { it.outputs }.distinctBy { it.toString() }
+
+            if (uniqueOutputs.size != uniqueOutputData.size) {
+                Either.Left(UpdateFailure.CannotJoin("mismatch between unique outputs and output data"))
+            } else {
+                val global = psbts[0].global.copy(
+                    tx = psbts[0].global.tx.copy(
+                        txIn = psbts.flatMap { it.global.tx.txIn },
+                        txOut = uniqueOutputs
+                    ),
+                    extendedPublicKeys = psbts.flatMap { it.global.extendedPublicKeys }.distinct(),
+                    unknown = psbts.flatMap { it.global.unknown }.distinct()
+                )
+                Either.Right(psbts[0].copy(
+                    global = global,
+                    inputs = psbts.flatMap { it.inputs },
+                    outputs = uniqueOutputData
+                ))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+actual suspend fun joinPsbts(
+    listOfPsbts: List<String>
+): String? {
+    val psbts = listOfPsbts.mapNotNull { Psbt.read(Base64.decode(it.toByteArray())).right }
+    val joinedPsbt = joinUniqueOutputs(*psbts.toTypedArray())
+    val psbtBytes = Psbt.write(joinedPsbt.right!!)
+    val psbtBase64 = Base64.encode(psbtBytes.toByteArray())
+    println("joined psbt>> $psbtBase64")
     return psbtBase64
 }
