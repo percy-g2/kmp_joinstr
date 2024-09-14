@@ -14,6 +14,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,14 +46,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -85,7 +91,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtherPoolsScreen(
-    poolsViewModel: PoolsViewModel
+    poolsViewModel: PoolsViewModel,
 ) {
     val poolContents by poolsViewModel.otherPoolEvents.collectAsState()
     val isLoading by poolsViewModel.isLoading.collectAsState()
@@ -93,6 +99,8 @@ fun OtherPoolsScreen(
     val showWaitingDialog = remember { mutableStateOf(false) }
     val showQrCodeDialog = remember { mutableStateOf(Pair<PoolContent?, Boolean>(null, false)) }
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
+
+    val pullState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         poolsViewModel.fetchOtherPools()
@@ -269,42 +277,106 @@ fun OtherPoolsScreen(
         )
     }
 
+    PoolList(
+        isLoading = isLoading,
+        poolContents = poolContents,
+        pullState = pullState,
+        poolsViewModel = poolsViewModel,
+        showQrCodeDialog = showQrCodeDialog
+    )
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PoolList(
+    isLoading: Boolean,
+    poolContents: List<PoolContent>?,
+    pullState: PullToRefreshState,
+    poolsViewModel: PoolsViewModel,
+    showQrCodeDialog: MutableState<Pair<PoolContent?, Boolean>>
+) {
     BoxWithConstraints(
-        contentAlignment = Alignment.TopCenter
+        contentAlignment = TopCenter
     ) {
-        if (isLoading) {
-            ShimmerEventList()
-        } else {
-            poolContents?.let { list ->
-                if (list.isNotEmpty()) {
-                    LazyColumn(
-                        modifier = Modifier.wrapContentSize(),
-                    ) {
-                        items(list) { poolContent ->
-                            var isVisible by remember { mutableStateOf(true) }
-                            AnimatedVisibility(
-                                visible = isVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                PoolItem(
-                                    poolContent = copyToLocalPoolContent(poolContent),
-                                    onJoinRequest = {
-                                        showQrCodeDialog.value = Pair(poolContent, true)
-                                    },
-                                    onTimeout = {
-                                        isVisible = false
-                                        poolsViewModel.removeOtherPool(poolContent.id)
-                                    }
-                                )
-                            }
-                        }
+        when {
+            isLoading -> ShimmerEventList()
+            else -> PoolListContent(
+                poolContents = poolContents,
+                pullState = pullState,
+                onRefresh = { poolsViewModel.fetchOtherPools() },
+                onJoinRequest = { poolContent ->
+                    showQrCodeDialog.value = poolContent to true
+                },
+                onTimeout = { id ->
+                    poolsViewModel.removeOtherPool(id)
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BoxScope.PoolListContent(
+    poolContents: List<PoolContent>?,
+    pullState: PullToRefreshState,
+    onRefresh: () -> Unit,
+    onJoinRequest: (PoolContent) -> Unit,
+    onTimeout: (String) -> Unit
+) {
+    PullToRefreshBox(
+        isRefreshing = false,
+        state = pullState,
+        modifier = Modifier.align(TopCenter),
+        onRefresh = onRefresh
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = if (poolContents.isNullOrEmpty()) Arrangement.Center else Arrangement.Top
+        ) {
+            when {
+                !poolContents.isNullOrEmpty() -> {
+                    items(poolContents) { poolContent ->
+                        PoolItemWrapper(
+                            poolContent = poolContent,
+                            onJoinRequest = onJoinRequest,
+                            onTimeout = onTimeout
+                        )
                     }
-                } else CenterColumnText(Res.string.no_active_pools)
-            } ?: run {
-                CenterColumnText(Res.string.something_went_wrong)
+                }
+                poolContents == null -> {
+                    item { CenterColumnText(Res.string.something_went_wrong) }
+                }
+                else -> {
+                    item { CenterColumnText(Res.string.no_active_pools) }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun PoolItemWrapper(
+    poolContent: PoolContent,
+    onJoinRequest: (PoolContent) -> Unit,
+    onTimeout: (String) -> Unit
+) {
+    var isVisible by remember { mutableStateOf(true) }
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        PoolItem(
+            poolContent = copyToLocalPoolContent(poolContent),
+            onJoinRequest = { onJoinRequest(poolContent) },
+            onTimeout = {
+                isVisible = false
+                onTimeout(poolContent.id)
+            }
+        )
     }
 }
 

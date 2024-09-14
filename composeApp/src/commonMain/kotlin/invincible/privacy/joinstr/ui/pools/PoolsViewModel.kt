@@ -98,6 +98,7 @@ class PoolsViewModel : ViewModel() {
     fun fetchLocalPools() {
         viewModelScope.launch {
             _isLoading.value = true
+            delay(2.seconds)
             _localPools.value = poolStore.get()
                 ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }

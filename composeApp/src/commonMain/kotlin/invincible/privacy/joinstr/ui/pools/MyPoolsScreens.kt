@@ -15,14 +15,15 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,9 +31,13 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -70,56 +76,113 @@ import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPoolsScreens(
-    poolsViewModel: PoolsViewModel
+    poolsViewModel: PoolsViewModel,
 ) {
     val events by poolsViewModel.localPools.collectAsState()
     val isLoading by poolsViewModel.isLoading.collectAsState()
+    val pullState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         poolsViewModel.fetchLocalPools()
     }
 
+    PoolList(
+        isLoading = isLoading,
+        events = events,
+        pullRefreshState = pullState,
+        poolsViewModel = poolsViewModel
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PoolList(
+    isLoading: Boolean,
+    events: List<LocalPoolContent>?,
+    pullRefreshState: PullToRefreshState,
+    poolsViewModel: PoolsViewModel,
+) {
     BoxWithConstraints(
-        contentAlignment = Alignment.TopCenter
+        contentAlignment = TopCenter
     ) {
-        if (isLoading) {
-            ShimmerEventList()
-        } else {
-            events?.let { list ->
-                if (list.isNotEmpty()) {
-                    LazyColumn(
-                        modifier = Modifier.wrapContentSize(),
-                    ) {
-                        items(
-                            items = list,
-                            key = { it.id }
-                        ) { event ->
-                            var isVisible by remember { mutableStateOf(true) }
-                            AnimatedVisibility(
-                                visible = isVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                PoolItem(
-                                    isInternal = true,
-                                    poolContent = event,
-                                    onTimeout = {
-                                        isVisible = false
-                                        poolsViewModel.removeLocalPool(event.id)
-                                    }
-                                )
-                            }
-                        }
+        when {
+            isLoading -> ShimmerEventList()
+            else -> PoolListContent(
+                isLoading = isLoading,
+                events = events,
+                pullRefreshState = pullRefreshState,
+                onRefresh = {
+                    poolsViewModel.fetchLocalPools()
+                },
+                onRemovePool = { poolsViewModel.removeLocalPool(it) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BoxScope.PoolListContent(
+    isLoading: Boolean,
+    events: List<LocalPoolContent>?,
+    pullRefreshState: PullToRefreshState,
+    onRefresh: () -> Unit,
+    onRemovePool: (String) -> Unit,
+) {
+    PullToRefreshBox(
+        isRefreshing = isLoading,
+        state = pullRefreshState,
+        modifier = Modifier.align(TopCenter),
+        onRefresh = onRefresh
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = if (events.isNullOrEmpty()) Arrangement.Center else Arrangement.Top
+        ) {
+            when {
+                !events.isNullOrEmpty() -> {
+                    items(events) { event ->
+                        PoolItemWrapper(
+                            poolContent = event,
+                            onTimeout = { onRemovePool(event.id) }
+                        )
                     }
-                } else CenterColumnText(Res.string.no_active_pools)
-            } ?: run {
-                if (isLoading.not()) {
-                    CenterColumnText(Res.string.something_went_wrong)
+                }
+
+                events == null -> {
+                    item { CenterColumnText(Res.string.something_went_wrong) }
+                }
+
+                else -> {
+                    item { CenterColumnText(Res.string.no_active_pools) }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PoolItemWrapper(
+    poolContent: LocalPoolContent,
+    onTimeout: () -> Unit,
+) {
+    var isVisible by remember { mutableStateOf(true) }
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        PoolItem(
+            isInternal = true,
+            poolContent = poolContent,
+            onTimeout = {
+                isVisible = false
+                onTimeout()
+            }
+        )
     }
 }
 
@@ -128,7 +191,7 @@ fun PoolItem(
     poolContent: LocalPoolContent,
     isInternal: Boolean = false,
     onJoinRequest: (() -> Unit)? = null,
-    onTimeout: () -> Unit
+    onTimeout: () -> Unit,
 ) {
     var isTimedOut by remember { mutableStateOf(false) }
     val animatedProgress = remember { Animatable(0f) }
@@ -227,7 +290,7 @@ fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
     val currentTime = remember { mutableStateOf(Clock.System.now().epochSeconds) }
     val remainingTime = remember { mutableStateOf(targetTime - currentTime.value) }
     val progress = remember { Animatable(1f) }
-    val totalDuration =  600f // 10 minutes in seconds
+    val totalDuration = 600f // 10 minutes in seconds
 
     LaunchedEffect(Unit) {
         while (remainingTime.value > 0) {
