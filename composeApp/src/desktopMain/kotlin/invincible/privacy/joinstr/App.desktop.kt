@@ -37,6 +37,7 @@ import io.ktor.client.plugins.websocket.*
 import kotlinx.datetime.Clock
 import net.harawata.appdirs.AppDirsFactory
 import okio.Path.Companion.toPath
+import java.awt.Desktop
 import java.awt.SystemTray
 import java.awt.Toolkit
 import java.awt.TrayIcon
@@ -44,6 +45,7 @@ import java.io.File
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import java.net.URI
 import javax.swing.JOptionPane
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -263,7 +265,7 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
 }
 
 @OptIn(ExperimentalEncodingApi::class)
-actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
+actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> {
     val psbts = listOfPsbts.mapNotNull { Psbt.read(Base64.decode(it.toByteArray())).right }
     val joinedPsbt = joinUniqueOutputs(*psbts.toTypedArray())
 
@@ -376,5 +378,22 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
     println("joined psbt>> ${finalizedPsbt.right?.extract()?.left}")
     println("joined psbt>> ${finalizedPsbt.right?.global?.tx.toString()}")
     println("joined psbt>> ${finalizedPsbt.right?.extract()?.right}")
-    return finalizedPsbt.right?.extract()?.right.toString()
+    val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
+    val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
+    return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
+}
+
+actual fun testOutput() {
+    val poolAmount: BigDecimal = BigDecimal(0.00995)
+    val selectedTxAmount: BigDecimal = BigDecimal( 0.01)
+    val estimatedVByteSize = BigDecimal(100).multiply(BigDecimal(2))
+    val estimatedBtcFee = (BigDecimal(4).multiply(estimatedVByteSize)).divide(BigDecimal(100000000))
+
+    val outputAmount = poolAmount.minus(estimatedBtcFee)
+    val mathContext = MathContext(8, RoundingMode.HALF_UP)
+    println("outputAmount " + outputAmount.setScale(8, RoundingMode.HALF_UP))
+}
+
+actual fun openLink(link: String) {
+    Desktop.getDesktop().browse(URI(link))
 }

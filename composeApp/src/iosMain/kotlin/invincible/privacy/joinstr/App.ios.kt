@@ -35,6 +35,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
 import okio.Path.Companion.toPath
@@ -48,10 +49,14 @@ import platform.Foundation.NSCalendarUnitSecond
 import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSDate
 import platform.Foundation.NSDecimalNumber
+import platform.Foundation.NSDecimalNumberHandler
+import platform.Foundation.NSRoundingMode
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.dateByAddingTimeInterval
+import platform.UIKit.UIApplication
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -333,7 +338,7 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
 }
 
 @OptIn(ExperimentalEncodingApi::class)
-actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
+actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> {
     val psbts = listOfPsbts.mapNotNull { Psbt.read(Base64.decode(it.toByteArray())).right }
     val joinedPsbt = joinUniqueOutputs(*psbts.toTypedArray())
 
@@ -446,5 +451,44 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
     println("joined psbt>> ${finalizedPsbt.right?.extract()?.left}")
     println("joined psbt>> ${finalizedPsbt.right?.global?.tx.toString()}")
     println("joined psbt>> ${finalizedPsbt.right?.extract()?.right}")
-    return finalizedPsbt.right?.extract()?.right.toString()
+    val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
+    val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
+    return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
+}
+
+actual fun openLink(link: String) {
+    runCatching {
+        val nsUrl = NSURL.URLWithString(link)
+        if (nsUrl != null) {
+            UIApplication.sharedApplication.openURL(nsUrl)
+        }
+    }.getOrElse {
+        it.printStackTrace()
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun testOutput() {
+
+    val poolAmount = NSDecimalNumber(0.00995)
+    val selectedTxAmount = NSDecimalNumber(0.01)
+    val estimatedVByteSize = NSDecimalNumber(100 * 2)
+    val estimatedBtcFee = (NSDecimalNumber(4).decimalNumberByMultiplyingBy(estimatedVByteSize))
+        .decimalNumberByDividingBy(NSDecimalNumber(100000000))
+
+    val outputAmount = poolAmount.decimalNumberBySubtracting(estimatedBtcFee)
+
+    val roundedOutputAmount = outputAmount.decimalNumberByRoundingAccordingToBehavior(
+        NSDecimalNumberHandler(
+            roundingMode = NSRoundingMode.NSRoundPlain,
+            scale = 8.toShort(),
+            raiseOnExactness = false,
+            raiseOnOverflow = false,
+            raiseOnUnderflow = false,
+            raiseOnDivideByZero = false
+        )
+    )
+
+    println("outputAmount " + roundedOutputAmount.stringValue)
+    println("outputAmount " + Satoshi((roundedOutputAmount.decimalNumberByMultiplyingBy(NSDecimalNumber(100_000_000))).longValue()).toLong())
 }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -32,11 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
@@ -47,7 +44,6 @@ import io.github.alexzhirkevich.compottie.CompottieException
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
-import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.joinstr_logo
 import kotlinx.coroutines.launch
@@ -139,7 +135,7 @@ fun LogoAnimation() {
     Box(
         contentAlignment = Alignment.Center
     ) {
-         Image(
+        /* Image(
              painter = rememberLottiePainter(
                  composition = composition.value,
                  progress = { animationState },
@@ -149,12 +145,12 @@ fun LogoAnimation() {
                  .fillMaxWidth()
                  .zIndex(1f),
              contentScale = ContentScale.FillBounds
-         )
+         )*/
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.zIndex(2f)
+
         ) {
             Image(
                 modifier = Modifier.wrapContentSize(),

@@ -4,7 +4,9 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
@@ -96,7 +98,8 @@ actual object LocalNotification {
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setChannelId(channelId)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
 
         with(NotificationManagerCompat.from(context)) {
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -284,7 +287,7 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
 }
 
 @OptIn(ExperimentalEncodingApi::class)
-actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
+actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> {
     val psbts = listOfPsbts.mapNotNull { Psbt.read(Base64.decode(it.toByteArray())).right }
     val joinedPsbt = joinUniqueOutputs(*psbts.toTypedArray())
 
@@ -397,5 +400,26 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): String? {
     println("joined psbt>> ${finalizedPsbt.right?.extract()?.left}")
     println("joined psbt>> ${finalizedPsbt.right?.global?.tx.toString()}")
     println("joined psbt>> ${finalizedPsbt.right?.extract()?.right}")
-    return finalizedPsbt.right?.extract()?.right.toString()
+    val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
+    val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
+    return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
+}
+
+actual fun openLink(link: String) {
+    val context = ContextProvider.getContext()
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+actual fun testOutput() {
+    val poolAmount: BigDecimal = BigDecimal(0.00995)
+    val selectedTxAmount: BigDecimal = BigDecimal( 0.01)
+    val estimatedVByteSize = BigDecimal(100).multiply(BigDecimal(2))
+    val estimatedBtcFee = (BigDecimal(4).multiply(estimatedVByteSize)).divide(BigDecimal(100000000))
+
+    val outputAmount = poolAmount.minus(estimatedBtcFee)
+    val mathContext = MathContext(8, RoundingMode.HALF_UP)
+    println("outputAmount " + outputAmount.setScale(8, RoundingMode.HALF_UP))
 }

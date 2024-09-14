@@ -118,6 +118,7 @@ internal fun VerticalEvent(
   val radiusAnimFactor by calculateRadiusAnimFactor(style)
   Box(
     modifier = modifier
+      .padding(top = 4.dp)
       .wrapContentSize()
       .drawBehind {
         val xOffset = when (verticalAlignment) {

@@ -27,6 +27,7 @@ import org.w3c.notifications.NotificationPermission
 import kotlin.js.Promise
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.seconds
 
 actual object LocalNotification {
@@ -302,9 +303,26 @@ actual suspend fun createPsbt(
 }
 
 actual suspend fun joinPsbts(
-    listOfPsbts: List<String>
-): String? {
+    listOfPsbts: List<String>,
+): Pair<String?, String?> {
     // TODO
 
-    return null
+    return Pair(null, null)
+}
+
+actual fun openLink(link: String) {
+    window.open(link)
+}
+
+actual fun testOutput() {
+    val poolAmount = 0.00995
+    val selectedTxAmount = 0.01
+    val estimatedVByteSize = 100.0 * 2
+    val estimatedBtcFee = (4 * estimatedVByteSize) / 100000000.0
+
+    val outputAmount = poolAmount - estimatedBtcFee
+
+    val roundedOutputAmount = (outputAmount * 100000000.0).roundToLong() / 100000000.0
+
+    println("outputAmount $roundedOutputAmount")
 }

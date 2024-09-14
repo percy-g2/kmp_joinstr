@@ -269,7 +269,7 @@ expect suspend fun createPsbt(
 
 expect suspend fun joinPsbts(
     listOfPsbts: List<String>
-): String?
+): Pair<String?, String?>
 
 expect fun getSharedSecret(
     privateKey: ByteArray,
@@ -293,6 +293,10 @@ expect object LocalNotification {
     )
     suspend fun requestPermission(): Boolean
 }
+
+expect fun openLink(link: String)
+
+expect fun testOutput()
 
 /* sample call
 scope.launch {

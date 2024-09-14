@@ -4,6 +4,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.createPsbt
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
@@ -18,10 +19,13 @@ import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.network.test
 import invincible.privacy.joinstr.ui.components.SnackbarController
+import invincible.privacy.joinstr.ui.components.timeline.data.Item
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import io.ktor.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
@@ -73,7 +77,8 @@ class RegisterInputViewModel : ViewModel() {
 
     fun registerInput(
         poolId: String,
-        onSuccess: () -> Unit
+        onSuccess: (Item) -> Unit,
+        onError: () -> Unit,
     ) {
         viewModelScope.launch {
             val activePools = getPoolsStore().get()
@@ -122,20 +127,26 @@ class RegisterInputViewModel : ViewModel() {
                         tagPubKey = selectedPool.publicKey
                     )
 
+                    val item =  Item(id = 0, title = "Register Input", description = "Input registered with event id: ${nostrEvent.id}")
+                    onSuccess.invoke(item)
+
                     nostrClient.sendEvent(
                         event = nostrEvent,
                         onSuccess = {
+                            val waitItem = Item(id = 1, title = "Wait", description = "Waiting for other users to register input...")
+                            onSuccess.invoke(waitItem)
                             SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
-                            onSuccess.invoke()
                             checkRegisteredInputs(
                                 poolId = selectedPool.id,
                                 privateKey = selectedPool.privateKey.hexToByteArray(),
-                                publicKey = selectedPool.publicKey.hexToByteArray()
+                                publicKey = selectedPool.publicKey.hexToByteArray(),
+                                onSuccess = onSuccess
                             )
                         },
                         onError = { error ->
                             val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
                             SnackbarController.showMessage(msg)
+                            onError.invoke()
                         }
                     )
                 }
@@ -145,6 +156,7 @@ class RegisterInputViewModel : ViewModel() {
                 } else {
                     SnackbarController.showMessage("An error occurred during PSBT creation!")
                 }
+                onError.invoke()
                 return@launch
             }
         }
@@ -153,7 +165,8 @@ class RegisterInputViewModel : ViewModel() {
     fun checkRegisteredInputs(
         poolId: String,
         publicKey: ByteArray,
-        privateKey: ByteArray
+        privateKey: ByteArray,
+        onSuccess: (Item) -> Unit
     ) {
         viewModelScope.launch {
             nostrClient.checkRegisteredInputs(
@@ -172,9 +185,21 @@ class RegisterInputViewModel : ViewModel() {
                         }
                         val listOfPsbts = registeredAddressList.mapNotNull { it.hex }
                         viewModelScope.launch {
-                            val rawTx = joinPsbts(listOfPsbts)
-                            if (rawTx != null) {
-                                httpClient.broadcastRawTx(rawTx)
+                            val (psbt, rawTx) = joinPsbts(listOfPsbts)
+                            if (rawTx != null && psbt != null) {
+                                val waitItem = Item(id = 2, title = "Finalize Coinjoin Tx", description = "PSBT: $psbt")
+                                onSuccess.invoke(waitItem)
+                                val txId = httpClient.broadcastRawTx(rawTx)
+                                val broadcastTxItem =  Item(id = 3, title = "Broadcast Tx", description = "TX: $txId")
+
+                                CoroutineScope(Dispatchers.Default).launch {
+                                    val result = LocalNotification.requestPermission()
+                                    if (result) {
+                                        LocalNotification.showNotification("CoinJoin Completed Successfully", "Your transaction has been successfully mixed for enhanced privacy.")
+                                    }
+                                }
+
+                                onSuccess.invoke(broadcastTxItem)
                             } else {
                                 SnackbarController.showMessage("Something went wrong.\nPlease try again.")
                             }
