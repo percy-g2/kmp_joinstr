@@ -71,7 +71,7 @@ fun RegisterInputScreen(
 ) {
     val isLoading by viewModel.isLoading
     val listUnspent by viewModel.listUnspent
-    val selectedTxId by viewModel.selectedTxId
+    val selectedTxId by viewModel.selectedTx
     var autoRotation by remember { mutableStateOf(false) }
     val showWaitingDialog = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -193,7 +193,7 @@ fun RegisterInputScreen(
                                 )
 
                                 LaunchedEffect(state, autoRotation) {
-                                    while (isActive && autoRotation && selectedTxId.isEmpty()) {
+                                    while (isActive && autoRotation && selectedTxId == null) {
                                         delay(10)
                                         state.rotateBy(0.001f, Vector3(1f, 1f, 1f))
                                     }
@@ -207,17 +207,17 @@ fun RegisterInputScreen(
                                         Box(
                                             modifier = Modifier.tagCloudItemFade(toAlpha = .5f)
                                         ) {
-                                            val color = if (item.txid == selectedTxId) {
+                                            val color = if (item.txid == selectedTxId?.txid && item.vout == selectedTxId?.vout) {
                                                 redDark
                                             } else Color.Transparent
 
                                             CustomOutlinedButton(
                                                 text = item.amount.convertFloatExponentialToString(),
                                                 color = color,
-                                                isSelected = item.txid == selectedTxId,
+                                                isSelected = item.txid == selectedTxId?.txid && item.vout == selectedTxId?.vout,
                                                 onClick = {
-                                                    viewModel.setSelectedTxId(item.txid)
-                                                    autoRotation = selectedTxId.isEmpty()
+                                                    viewModel.setSelectedTxId(item.txid, item.vout)
+                                                    autoRotation = selectedTxId == null
                                                 }
                                             )
                                         }
@@ -233,7 +233,7 @@ fun RegisterInputScreen(
                     Button(
                         modifier = Modifier.padding(16.dp),
                         shape = RoundedCornerShape(8.dp),
-                        enabled = selectedTxId.isNotEmpty(),
+                        enabled = selectedTxId != null,
                         onClick = {
                             viewModel.registerInput(poolId) {
                                 showWaitingDialog.value = true

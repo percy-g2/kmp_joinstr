@@ -40,8 +40,8 @@ class RegisterInputViewModel : ViewModel() {
     private val _listUnspent = mutableStateOf<List<ListUnspentResponseItem>?>(null)
     val listUnspent: State<List<ListUnspentResponseItem>?> = _listUnspent
 
-    private val _selectedTxId = mutableStateOf("")
-    val selectedTxId: State<String> = _selectedTxId
+    private val _selectedTx = mutableStateOf<ListUnspentResponseItem?>(null)
+    val selectedTx: State<ListUnspentResponseItem?> = _selectedTx
 
     init {
         fetchListUnspent()
@@ -60,12 +60,13 @@ class RegisterInputViewModel : ViewModel() {
         }
     }
 
-    fun setSelectedTxId(txId: String) {
-        _selectedTxId.value = if (_selectedTxId.value == txId) "" else txId
+    fun setSelectedTxId(txId: String, vOut:Int) {
+        val selectedTx = _listUnspent.value?.find { it.txid == txId && it.vout == vOut }
+        _selectedTx.value = if (_selectedTx.value == selectedTx) null else selectedTx
     }
 
     fun getSelectedTxInfo(): Pair<String, Int>? {
-        return _listUnspent.value?.find { it.txid == _selectedTxId.value }?.let {
+        return _selectedTx.value?.let {
             Pair(it.txid, it.vout)
         }
     }
@@ -79,7 +80,7 @@ class RegisterInputViewModel : ViewModel() {
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                 ?.sortedByDescending { it.timeout }
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
-            _listUnspent.value?.find { it.txid == selectedTxId.value }?.let {
+            _selectedTx.value?.let {
                 viewModelScope.launch {
                     val psbtBase64 = createPsbt(
                         poolId = poolId,
