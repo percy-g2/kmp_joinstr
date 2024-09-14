@@ -171,7 +171,12 @@ class RegisterInputViewModel : ViewModel() {
                         }
                         val listOfPsbts = registeredAddressList.mapNotNull { it.hex }
                         viewModelScope.launch {
-                            joinPsbts(listOfPsbts)
+                            val rawTx = joinPsbts(listOfPsbts)
+                            if (rawTx != null) {
+                                httpClient.broadcastRawTx(rawTx)
+                            } else {
+                                SnackbarController.showMessage("Something went wrong.\nPlease try again.")
+                            }
                         }
                     }
                 },

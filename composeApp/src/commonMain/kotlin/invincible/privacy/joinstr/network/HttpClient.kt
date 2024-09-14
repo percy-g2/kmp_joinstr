@@ -68,6 +68,19 @@ class HttpClient {
         it.printStackTrace()
         null
     }
+
+    suspend fun broadcastRawTx(rawTx: String): String? = runCatching {
+        val response: HttpResponse = createHttpClient.post {
+            url("https://mempool.space/signet/api/tx")
+            setBody(rawTx)
+        }
+        if (response.status == HttpStatusCode.OK) {
+            json.decodeFromString<String>(response.bodyAsText())
+        } else null
+    }.getOrElse {
+        it.printStackTrace()
+        null
+    }
 }
 
 val json = Json {
