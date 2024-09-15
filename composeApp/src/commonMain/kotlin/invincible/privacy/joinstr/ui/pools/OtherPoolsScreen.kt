@@ -80,7 +80,6 @@ import io.github.alexzhirkevich.qrose.options.QrBrush
 import io.github.alexzhirkevich.qrose.options.QrColors
 import io.github.alexzhirkevich.qrose.options.solid
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
-import io.ktor.util.*
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.no_active_pools
 import joinstr.composeapp.generated.resources.pool_request
@@ -122,12 +121,8 @@ fun OtherPoolsScreen(
             content = {
 
                 showQrCodeDialog.value.first?.let { poolContent ->
-
                     val privateKey = generatePrivateKey()
-                    val publicKey = if (PlatformUtils.IS_BROWSER) {
-                        getPublicKey(privateKey).drop(1).take(32).toByteArray()
-                    } else getPublicKey(privateKey)
-
+                    val publicKey = getPublicKey(privateKey)
                     val qrCodeColor = MaterialTheme.colorScheme.onBackground
                     val painter = rememberQrCodePainter(
                         data = poolContent.publicKey,
@@ -180,6 +175,7 @@ fun OtherPoolsScreen(
                                     showQrCodeDialog.value = Pair(null, false)
                                     joiningPool.value = true
                                     poolsViewModel.joinRequest(
+                                        poolId = poolContent.id,
                                         publicKey = publicKey,
                                         privateKey = privateKey,
                                         poolPublicKey = poolContent.publicKey,

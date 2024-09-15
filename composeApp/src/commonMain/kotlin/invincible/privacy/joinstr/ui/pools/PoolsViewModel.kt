@@ -11,6 +11,7 @@ import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.JoinedPoolContent
+import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
@@ -66,7 +67,7 @@ class PoolsViewModel : ViewModel() {
     val coinJoinHistory: StateFlow<List<CoinJoinHistory>?> = _coinJoinHistory.asStateFlow()
 
     private val _activePoolReady = MutableStateFlow(Pair(false, ""))
-    val activePoolReady: StateFlow<Pair<Boolean,String>> = _activePoolReady.asStateFlow()
+    val activePoolReady: StateFlow<Pair<Boolean, String>> = _activePoolReady.asStateFlow()
 
     fun startInitialChecks() {
         GlobalScope.launch {
@@ -81,12 +82,12 @@ class PoolsViewModel : ViewModel() {
         }
     }
 
-    private suspend fun checkForReadyActivePools() = withContext(Dispatchers.Default){
+    private suspend fun checkForReadyActivePools() = withContext(Dispatchers.Default) {
         while (isActive) {
             val activePools = getPoolsStore().get()
                 ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-            _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it)} ?: Pair(false, "")
+            _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it) } ?: Pair(false, "")
             // Delay for 30 seconds
             delay(30.seconds)
         }
@@ -150,17 +151,19 @@ class PoolsViewModel : ViewModel() {
     fun createPool(
         denomination: String,
         peers: String,
-        onSuccess: () -> Unit
+        onSuccess: () -> Unit,
     ) {
         viewModelScope.launch {
             runCatching {
                 _isLoading.value = true
                 SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
                     httpClient.fetchHourFee()?.let { hourFee ->
-                        val params = JsonArray(listOf(
-                            JsonPrimitive("coin_join"),
-                            JsonPrimitive("bech32")
-                        ))
+                        val params = JsonArray(
+                            listOf(
+                                JsonPrimitive("coin_join"),
+                                JsonPrimitive("bech32")
+                            )
+                        )
                         val addressBody = RpcRequestBody(
                             method = Methods.NEW_ADDRESS.value,
                             params = params
@@ -245,7 +248,7 @@ class PoolsViewModel : ViewModel() {
         poolId: String,
         publicKey: ByteArray,
         privateKey: ByteArray,
-        showWaitingDialog: MutableState<Boolean>
+        showWaitingDialog: MutableState<Boolean>,
     ) {
         viewModelScope.launch {
             nostrClient.checkRegisteredOutputs(
@@ -272,101 +275,145 @@ class PoolsViewModel : ViewModel() {
     }
 
     fun joinRequest(
+        poolId: String,
         publicKey: ByteArray,
         privateKey: ByteArray,
         poolPublicKey: String,
         showJoinDialog: MutableState<Boolean>,
         onSuccess: (LocalPoolContent) -> Unit,
-        onError: () -> Unit
+        onError: () -> Unit,
     ) {
         viewModelScope.launch {
-            showJoinDialog.value = true
-            val jsonObject = buildJsonObject {
-                put("type", JsonPrimitive("join_pool"))
-            }
-            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
-            val sharedSecret = getSharedSecret(privateKey, poolPublicKey.hexToByteArray())
-            val encryptedMessage = encrypt(data, sharedSecret)
-            val nostrEvent = createEvent(
-                content = encryptedMessage,
-                event = Event.ENCRYPTED_DIRECT_MESSAGE,
-                privateKey = privateKey,
-                publicKey = publicKey,
-                tagPubKey = poolPublicKey
-            )
-            nostrClient.sendEvent(
-                event = nostrEvent,
-                onSuccess = {
-                    SnackbarController.showMessage("Join request sent.\nEvent ID: ${nostrEvent.id}")
-                    viewModelScope.launch {
-                        nostrClient.requestPoolCredentials(
-                            requestPublicKey = publicKey.toHexString(),
-                            onSuccess = { eventWithCredentials ->
-                                viewModelScope.launch {
-                                    runCatching {
-                                        val params = JsonArray(listOf(
-                                            JsonPrimitive("coin_join"),
-                                            JsonPrimitive("bech32")
-                                        ))
-                                        val addressBody = RpcRequestBody(
-                                            method = Methods.NEW_ADDRESS.value,
-                                            params = params
-                                        )
-                                        httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
-                                            val decryptedContent = decrypt(eventWithCredentials.content, sharedSecret)
-                                            val credentials = json.decodeFromString<Credentials>(decryptedContent)
-                                            val pool = LocalPoolContent(
-                                                id = credentials.id,
-                                                type = "new_pool",
-                                                peers = credentials.peers,
-                                                denomination = credentials.denomination,
-                                                relay = credentials.relay,
-                                                feeRate = credentials.feeRate,
-                                                timeout = credentials.timeout,
-                                                publicKey = credentials.publicKey,
-                                                privateKey = credentials.privateKey
-                                            )
-                                            poolStore.update {
-                                                it?.plus(pool) ?: listOf(pool)
-                                            }
-                                            showJoinDialog.value = false
-                                            SnackbarController.showMessage("Joined pool : ${credentials.id}")
+            val activePools = getPoolsStore().get()
+                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.sortedByDescending { it.timeout }
+            activePools?.find { it.id == poolId }?.let { selectedPool ->
 
-                                            registerOutput(
-                                                address = address,
-                                                publicKey = credentials.publicKey.hexToByteArray(),
-                                                privateKey = credentials.privateKey.hexToByteArray(),
-                                                onSuccess = {
-                                                    onSuccess.invoke(pool)
-                                                }
+                val poolAmount = selectedPool.denomination
+
+                val rpcRequestBody = RpcRequestBody(
+                    method = Methods.LIST_UNSPENT.value
+                )
+
+                // Derive selectedTxAmount from poolAmount
+                val selectedTxAmount = poolAmount - (0.00005).toFloat()// Subtracting 5000 satoshis (0.00005 BTC)
+
+                val listOfAmounts = httpClient.fetchNodeData<List<ListUnspentResponseItem>>(rpcRequestBody)?.map { it.amount }
+
+
+                if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
+                        selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
+                ) {
+                    SnackbarController.showMessage(
+                        "Error: Selected input value is not within the specified range for this pool " +
+                            "(denomination: $poolAmount BTC)"
+                    )
+                    return@launch
+                }
+
+                if (listOfAmounts?.contains<Float>(selectedTxAmount) != true) {
+                    SnackbarController.showMessage(
+                        "Error: The derived amount $selectedTxAmount BTC is not available in the list of unspent amounts"
+                    )
+                    return@launch
+                }
+
+
+                showJoinDialog.value = true
+                val jsonObject = buildJsonObject {
+                    put("type", JsonPrimitive("join_pool"))
+                }
+                val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+                val sharedSecret = getSharedSecret(privateKey, poolPublicKey.hexToByteArray())
+                val encryptedMessage = encrypt(data, sharedSecret)
+                val nostrEvent = createEvent(
+                    content = encryptedMessage,
+                    event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                    privateKey = privateKey,
+                    publicKey = publicKey,
+                    tagPubKey = poolPublicKey
+                )
+                nostrClient.sendEvent(
+                    event = nostrEvent,
+                    onSuccess = {
+                        SnackbarController.showMessage("Join request sent.\nEvent ID: ${nostrEvent.id}")
+                        viewModelScope.launch {
+                            nostrClient.requestPoolCredentials(
+                                requestPublicKey = publicKey.toHexString(),
+                                onSuccess = { eventWithCredentials ->
+                                    viewModelScope.launch {
+                                        runCatching {
+                                            val params = JsonArray(
+                                                listOf(
+                                                    JsonPrimitive("coin_join"),
+                                                    JsonPrimitive("bech32")
+                                                )
                                             )
-                                        } ?: run {
+                                            val addressBody = RpcRequestBody(
+                                                method = Methods.NEW_ADDRESS.value,
+                                                params = params
+                                            )
+                                            httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
+                                                val decryptedContent = decrypt(eventWithCredentials.content, sharedSecret)
+                                                val credentials = json.decodeFromString<Credentials>(decryptedContent)
+                                                val pool = LocalPoolContent(
+                                                    id = credentials.id,
+                                                    type = "new_pool",
+                                                    peers = credentials.peers,
+                                                    denomination = credentials.denomination,
+                                                    relay = credentials.relay,
+                                                    feeRate = credentials.feeRate,
+                                                    timeout = credentials.timeout,
+                                                    publicKey = credentials.publicKey,
+                                                    privateKey = credentials.privateKey
+                                                )
+                                                poolStore.update {
+                                                    it?.plus(pool) ?: listOf(pool)
+                                                }
+                                                showJoinDialog.value = false
+                                                SnackbarController.showMessage("Joined pool : ${credentials.id}")
+
+                                                registerOutput(
+                                                    address = address,
+                                                    publicKey = credentials.publicKey.hexToByteArray(),
+                                                    privateKey = credentials.privateKey.hexToByteArray(),
+                                                    onSuccess = {
+                                                        onSuccess.invoke(pool)
+                                                    }
+                                                )
+                                            } ?: run {
+                                                onError.invoke()
+                                                showJoinDialog.value = false
+                                                SnackbarController.showMessage("Unable to generate new address.\nPlease try again.")
+                                            }
+                                        }.getOrElse {
                                             onError.invoke()
                                             showJoinDialog.value = false
-                                            SnackbarController.showMessage("Unable to generate new address.\nPlease try again.")
+                                            SnackbarController.showMessage("Something went wrong!\nPlease try again.")
                                         }
-                                    }.getOrElse {
-                                        onError.invoke()
-                                        showJoinDialog.value = false
-                                        SnackbarController.showMessage("Something went wrong!\nPlease try again.")
                                     }
+                                },
+                                onError = { error ->
+                                    onError.invoke()
+                                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                                    SnackbarController.showMessage(msg)
+                                    showJoinDialog.value = false
                                 }
-                            },
-                            onError = { error ->
-                                onError.invoke()
-                                val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
-                                SnackbarController.showMessage(msg)
-                                showJoinDialog.value = false
-                            }
-                        )
+                            )
+                        }
+                    },
+                    onError = { error ->
+                        onError.invoke()
+                        val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                        SnackbarController.showMessage(msg)
                     }
-                },
-                onError = { error ->
-                    onError.invoke()
-                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
-                    SnackbarController.showMessage(msg)
-                }
-            )
+                )
+            } ?: run {
+                onError.invoke()
+                SnackbarController.showMessage(
+                    "The selected pool value is not found in the unspent list."
+                )
+            }
         }
     }
 
@@ -374,7 +421,7 @@ class PoolsViewModel : ViewModel() {
         address: String,
         privateKey: ByteArray,
         publicKey: ByteArray,
-        onSuccess: (() -> Unit)? = null
+        onSuccess: (() -> Unit)? = null,
     ) {
         viewModelScope.launch {
             if (onSuccess == null) _isLoading.value = true

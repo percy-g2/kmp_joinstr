@@ -90,8 +90,24 @@ class RegisterInputViewModel : ViewModel() {
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
                 ?.sortedByDescending { it.timeout }
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
+
+            val poolAmount = selectedPool.denomination
+            val selectedTxAmount = _selectedTx.value?.amount
+
+            if (selectedTxAmount != null) {
+                if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
+                        selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
+                ) {
+                    SnackbarController.showMessage(
+                        "Error: Selected input value is not within the specified range for this pool " +
+                            "(denomination: $poolAmount BTC)"
+                    )
+                    return@launch
+                }
+            } else return@launch
             _selectedTx.value?.let {
                 viewModelScope.launch {
+
                     val psbtBase64 = createPsbt(
                         poolId = poolId,
                         unspentItem = it
@@ -201,38 +217,39 @@ class RegisterInputViewModel : ViewModel() {
                                 )
                                 onSuccess.invoke(waitItem)
                                 val txId = httpClient.broadcastRawTx(rawTx)
-                                val info = "https://mempool.space/signet/tx/$txId"
-                                val broadcastTxItem = Item(
-                                    id = 3,
-                                    title = "Broadcast Tx",
-                                    description = "TX: $txId",
-                                    info = info
-                                )
+                                if (txId != null) {
+                                    val info = "https://mempool.space/signet/tx/$txId"
+                                    val broadcastTxItem = Item(
+                                        id = 3,
+                                        title = "Broadcast Tx",
+                                        description = "TX: $txId",
+                                        info = info
+                                    )
 
-                                CoroutineScope(Dispatchers.Default).launch {
-                                    historyStore.update {
-                                        val transaction = CoinJoinHistory(
-                                            relay = selectedPool.relay,
-                                            publicKey = selectedPool.publicKey,
-                                            privateKey = selectedPool.privateKey,
-                                            amount = selectedPool.denomination,
-                                            address = selectedPool.peersData.find { it.type == "output" }?.address ?: "",
-                                            psbt = psbt,
-                                            tx = txId ?: "",
-                                            timestamp = Clock.System.now().toEpochMilliseconds()
-                                        )
-                                        it?.plus(transaction) ?: listOf(transaction)
+                                    CoroutineScope(Dispatchers.Default).launch {
+                                        historyStore.update {
+                                            val transaction = CoinJoinHistory(
+                                                relay = selectedPool.relay,
+                                                publicKey = selectedPool.publicKey,
+                                                privateKey = selectedPool.privateKey,
+                                                amount = selectedPool.denomination,
+                                                address = selectedPool.peersData.find { it.type == "output" }?.address ?: "",
+                                                psbt = psbt,
+                                                tx = txId ?: "",
+                                                timestamp = Clock.System.now().toEpochMilliseconds()
+                                            )
+                                            it?.plus(transaction) ?: listOf(transaction)
+                                        }
+                                        val result = LocalNotification.requestPermission()
+                                        if (result) {
+                                            LocalNotification.showNotification(
+                                                title = "Coinjoin tx broadcast successful",
+                                                message = "Check pool history for more details."
+                                            )
+                                        }
                                     }
-                                    val result = LocalNotification.requestPermission()
-                                    if (result) {
-                                        LocalNotification.showNotification(
-                                            title = "Coinjoin tx broadcast successful",
-                                            message = "Check pool history for more details."
-                                        )
-                                    }
+                                    onSuccess.invoke(broadcastTxItem)
                                 }
-
-                                onSuccess.invoke(broadcastTxItem)
                             } else {
                                 SnackbarController.showMessage("Something went wrong.\nPlease try again.")
                             }
