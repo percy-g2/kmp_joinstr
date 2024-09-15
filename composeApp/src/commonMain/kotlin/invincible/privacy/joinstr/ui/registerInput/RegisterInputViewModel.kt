@@ -190,7 +190,8 @@ class RegisterInputViewModel : ViewModel() {
                                 val waitItem = Item(id = 2, title = "Finalize Coinjoin Tx", description = "PSBT: $psbt")
                                 onSuccess.invoke(waitItem)
                                 val txId = httpClient.broadcastRawTx(rawTx)
-                                val broadcastTxItem =  Item(id = 3, title = "Broadcast Tx", description = "TX: $txId")
+                                val info = "https://mempool.space/signet/tx/$txId"
+                                val broadcastTxItem =  Item(id = 3, title = "Broadcast Tx", description = "TX: $txId", info = info)
 
                                 CoroutineScope(Dispatchers.Default).launch {
                                     val result = LocalNotification.requestPermission()
