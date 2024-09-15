@@ -1,9 +1,11 @@
 package invincible.privacy.joinstr.ui.registerInput
 
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +21,17 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +69,8 @@ import invincible.privacy.joinstr.ui.components.timeline.JetLimeEvent
 import invincible.privacy.joinstr.ui.components.timeline.JetLimeEventDefaults
 import invincible.privacy.joinstr.ui.components.timeline.VerticalEventContent
 import invincible.privacy.joinstr.ui.components.timeline.data.Item
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.Theme
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.input_registration
 import joinstr.composeapp.generated.resources.no_amount_found_to_spend
@@ -282,6 +290,7 @@ fun CustomOutlinedButton(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @ExperimentalAnimationApi
 @Composable
 fun VerticalDynamicTimeLine(
@@ -289,10 +298,40 @@ fun VerticalDynamicTimeLine(
     items: SnapshotStateList<Item>,
 ) {
     val listState = rememberLazyListState()
+    val theme = SettingsManager.themeState
+    val isDarkTheme = (theme.value == Theme.DARK.id || (theme.value == Theme.SYSTEM.id && isSystemInDarkTheme()))
+    val hasScrolled by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0
+        }
+    }
+
+    val appBarElevation by animateDpAsState(targetValue = if (hasScrolled) 4.dp else 0.dp)
 
     Scaffold(
         modifier = modifier,
-        contentWindowInsets = WindowInsets(0.dp)
+        contentWindowInsets = WindowInsets(0.dp),
+        topBar = {
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isDarkTheme) {
+                        MaterialTheme.colorScheme.surface.copy(alpha = if (hasScrolled) 1f else 0f)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                ),
+                modifier = Modifier.shadow(
+                    elevation = appBarElevation,
+                    spotColor = if (isDarkTheme) Color.White else Color.Black
+                ),
+                title = { Text("Transaction") },
+                windowInsets = WindowInsets(
+                    top = 0.dp,
+                    bottom = 0.dp
+                )
+            )
+        }
     ) { paddingValues ->
         Surface(
             modifier = Modifier
@@ -300,7 +339,7 @@ fun VerticalDynamicTimeLine(
                 .fillMaxSize(),
         ) {
             JetLimeColumn(
-                modifier = Modifier.padding(32.dp),
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
                 listState = listState,
                 style = JetLimeDefaults.columnStyle(
                     lineBrush = JetLimeDefaults.lineGradientBrush(),

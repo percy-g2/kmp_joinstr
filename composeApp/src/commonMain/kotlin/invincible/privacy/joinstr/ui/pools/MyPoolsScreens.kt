@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -32,7 +33,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -48,11 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.convertFloatExponentialToString
@@ -346,15 +348,13 @@ fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        LinearProgressIndicator(
-            progress = { progress.value },
+        CustomProgressIndicator(
+            progress = progress.value,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp)),
+                .height(4.dp),
             color = timeColor,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            strokeCap = StrokeCap.Round
+            backgroundColor = MaterialTheme.colorScheme.surfaceVariant
         )
     }
 }
@@ -391,4 +391,50 @@ fun AnimatedCountdownDisplay(remainingTime: Long, color: Color, style: TextStyle
             )
         }
     }
+}
+
+@Composable
+fun CustomProgressIndicator(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    color: Color,
+    backgroundColor: Color,
+    height: Dp = 4.dp
+) {
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+    ) {
+        drawBackgroundTrack(backgroundColor, height)
+        drawProgressBar(progress, color, height)
+    }
+}
+
+private fun DrawScope.drawBackgroundTrack(
+    backgroundColor: Color,
+    height: Dp
+) {
+    drawLine(
+        color = backgroundColor,
+        start = Offset(0f, size.height / 2),
+        end = Offset(size.width, size.height / 2),
+        strokeWidth = height.toPx(),
+        cap = StrokeCap.Round
+    )
+}
+
+private fun DrawScope.drawProgressBar(
+    progress: Float,
+    color: Color,
+    height: Dp
+) {
+    val progressWidth = progress * size.width
+    drawLine(
+        color = color,
+        start = Offset(0f, size.height / 2),
+        end = Offset(progressWidth, size.height / 2),
+        strokeWidth = height.toPx(),
+        cap = StrokeCap.Round
+    )
 }
