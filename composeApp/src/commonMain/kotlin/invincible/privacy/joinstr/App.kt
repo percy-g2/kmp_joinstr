@@ -299,11 +299,3 @@ expect object LocalNotification {
 expect fun openLink(link: String)
 
 expect fun testOutput()
-
-/* sample call
-scope.launch {
-    val result = LocalNotification.requestPermission()
-    if (result) {
-        LocalNotification.showNotification("title", "msg")
-    }
-}*/

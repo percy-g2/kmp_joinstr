@@ -127,13 +127,21 @@ class RegisterInputViewModel : ViewModel() {
                         tagPubKey = selectedPool.publicKey
                     )
 
-                    val item =  Item(id = 0, title = "Register Input", description = "Input registered with event id: ${nostrEvent.id}")
+                    val item =  Item(
+                        id = 0,
+                        title = "Register Input",
+                        description = "Input registered with event id: ${nostrEvent.id}"
+                    )
                     onSuccess.invoke(item)
 
                     nostrClient.sendEvent(
                         event = nostrEvent,
                         onSuccess = {
-                            val waitItem = Item(id = 1, title = "Wait", description = "Waiting for other users to register input...")
+                            val waitItem = Item(
+                                id = 1,
+                                title = "Wait",
+                                description = "Waiting for other users to register input..."
+                            )
                             onSuccess.invoke(waitItem)
                             SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
                             checkRegisteredInputs(
@@ -187,16 +195,28 @@ class RegisterInputViewModel : ViewModel() {
                         viewModelScope.launch {
                             val (psbt, rawTx) = joinPsbts(listOfPsbts)
                             if (rawTx != null && psbt != null) {
-                                val waitItem = Item(id = 2, title = "Finalize Coinjoin Tx", description = "PSBT: $psbt")
+                                val waitItem = Item(
+                                    id = 2,
+                                    title = "Finalize Coinjoin Tx",
+                                    description = "PSBT: $psbt"
+                                )
                                 onSuccess.invoke(waitItem)
                                 val txId = httpClient.broadcastRawTx(rawTx)
                                 val info = "https://mempool.space/signet/tx/$txId"
-                                val broadcastTxItem =  Item(id = 3, title = "Broadcast Tx", description = "TX: $txId", info = info)
+                                val broadcastTxItem = Item(
+                                    id = 3,
+                                    title = "Broadcast Tx",
+                                    description = "TX: $txId",
+                                    info = info
+                                )
 
                                 CoroutineScope(Dispatchers.Default).launch {
                                     val result = LocalNotification.requestPermission()
                                     if (result) {
-                                        LocalNotification.showNotification("CoinJoin Completed Successfully", "Your transaction has been successfully mixed for enhanced privacy.")
+                                        LocalNotification.showNotification(
+                                            title = "Coinjoin tx broadcast successful",
+                                            message = "Check your history for more details."
+                                        )
                                     }
                                 }
 
