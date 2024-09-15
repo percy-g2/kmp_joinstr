@@ -45,6 +45,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.serialization.generateHashCode
 import androidx.navigation.toRoute
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.Home
 import invincible.privacy.joinstr.model.InputRegistration
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
@@ -259,6 +260,7 @@ expect fun getWebSocketClient(): HttpClient
 
 expect fun getSettingsStore(): KStore<SettingsStore>
 expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
+expect fun getHistoryStore(): KStore<List<CoinJoinHistory>>
 
 expect fun Float.convertFloatExponentialToString(): String
 

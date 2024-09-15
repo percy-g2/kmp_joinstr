@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr
 
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
@@ -216,6 +217,13 @@ actual fun getSettingsStore(): KStore<SettingsStore> {
 actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
     return storeOf<List<LocalPoolContent>>(
         key = "pools",
+        default = emptyList()
+    )
+}
+
+actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
+    return storeOf<List<CoinJoinHistory>>(
+        key = "coin_join_history",
         default = emptyList()
     )
 }

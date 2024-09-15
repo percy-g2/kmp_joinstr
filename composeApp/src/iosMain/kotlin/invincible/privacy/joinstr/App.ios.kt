@@ -21,6 +21,7 @@ import fr.acinq.bitcoin.utils.flatMap
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.ui.components.SnackbarController
@@ -93,6 +94,14 @@ actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
     return storeOf<List<LocalPoolContent>>(
         file = "${paths.firstOrNull() as? String}/pools.json".toPath(),
+        default = emptyList()
+    )
+}
+
+actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
+    val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
+    return storeOf<List<CoinJoinHistory>>(
+        file = "${paths.firstOrNull() as? String}/coin_join_history.json".toPath(),
         default = emptyList()
     )
 }

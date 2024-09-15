@@ -112,6 +112,18 @@ fun PoolScreen(
                     style = MaterialTheme.typography.labelMedium.copy(color = color)
                 )
             }
+            Tab(
+                selected = selectedTab == 3,
+                onClick = {
+                    selectedTab = 3
+                }
+            ) {
+                val color = if (selectedTab == 3) Color.DarkGray else Color.Gray
+                Text(
+                    text = "History",
+                    style = MaterialTheme.typography.labelMedium.copy(color = color)
+                )
+            }
         }
 
         HorizontalDivider(
@@ -145,9 +157,15 @@ fun PoolScreen(
             enter = expandIn(expandFrom = Alignment.Center),
             exit = shrinkOut(shrinkTowards = Alignment.Center)
         ) {
-            OtherPoolsScreen(
-                poolsViewModel = poolsViewModel
-            )
+            OtherPoolsScreen(poolsViewModel = poolsViewModel)
+        }
+
+        AnimatedVisibility(
+            visible = selectedTab == 3,
+            enter = expandIn(expandFrom = Alignment.Center),
+            exit = shrinkOut(shrinkTowards = Alignment.Center)
+        ) {
+            CoinJoinHistoryScreen(poolsViewModel = poolsViewModel)
         }
     }
 }

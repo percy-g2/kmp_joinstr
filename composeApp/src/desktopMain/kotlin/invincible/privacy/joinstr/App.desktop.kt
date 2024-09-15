@@ -21,6 +21,7 @@ import fr.acinq.bitcoin.utils.flatMap
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.ui.components.SnackbarController
@@ -101,6 +102,18 @@ actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
     }
     return storeOf<List<LocalPoolContent>>(
         file = "${directory}/pools.json".toPath(),
+        default = emptyList()
+    )
+}
+
+actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
+    val directory = AppDirsFactory.getInstance()
+        .getUserDataDir("invincible.privacy.joinstr", "1.0.0", "invincible")
+    if (File(directory).exists().not()) {
+        File(directory).mkdirs()
+    }
+    return storeOf<List<CoinJoinHistory>>(
+        file = "${directory}/coin_join_history.json".toPath(),
         default = emptyList()
     )
 }

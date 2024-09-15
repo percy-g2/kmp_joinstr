@@ -33,9 +33,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 open class NostrClient {
-    private val nostrRelay = suspend {
-        SettingsManager.store.get()?.nostrRelay ?: SettingsStore().nostrRelay
-    }
+    private val nostrRelay
+        get() = suspend {
+            SettingsManager.store.get()?.nostrRelay ?: SettingsStore().nostrRelay
+        }
 
     val json = Json {
         explicitNulls = false

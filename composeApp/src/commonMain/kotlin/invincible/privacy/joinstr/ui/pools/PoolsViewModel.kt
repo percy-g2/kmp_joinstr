@@ -3,10 +3,12 @@ package invincible.privacy.joinstr.ui.pools
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import invincible.privacy.joinstr.getHistoryStore
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.JoinedPoolContent
 import invincible.privacy.joinstr.model.LocalPoolContent
@@ -41,6 +43,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -48,6 +51,8 @@ class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
     private val httpClient = HttpClient()
     private val poolStore = getPoolsStore()
+    private val historyStore
+        get() = getHistoryStore()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -57,6 +62,9 @@ class PoolsViewModel : ViewModel() {
 
     private val _localPools = MutableStateFlow<List<LocalPoolContent>?>(null)
     val localPools: StateFlow<List<LocalPoolContent>?> = _localPools.asStateFlow()
+
+    private val _coinJoinHistory = MutableStateFlow<List<CoinJoinHistory>?>(null)
+    val coinJoinHistory: StateFlow<List<CoinJoinHistory>?> = _coinJoinHistory.asStateFlow()
 
     private val _activePoolReady = MutableStateFlow(Pair(false, ""))
     val activePoolReady: StateFlow<Pair<Boolean,String>> = _activePoolReady.asStateFlow()
@@ -102,6 +110,28 @@ class PoolsViewModel : ViewModel() {
             _localPools.value = poolStore.get()
                 ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+            _isLoading.value = false
+        }
+    }
+
+    fun fetchCoinJoinHistory() {
+        viewModelScope.launch {
+            val privateKey = generatePrivateKey()
+            val publicKey = getPublicKey(privateKey)
+            val dummy = CoinJoinHistory(
+                relay = "wss://coordinator.coinjoin.io",
+                publicKey = publicKey.toHexString(),
+                privateKey = privateKey.toHexString(),
+                amount = Random.nextDouble(0.001, 1.0),
+                address = "tb1qz6zxdc756mwjqxhp6p9vx6ayclyk4ghxhtsh8v",
+                psbt = "cHNidP8BAHECAAAAAXbrQBtjWLDjjbIpOTIDgM6VeBrFuCSqZY/E9uf+xv+AAAAAAP3///8BoBOywgUAAABqRzBEAiAfANPb0YZXxKGrZf77ys6rKoXxn1b3/4XCfGjc3MsExwIgUE2d7h7ogFmHI/gfE5DGN0yJr/rVtHm0kf3B4ZXjfcYBIQMLxKGlSIbNy3n1ckfbxrD72yM0n9l7gwtYxV+kpuNRgg==",
+                tx = "a40ae97da65ed66f279cc04c54ed5040e94cde39d11b6f2d1ea151855b49c931",
+                timestamp = Clock.System.now().toEpochMilliseconds()
+            )
+            _isLoading.value = true
+            delay(2.seconds)
+            _coinJoinHistory.value = listOf(dummy)
+           // _coinJoinHistory.value = historyStore.get()?.sortedByDescending { it.timestamp }
             _isLoading.value = false
         }
     }

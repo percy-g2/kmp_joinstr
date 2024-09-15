@@ -79,7 +79,7 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPoolsScreens(
-    poolsViewModel: PoolsViewModel,
+    poolsViewModel: PoolsViewModel
 ) {
     val events by poolsViewModel.localPools.collectAsState()
     val isLoading by poolsViewModel.isLoading.collectAsState()
