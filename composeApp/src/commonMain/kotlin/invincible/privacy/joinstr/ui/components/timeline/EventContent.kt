@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import invincible.privacy.joinstr.openLink
+import invincible.privacy.joinstr.theme.lightBlue
 import invincible.privacy.joinstr.ui.components.timeline.data.Item
 
 @Composable
@@ -83,7 +84,7 @@ fun VerticalEventContent(item: Item, modifier: Modifier = Modifier) {
                         }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = lightBlue,
                     text = item.info,
                 )
             }
