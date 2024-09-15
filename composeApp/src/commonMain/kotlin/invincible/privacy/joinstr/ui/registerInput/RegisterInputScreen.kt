@@ -97,9 +97,7 @@ fun RegisterInputScreen(
         if (showRegisterInputTimeLine.value) {
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
             viewModel.checkRegisteredInputs(
-                poolId = selectedPool.id,
-                publicKey = selectedPool.publicKey.hexToByteArray(),
-                privateKey = selectedPool.privateKey.hexToByteArray(),
+                selectedPool= selectedPool,
                 onSuccess = {
 
                 }

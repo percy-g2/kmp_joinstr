@@ -6,11 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.createPsbt
+import invincible.privacy.joinstr.getHistoryStore
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.joinPsbts
 import invincible.privacy.joinstr.ktx.hexToByteArray
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
+import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
@@ -37,6 +40,8 @@ import kotlinx.serialization.json.buildJsonObject
 class RegisterInputViewModel : ViewModel() {
     private val httpClient = HttpClient()
     private val nostrClient = NostrClient()
+    private val historyStore
+        get() = getHistoryStore()
 
     private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
@@ -107,8 +112,6 @@ class RegisterInputViewModel : ViewModel() {
 
                     val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
 
-                    println(processPsbt?.psbt)
-
                     val jsonObject = buildJsonObject {
                         put("hex", JsonPrimitive(processPsbt?.psbt))
                         put("type", JsonPrimitive("input"))
@@ -145,9 +148,7 @@ class RegisterInputViewModel : ViewModel() {
                             onSuccess.invoke(waitItem)
                             SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
                             checkRegisteredInputs(
-                                poolId = selectedPool.id,
-                                privateKey = selectedPool.privateKey.hexToByteArray(),
-                                publicKey = selectedPool.publicKey.hexToByteArray(),
+                                selectedPool = selectedPool,
                                 onSuccess = onSuccess
                             )
                         },
@@ -171,21 +172,19 @@ class RegisterInputViewModel : ViewModel() {
     }
 
     fun checkRegisteredInputs(
-        poolId: String,
-        publicKey: ByteArray,
-        privateKey: ByteArray,
+        selectedPool: LocalPoolContent,
         onSuccess: (Item) -> Unit
     ) {
         viewModelScope.launch {
             nostrClient.checkRegisteredInputs(
-                publicKey = publicKey,
-                privateKey = privateKey,
+                publicKey = selectedPool.publicKey.hexToByteArray(),
+                privateKey = selectedPool.privateKey.hexToByteArray(),
                 onSuccess = { registeredAddressList ->
                     runCatching {
                         viewModelScope.launch {
                             getPoolsStore().update { existingPools ->
                                 existingPools?.map {
-                                    if (it.id == poolId) {
+                                    if (it.id == selectedPool.id) {
                                         it.copy(peersData = registeredAddressList)
                                     } else it
                                 } ?: emptyList()
@@ -193,7 +192,7 @@ class RegisterInputViewModel : ViewModel() {
                         }
                         val listOfPsbts = registeredAddressList.mapNotNull { it.hex }
                         viewModelScope.launch {
-                            val (psbt, rawTx) = joinPsbts(listOfPsbts)
+                            val (psbt, rawTx) = joinPsbts(listOfPsbts.sortedWith(compareBy { it }))
                             if (rawTx != null && psbt != null) {
                                 val waitItem = Item(
                                     id = 2,
@@ -211,11 +210,24 @@ class RegisterInputViewModel : ViewModel() {
                                 )
 
                                 CoroutineScope(Dispatchers.Default).launch {
+                                    historyStore.update {
+                                        val transaction = CoinJoinHistory(
+                                            relay = selectedPool.relay,
+                                            publicKey = selectedPool.publicKey,
+                                            privateKey = selectedPool.privateKey,
+                                            amount = selectedPool.denomination,
+                                            address = selectedPool.peersData.find { it.type == "output" }?.address ?: "",
+                                            psbt = psbt,
+                                            tx = txId ?: "",
+                                            timestamp = Clock.System.now().toEpochMilliseconds()
+                                        )
+                                        it?.plus(transaction) ?: listOf(transaction)
+                                    }
                                     val result = LocalNotification.requestPermission()
                                     if (result) {
                                         LocalNotification.showNotification(
                                             title = "Coinjoin tx broadcast successful",
-                                            message = "Check your history for more details."
+                                            message = "Check pool history for more details."
                                         )
                                     }
                                 }

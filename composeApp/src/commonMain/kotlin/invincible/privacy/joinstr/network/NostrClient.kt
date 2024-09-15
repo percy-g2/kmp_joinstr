@@ -213,7 +213,7 @@ open class NostrClient {
                                                 val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
                                                 if (registeredAddress.type == "input") {
                                                     registeredAddressList += registeredAddress
-                                                    if (registeredAddressList.size == totalPeers) {
+                                                    if (registeredAddressList.filter { it.type == "input" }.size == totalPeers) {
                                                         onSuccess(registeredAddressList.toList())
                                                         closeSession()
                                                     }
@@ -289,7 +289,7 @@ open class NostrClient {
                                                 val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
                                                 if (registeredAddress.type == "output") {
                                                     registeredAddressList += registeredAddress
-                                                    if (registeredAddressList.size == totalPeers) {
+                                                    if (registeredAddressList.filter { it.type == "output" }.size == totalPeers) {
                                                         onSuccess(registeredAddressList.toList())
                                                         closeSession()
                                                     }

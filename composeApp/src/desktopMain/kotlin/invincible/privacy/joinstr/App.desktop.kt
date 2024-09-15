@@ -241,8 +241,17 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
         psbts.any { it.global.tx.txIn.size != it.inputs.size || it.global.tx.txOut.size != it.outputs.size } -> Either.Left(UpdateFailure.CannotJoin("some psbts have an invalid number of inputs/outputs"))
         psbts.flatMap { it.global.tx.txIn.map { txIn -> txIn.outPoint } }.toSet().size != psbts.sumOf { it.global.tx.txIn.size } -> Either.Left(UpdateFailure.CannotJoin("cannot join psbts that spend the same input"))
         else -> {
-            val uniqueOutputs = psbts.flatMap { it.global.tx.txOut }.distinctBy { it.toString() }
-            val uniqueOutputData = psbts.flatMap { it.outputs }.distinctBy { it.toString() }
+            val outputsWithData = psbts.flatMap { psbt ->
+                psbt.global.tx.txOut.zip(psbt.outputs)
+            }.distinctBy { (txOut, _) -> txOut.toString() }
+
+            val sortedOutputsWithData = outputsWithData.sortedWith { a, b ->
+                compareBy<Pair<TxOut, Any>> { (txOut, _) ->
+                    extractAddressFromPublicKeyScript(txOut.publicKeyScript)
+                }.compare(a, b)
+            }
+
+            val (uniqueOutputs, uniqueOutputData) = sortedOutputsWithData.unzip()
 
             if (uniqueOutputs.size != uniqueOutputData.size) {
                 Either.Left(UpdateFailure.CannotJoin("mismatch between unique outputs and output data"))
@@ -275,6 +284,10 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
             }
         }
     }
+}
+
+fun extractAddressFromPublicKeyScript(publicKeyScript: ByteVector): String {
+    return Bitcoin.addressFromPublicKeyScript(Block.SignetGenesisBlock.hash, publicKeyScript.toByteArray()).right!!
 }
 
 @OptIn(ExperimentalEncodingApi::class)

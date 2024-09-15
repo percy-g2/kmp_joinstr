@@ -182,8 +182,8 @@ android {
         applicationId = "invincible.privacy.joinstr"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "0.0.6"
+        versionCode = 1
+        versionName = "0.1.0"
     }
     packaging {
         resources {
@@ -218,6 +218,17 @@ android {
         resources {
             excludes += "META-INF/INDEX.LIST"
         }
+    }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs
+            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                val buildType = variant.buildType.name
+                val outputFileName = "Joinstr_v${defaultConfig.versionName}_${buildType}.apk"
+                output.outputFileName = outputFileName
+            }
     }
 }
 

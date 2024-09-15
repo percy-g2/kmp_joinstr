@@ -43,7 +43,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -116,22 +115,9 @@ class PoolsViewModel : ViewModel() {
 
     fun fetchCoinJoinHistory() {
         viewModelScope.launch {
-            val privateKey = generatePrivateKey()
-            val publicKey = getPublicKey(privateKey)
-            val dummy = CoinJoinHistory(
-                relay = "wss://coordinator.coinjoin.io",
-                publicKey = publicKey.toHexString(),
-                privateKey = privateKey.toHexString(),
-                amount = Random.nextDouble(0.001, 1.0),
-                address = "tb1qz6zxdc756mwjqxhp6p9vx6ayclyk4ghxhtsh8v",
-                psbt = "cHNidP8BAHECAAAAAXbrQBtjWLDjjbIpOTIDgM6VeBrFuCSqZY/E9uf+xv+AAAAAAP3///8BoBOywgUAAABqRzBEAiAfANPb0YZXxKGrZf77ys6rKoXxn1b3/4XCfGjc3MsExwIgUE2d7h7ogFmHI/gfE5DGN0yJr/rVtHm0kf3B4ZXjfcYBIQMLxKGlSIbNy3n1ckfbxrD72yM0n9l7gwtYxV+kpuNRgg==",
-                tx = "a40ae97da65ed66f279cc04c54ed5040e94cde39d11b6f2d1ea151855b49c931",
-                timestamp = Clock.System.now().toEpochMilliseconds()
-            )
             _isLoading.value = true
             delay(2.seconds)
-            _coinJoinHistory.value = listOf(dummy)
-           // _coinJoinHistory.value = historyStore.get()?.sortedByDescending { it.timestamp }
+            _coinJoinHistory.value = historyStore.get()?.sortedByDescending { it.timestamp }
             _isLoading.value = false
         }
     }
