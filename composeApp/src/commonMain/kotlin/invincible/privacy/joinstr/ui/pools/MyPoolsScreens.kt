@@ -271,7 +271,8 @@ fun PoolItem(
                     if (onJoinRequest != null) {
                         Button(
                             shape = RoundedCornerShape(8.dp),
-                            onClick = onJoinRequest
+                            onClick = onJoinRequest,
+                            enabled = joiningPool.value.not()
                         ) {
                             Text(
                                 text = stringResource(Res.string.join),

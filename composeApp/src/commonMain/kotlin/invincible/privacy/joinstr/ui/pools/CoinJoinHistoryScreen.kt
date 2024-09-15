@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,7 +29,6 @@ import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.openLink
@@ -138,35 +135,14 @@ fun HistoryItem(
         Column(
             modifier = Modifier.padding(16.dp),
         ) {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "CoinJoin Transaction",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
             InfoRow("Relay", coinJoinHistory.relay)
             InfoRow("Amount", "${coinJoinHistory.amount} BTC")
             InfoRow("Address", coinJoinHistory.address)
             InfoRow("Timestamp", formatTimestamp(coinJoinHistory.timestamp))
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "Advanced Details",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
             InfoRow("Public Key", coinJoinHistory.publicKey, isSelectable = true)
             InfoRow("Private Key", coinJoinHistory.privateKey, isSelectable = true)
             InfoRow("PSBT", coinJoinHistory.psbt, isSelectable = true)
-            InfoRow("TX", coinJoinHistory.tx, isSelectable = true) {
+            InfoRow("TX", coinJoinHistory.tx) {
                 openLink("https://mempool.space/signet/tx/${coinJoinHistory.tx}")
             }
         }
@@ -193,18 +169,18 @@ private fun InfoRow(
         )
         if (isSelectable) {
             SelectionContainer {
-                val modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
                 Text(
-                    modifier = modifier,
                     text = value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (onClick != null) lightBlue else Color.Unspecified
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         } else {
+            val modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
             Text(
+                modifier = modifier,
                 text = value,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (onClick != null) lightBlue else Color.Unspecified
             )
         }
     }

@@ -290,7 +290,8 @@ class PoolsViewModel : ViewModel() {
         privateKey: ByteArray,
         poolPublicKey: String,
         showJoinDialog: MutableState<Boolean>,
-        onSuccess: (LocalPoolContent) -> Unit
+        onSuccess: (LocalPoolContent) -> Unit,
+        onError: () -> Unit
     ) {
         viewModelScope.launch {
             showJoinDialog.value = true
@@ -343,7 +344,7 @@ class PoolsViewModel : ViewModel() {
                                                 it?.plus(pool) ?: listOf(pool)
                                             }
                                             showJoinDialog.value = false
-                                            SnackbarController.showMessage("Credentials have been received and securely saved!")
+                                            SnackbarController.showMessage("Joined pool : ${credentials.id}")
 
                                             registerOutput(
                                                 address = address,
@@ -354,16 +355,19 @@ class PoolsViewModel : ViewModel() {
                                                 }
                                             )
                                         } ?: run {
+                                            onError.invoke()
                                             showJoinDialog.value = false
                                             SnackbarController.showMessage("Unable to generate new address.\nPlease try again.")
                                         }
                                     }.getOrElse {
+                                        onError.invoke()
                                         showJoinDialog.value = false
                                         SnackbarController.showMessage("Something went wrong!\nPlease try again.")
                                     }
                                 }
                             },
                             onError = { error ->
+                                onError.invoke()
                                 val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
                                 SnackbarController.showMessage(msg)
                                 showJoinDialog.value = false
@@ -372,6 +376,7 @@ class PoolsViewModel : ViewModel() {
                     }
                 },
                 onError = { error ->
+                    onError.invoke()
                     val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
                     SnackbarController.showMessage(msg)
                 }

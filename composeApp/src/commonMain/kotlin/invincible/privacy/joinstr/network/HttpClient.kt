@@ -17,9 +17,8 @@ import kotlin.time.Duration.Companion.seconds
 
 class HttpClient {
 
-    suspend fun getNodeConfig(): NodeConfig {
-        return SettingsManager.store.get()?.nodeConfig ?: NodeConfig()
-    }
+    val getNodeConfig: suspend () -> NodeConfig
+        get() = suspend { SettingsManager.store.get()?.nodeConfig ?: NodeConfig() }
 
     val createHttpClient: HttpClient =  HttpClient {
             install(HttpTimeout) {

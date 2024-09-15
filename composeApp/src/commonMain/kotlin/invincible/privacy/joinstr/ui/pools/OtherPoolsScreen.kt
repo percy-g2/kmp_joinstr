@@ -88,6 +88,9 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import joinstr.composeapp.generated.resources.waiting_for_pool_credentials
 import org.jetbrains.compose.resources.stringResource
 
+// TODO refactor
+val joiningPool = mutableStateOf(false)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtherPoolsScreen(
@@ -175,20 +178,26 @@ fun OtherPoolsScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 onClick = {
                                     showQrCodeDialog.value = Pair(null, false)
+                                    joiningPool.value = true
                                     poolsViewModel.joinRequest(
                                         publicKey = publicKey,
                                         privateKey = privateKey,
                                         poolPublicKey = poolContent.publicKey,
-                                        showJoinDialog = showJoinDialog
-                                    ) { pool ->
-                                        showWaitingDialog.value = true
-                                        poolsViewModel.checkRegisteredOutputs(
-                                            poolId = pool.id,
-                                            privateKey = pool.privateKey.hexToByteArray(),
-                                            publicKey = pool.publicKey.hexToByteArray(),
-                                            showWaitingDialog = showWaitingDialog
-                                        )
-                                    }
+                                        showJoinDialog = showJoinDialog,
+                                        onSuccess =  { pool ->
+                                            showWaitingDialog.value = true
+                                            poolsViewModel.checkRegisteredOutputs(
+                                                poolId = pool.id,
+                                                privateKey = pool.privateKey.hexToByteArray(),
+                                                publicKey = pool.publicKey.hexToByteArray(),
+                                                showWaitingDialog = showWaitingDialog
+                                            )
+                                        },
+                                        onError = {
+                                            joiningPool.value = false
+                                            showJoinDialog.value = false
+                                        }
+                                    )
                                 }
                             ) {
                                 Text(
