@@ -74,7 +74,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalStdlibApi::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun RegisterInputScreen(
     poolId: String,

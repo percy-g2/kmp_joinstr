@@ -334,3 +334,6 @@ actual fun testOutput() {
 
     println("outputAmount $roundedOutputAmount")
 }
+
+actual fun convertToLong(value: Double): Long = value.toLong()
+actual fun convertToDouble(value: Long): Double = value.toDouble()

@@ -1,6 +1,7 @@
 package invincible.privacy.joinstr.ui.pools
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,8 +10,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,13 +22,18 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,14 +46,18 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import invincible.privacy.joinstr.calculatePoolAmount
+import invincible.privacy.joinstr.convertFloatExponentialToString
 import invincible.privacy.joinstr.ui.components.SnackbarController
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,8 +65,24 @@ import invincible.privacy.joinstr.ui.components.SnackbarController
 fun CreateNewPoolScreen(
     poolsViewModel: PoolsViewModel
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
+    val listUnspentAmounts by poolsViewModel.listUnspentAmount.collectAsState()
     val showWaitingDialog = remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                poolsViewModel.fetchUnspentAmounts()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     if (showWaitingDialog.value && activePoolReady.first) {
         showWaitingDialog.value = false
@@ -102,7 +130,8 @@ fun CreateNewPoolScreen(
         val keyboardController = LocalSoftwareKeyboardController.current
         val focusManager = LocalFocusManager.current
 
-        var denomination by remember { mutableStateOf(TextFieldValue("")) }
+        var selectedOption = remember { mutableStateOf<Float?>(null) }
+        val denomination = remember { mutableStateOf("") }
         var peers by remember { mutableStateOf("") }
 
         Column(
@@ -124,61 +153,11 @@ fun CreateNewPoolScreen(
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
-            OutlinedTextField(
-                value = denomination,
-                onValueChange = { inputText ->
-                    val maxBtcValue = 21_000_000.00000000
-                    var input = inputText.text.trim()
-                    var selectionPosition = inputText.selection.start
-
-                    if (input.startsWith(".")) {
-                        input = "0$input"
-                        selectionPosition += 1
-                    }
-
-                    val regex = Regex("^\\d{0,8}(\\.\\d{0,8})?\$")
-
-                    if (regex.matches(input)) {
-                        val value = input.toDoubleOrNull()
-
-                        if (value != null && value <= maxBtcValue) {
-                            denomination = TextFieldValue(text = input, selection = TextRange(selectionPosition))
-                        } else {
-                            if (input.isNotEmpty()) {
-                                SnackbarController.showMessage(
-                                    message = "Input exceeds the maximum BTC value of 21 million or is invalid."
-                                )
-                            }
-                            denomination = TextFieldValue("")
-                        }
-                    } else {
-                        SnackbarController.showMessage(
-                            message = "Input is not a valid BTC amount. Ensure it is up to 8 decimal places and contains only numbers."
-                        )
-                        denomination = TextFieldValue("")
-                    }
-                },
-                label = { Text("Denomination") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusRequester.requestFocus() }
-                ),
-                modifier = Modifier
-                    .wrapContentSize()
-                    .focusRequester(focusRequester),
-                trailingIcon = {
-                    if (denomination.text.isNotEmpty()) {
-                        IconButton(onClick = { denomination = TextFieldValue("") }) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Clear text"
-                            )
-                        }
-                    }
-                }
+            SelectInputDropdown(
+                denomination = denomination,
+                options = listUnspentAmounts ?: emptyList(),
+                selectedOption = selectedOption,
+                onOptionSelected = { selectedOption.value = it }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -229,10 +208,10 @@ fun CreateNewPoolScreen(
                 .padding(all = 12.dp)
                 .align(Alignment.BottomCenter),
             shape = RoundedCornerShape(8.dp),
-            enabled = denomination.text.isNotEmpty() && peers.isNotEmpty(),
+            enabled = denomination.value.isNotEmpty() && peers.isNotEmpty(),
             onClick = {
-                poolsViewModel.createPool(denomination.text, peers) {
-                    denomination = TextFieldValue("")
+                poolsViewModel.createPool(denomination.value, peers) {
+                    denomination.value = ""
                     peers = ""
                     showWaitingDialog.value = true
                     focusManager.clearFocus()
@@ -246,6 +225,85 @@ fun CreateNewPoolScreen(
                 text = "Create",
                 fontSize = 16.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun SelectInputDropdown(
+    denomination: MutableState<String>,
+    options: List<Float>,
+    selectedOption: MutableState<Float?>,
+    onOptionSelected: (Float?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val allOptions = listOf(null) + options
+
+    Box(
+        modifier = Modifier.wrapContentWidth()
+    ) {
+        OutlinedTextField(
+            modifier = Modifier
+                .padding(16.dp)
+                .clickable(onClick = { expanded = true }),
+            value = selectedOption.value?.convertFloatExponentialToString() ?: "Unselect",
+            onValueChange = { /* no-op */ },
+            textStyle = MaterialTheme.typography.bodyMedium,
+            enabled = false,
+            label = {
+                Text(text = "Select input")
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onBackground,
+                disabledLabelColor = MaterialTheme.colorScheme.onBackground,
+                disabledBorderColor = MaterialTheme.colorScheme.onBackground
+            ),
+            trailingIcon = {
+                if (denomination.value.isNotEmpty()) {
+                    IconButton(onClick = {
+                        denomination.value = ""
+                        selectedOption.value = null
+                    }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Clear text",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                }
+            },
+            supportingText = {
+                if (selectedOption.value != null) {
+                    Text(text = "Pool amount ${denomination.value}")
+                }
+            }
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .wrapContentWidth()
+                .heightIn(max = 300.dp)  // Limit the maximum height
+        ) {
+            allOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = option?.let { "${it.convertFloatExponentialToString()} BTC" } ?: "Select input",
+                            maxLines = 1,  // Ensure each item is single-line
+                            overflow = TextOverflow.Ellipsis  // Add ellipsis for long text
+                        )
+                    },
+                    onClick = {
+                        onOptionSelected(option)
+                        val poolAmount = calculatePoolAmount(option?.toDouble() ?: 0.0)
+                        denomination.value = poolAmount.toFloat().convertFloatExponentialToString()
+                        expanded = false
+                    },
+                    modifier = Modifier.height(48.dp)  // Set a fixed height for each item
+                )
+            }
         }
     }
 }

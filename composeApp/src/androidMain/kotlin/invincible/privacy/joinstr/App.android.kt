@@ -445,3 +445,6 @@ actual fun testOutput() {
     val mathContext = MathContext(8, RoundingMode.HALF_UP)
     println("outputAmount " + outputAmount.setScale(8, RoundingMode.HALF_UP))
 }
+
+actual fun convertToLong(value: Double): Long = value.toLong()
+actual fun convertToDouble(value: Long): Double = value.toDouble()

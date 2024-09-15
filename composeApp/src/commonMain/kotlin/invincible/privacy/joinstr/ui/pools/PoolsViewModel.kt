@@ -11,6 +11,7 @@ import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.JoinedPoolContent
+import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
@@ -19,6 +20,7 @@ import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
+import invincible.privacy.joinstr.network.test
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
@@ -68,6 +70,9 @@ class PoolsViewModel : ViewModel() {
     private val _activePoolReady = MutableStateFlow(Pair(false, ""))
     val activePoolReady: StateFlow<Pair<Boolean,String>> = _activePoolReady.asStateFlow()
 
+    private val _listUnspentAmount = MutableStateFlow<List<Float>?>(null)
+    val listUnspentAmount: StateFlow<List<Float>?> = _listUnspentAmount
+
     fun startInitialChecks() {
         GlobalScope.launch {
             nostrClient.activePoolsCredentialsSender()
@@ -78,6 +83,21 @@ class PoolsViewModel : ViewModel() {
             }.getOrElse {
                 it.printStackTrace()
             }
+        }
+    }
+
+    fun fetchUnspentAmounts() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            delay(2.seconds)
+            val rpcRequestBody = RpcRequestBody(
+                method = Methods.LIST_UNSPENT.value
+            )
+            val list = httpClient
+                .fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(rpcRequestBody)?.result?.map { it.amount }
+                ?: json.decodeFromString<RpcResponse<List<ListUnspentResponseItem>>>(test).result.map { it.amount }
+            _listUnspentAmount.value = list.distinct().sortedByDescending { it }
+            _isLoading.value = false
         }
     }
 

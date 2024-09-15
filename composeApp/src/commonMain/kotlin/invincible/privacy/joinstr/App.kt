@@ -70,6 +70,7 @@ import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.math.floor
 
 @Composable
 @Preview
@@ -227,6 +228,18 @@ fun App(
     }
 }
 
+fun calculatePoolAmount(selectedAmount: Double): Double {
+    val selectedSatoshis = convertToLong(selectedAmount * 100_000_000)
+    val poolSatoshis = selectedSatoshis - 501
+    return floor(convertToDouble(poolSatoshis) / 100) / 1_000_000
+}
+
+fun validatePoolAmount(poolAmount: Double, selectedAmount: Double): Boolean {
+    val poolSatoshis = convertToLong(poolAmount * 100_000_000)
+    val selectedSatoshis = convertToLong(selectedAmount * 100_000_000)
+    return (poolSatoshis + 500 <= selectedSatoshis) && (selectedSatoshis <= poolSatoshis + 5000)
+}
+
 @OptIn(ExperimentalAnimationApi::class)
 inline fun <reified T : Any> NavGraphBuilder.animatedComposable(
     noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
@@ -255,6 +268,9 @@ fun shrinkToCenter(): ExitTransition {
         transformOrigin = TransformOrigin.Center
     ) + fadeOut(animationSpec = tween(300))
 }
+
+expect fun convertToLong(value: Double): Long
+expect fun convertToDouble(value: Long): Double
 
 expect fun getWebSocketClient(): HttpClient
 

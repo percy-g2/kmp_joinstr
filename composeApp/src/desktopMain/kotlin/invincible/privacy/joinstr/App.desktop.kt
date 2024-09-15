@@ -423,3 +423,6 @@ actual fun testOutput() {
 actual fun openLink(link: String) {
     Desktop.getDesktop().browse(URI(link))
 }
+
+actual fun convertToLong(value: Double): Long = value.toLong()
+actual fun convertToDouble(value: Long): Double = value.toDouble()

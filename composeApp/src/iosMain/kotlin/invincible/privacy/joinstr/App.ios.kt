@@ -51,6 +51,7 @@ import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSDate
 import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSDecimalNumberHandler
+import platform.Foundation.NSNumber
 import platform.Foundation.NSRoundingMode
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
@@ -78,6 +79,9 @@ import kotlin.coroutines.resume
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
+
+actual fun convertToLong(value: Double): Long = value.toLong()
+actual fun convertToDouble(value: Long): Double = NSNumber(long = value).doubleValue
 
 actual fun getSettingsStore(): KStore<SettingsStore> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
