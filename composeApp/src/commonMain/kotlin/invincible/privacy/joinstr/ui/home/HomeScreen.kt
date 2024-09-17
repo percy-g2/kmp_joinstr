@@ -13,12 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -92,7 +88,7 @@ fun HomeScreen(
             }
         }
 
-        FloatingActionButton(
+       /* FloatingActionButton(
             onClick = {
                 scope.launch {
                     homeScreenViewModel.fetchData()
@@ -106,7 +102,7 @@ fun HomeScreen(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = "Refresh"
             )
-        }
+        }*/
     }
 }
 
@@ -219,8 +215,4 @@ fun InfoTextField(value: String, label: String) {
             disabledLabelColor = MaterialTheme.colorScheme.onBackground
         )
     )
-}
-
-fun formatNumber(input: Int): String {
-    return input.toString().reversed().chunked(3).joinToString(",").reversed()
 }
