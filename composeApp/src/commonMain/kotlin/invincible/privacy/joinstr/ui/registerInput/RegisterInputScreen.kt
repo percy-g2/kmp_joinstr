@@ -82,9 +82,10 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalStdlibApi::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun RegisterInputScreen(
     poolId: String,
@@ -95,12 +96,12 @@ fun RegisterInputScreen(
     val listUnspent by viewModel.listUnspent
     val selectedTxId by viewModel.selectedTx
     var autoRotation by remember { mutableStateOf(false) }
-    val showRegisterInputTimeLine = remember { mutableStateOf(true) }
+    val showRegisterInputTimeLine = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val items = remember { mutableStateListOf<Item>() }
 
     LaunchedEffect(Unit) {
-        /* val activePools = getPoolsStore().get()
+         val activePools = getPoolsStore().get()
              ?.sortedByDescending { it.timeout }
              ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
          showRegisterInputTimeLine.value = activePools?.find { it.peersData.filter { it.type == "input" }.size == it.peers }?.id?.let { true } ?: false
@@ -113,9 +114,9 @@ fun RegisterInputScreen(
 
                  }
              )
-         }*/
+         }
 
-        items.addAll(getCharacters())
+       // items.addAll(getCharacters())
     }
 
     if (showRegisterInputTimeLine.value) {

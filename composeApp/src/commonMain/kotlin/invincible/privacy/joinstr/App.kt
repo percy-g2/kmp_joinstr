@@ -193,7 +193,7 @@ fun App(
                         .fillMaxSize()
                         .padding(innerPadding),
                     navController = navController,
-                    startDestination = InputRegistration(id = activePoolReady.second)
+                    startDestination = NavItem.HomeScreen.path
                 ) {
 
                     animatedComposable<Home> {
@@ -222,7 +222,7 @@ fun App(
 
                 if (activePoolReady.first && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
                     val pool = InputRegistration(id = activePoolReady.second)
-                //    navController.navigate(pool)
+                    navController.navigate(pool)
                 }
             }
         }
