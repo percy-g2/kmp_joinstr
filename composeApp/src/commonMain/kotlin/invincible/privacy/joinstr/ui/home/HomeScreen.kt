@@ -172,7 +172,7 @@ fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
     val chain = blockchain?.chain?.capitalize(Locale.current) ?: ""
 
     Column(
-        modifier = Modifier.padding(top = 24.dp)
+        modifier = Modifier.padding(top = 100.dp)
     ) {
         InfoTextField(
             value = if (version.isEmpty() && textInsideParentheses.isEmpty() ) "" else "Bitcoin Core v$version($textInsideParentheses)",
