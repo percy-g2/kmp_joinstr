@@ -4,6 +4,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.decimal.DecimalMode
 import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.LocalNotification
@@ -22,7 +23,6 @@ import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
-import invincible.privacy.joinstr.network.test
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.ui.components.timeline.data.Item
 import invincible.privacy.joinstr.utils.Event
@@ -64,9 +64,7 @@ class RegisterInputViewModel : ViewModel() {
             val rpcRequestBody = RpcRequestBody(
                 method = Methods.LIST_UNSPENT.value
             )
-            _listUnspent.value = httpClient
-                .fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(rpcRequestBody)?.result
-                ?: json.decodeFromString<RpcResponse<List<ListUnspentResponseItem>>>(test).result
+            _listUnspent.value = httpClient.fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(rpcRequestBody)?.result
             _isLoading.value = false
         }
     }
@@ -94,17 +92,7 @@ class RegisterInputViewModel : ViewModel() {
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
 
             val poolAmount = selectedPool.denomination.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8))
-            val selectedTxAmount = _selectedTx.value?.amount?.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8))
-
-            println("poolAmount" + poolAmount)
-            println("selectedTxAmount" + selectedTxAmount)
-
-            println("check1" + (poolAmount * 100_000_000) + 500)
-            println("check2" + (selectedTxAmount!! * 100_000_000))
-
-            println("check3" + (selectedTxAmount!! * 100_000_000))
-
-            println("check4" + (poolAmount * 100_000_000) + 5000)
+            val selectedTxAmount = _selectedTx.value?.amount?.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8)) ?: BigDecimal.ZERO
 
             if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
                     selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)

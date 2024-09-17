@@ -117,11 +117,6 @@ actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
     )
 }
 
-actual fun Float.convertFloatExponentialToString(): String {
-    val mathContext = MathContext(8, RoundingMode.HALF_UP)
-    return BigDecimal(toString()).round(mathContext).toPlainString()
-}
-
 actual fun getWebSocketClient(): HttpClient {
     return HttpClient(CIO) {
         install(WebSockets)
@@ -134,7 +129,7 @@ actual fun getWebSocketClient(): HttpClient {
 
         install(Logging) {
             logger = Logger.SIMPLE
-            level = LogLevel.ALL
+            level = LogLevel.NONE
         }
     }
 }
@@ -392,24 +387,9 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
         }
     )
 
-  //  println("joined psbt>> $psbtBase64")
-    println("joined psbt>> ${finalizedPsbt.right?.extract()?.left}")
-    println("joined psbt>> ${finalizedPsbt.right?.global?.tx.toString()}")
-    println("joined psbt>> ${finalizedPsbt.right?.extract()?.right}")
     val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
     val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
     return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
-}
-
-actual fun testOutput() {
-    val poolAmount: BigDecimal = BigDecimal(0.00995)
-    val selectedTxAmount: BigDecimal = BigDecimal( 0.01)
-    val estimatedVByteSize = BigDecimal(100).multiply(BigDecimal(2))
-    val estimatedBtcFee = (BigDecimal(4).multiply(estimatedVByteSize)).divide(BigDecimal(100000000))
-
-    val outputAmount = poolAmount.minus(estimatedBtcFee)
-    val mathContext = MathContext(8, RoundingMode.HALF_UP)
-    println("outputAmount " + outputAmount.setScale(8, RoundingMode.HALF_UP))
 }
 
 actual fun openLink(link: String) {

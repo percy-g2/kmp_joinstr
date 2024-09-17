@@ -264,8 +264,6 @@ expect fun getSettingsStore(): KStore<SettingsStore>
 expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 expect fun getHistoryStore(): KStore<List<CoinJoinHistory>>
 
-expect fun Float.convertFloatExponentialToString(): String
-
 expect suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
@@ -299,5 +297,3 @@ expect object LocalNotification {
 }
 
 expect fun openLink(link: String)
-
-expect fun testOutput()

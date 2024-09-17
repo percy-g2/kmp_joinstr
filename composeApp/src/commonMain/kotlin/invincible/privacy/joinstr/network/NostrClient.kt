@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr.network
 
+import invincible.privacy.joinstr.getHistoryStore
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.getWebSocketClient
@@ -396,6 +397,7 @@ open class NostrClient {
                         var registeredAddressList: MutableList<JoinedPoolContent> = mutableListOf()
                         val activePools = getPoolsStore().get()?.sortedByDescending { it.timeout }
                             ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                            ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
                         val activePoolsPublicKeys = activePools?.map { it.publicKey } ?: emptyList()
                         val formattedKeys = activePoolsPublicKeys.joinToString(
                             separator = ", ",

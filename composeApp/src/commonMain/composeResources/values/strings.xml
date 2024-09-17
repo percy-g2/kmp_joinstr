@@ -9,4 +9,6 @@
     <string name="no_active_pools">No active pools available, please create one!</string>
     <string name="something_went_wrong">Something went wrong!&#10;Check your settings</string>
     <string name="no_history_found">Your coinjoin history is empty.</string>
+    <string name="node_version">Node Version</string>
+    <string name="network">Network</string>
 </resources>

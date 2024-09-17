@@ -26,9 +26,6 @@ import org.w3c.notifications.Notification
 import org.w3c.notifications.NotificationOptions
 import org.w3c.notifications.NotificationPermission
 import kotlin.js.Promise
-import kotlin.math.abs
-import kotlin.math.floor
-import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.seconds
 
 actual object LocalNotification {
@@ -228,40 +225,6 @@ actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
     )
 }
 
-actual fun Float.convertFloatExponentialToString(): String {
-    // Handle special cases
-    if (this.isNaN()) return "NaN"
-    if (this.isInfinite()) return if (this > 0) "Infinity" else "-Infinity"
-
-    val absValue = abs(this)
-    val intPart = floor(absValue).toInt()
-    val fracPart = absValue - intPart
-
-    // Convert integer part to string
-    var result = if (this < 0) "-" else ""
-    result += intPart.toString()
-
-    // Handle fractional part
-    if (fracPart > 0) {
-        result += "."
-        var fraction = fracPart
-        repeat(6) { // Use 6 decimal places
-            fraction *= 10
-            val digit = floor(fraction).toInt()
-            result += digit.toString()
-            fraction -= digit
-        }
-
-        // Remove trailing zeros
-        result = result.trimEnd('0')
-        if (result.endsWith(".")) {
-            result = result.dropLast(1)
-        }
-    }
-
-    return result
-}
-
 actual fun getWebSocketClient(): HttpClient {
     return HttpClient(Js) {
         install(WebSockets)
@@ -274,7 +237,7 @@ actual fun getWebSocketClient(): HttpClient {
 
         install(Logging) {
             logger = Logger.SIMPLE
-            level = LogLevel.ALL
+            level = LogLevel.NONE
         }
     }
 }
@@ -297,13 +260,6 @@ actual suspend fun createPsbt(
 
     val outputAmount = poolAmount - estimatedBtcFee
 
-    // Check if the selected input value is within the specified range
-    if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
-            selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
-    ) {
-        throw IllegalStateException("Error: Selected input value is not within the specified range for this pool (denomination: $poolAmount BTC)")
-    }
-
 
     // TODO
 
@@ -320,17 +276,4 @@ actual suspend fun joinPsbts(
 
 actual fun openLink(link: String) {
     window.open(link)
-}
-
-actual fun testOutput() {
-    val poolAmount = 0.00995
-    val selectedTxAmount = 0.01
-    val estimatedVByteSize = 100.0 * 2
-    val estimatedBtcFee = (4 * estimatedVByteSize) / 100000000.0
-
-    val outputAmount = poolAmount - estimatedBtcFee
-
-    val roundedOutputAmount = (outputAmount * 100000000.0).roundToLong() / 100000000.0
-
-    println("outputAmount $roundedOutputAmount")
 }

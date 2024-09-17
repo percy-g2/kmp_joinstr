@@ -86,6 +86,7 @@ class PoolsViewModel : ViewModel() {
             val activePools = getPoolsStore().get()
                 ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
             _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it) } ?: Pair(false, "")
             // Delay for 30 seconds
             delay(30.seconds)
@@ -109,6 +110,7 @@ class PoolsViewModel : ViewModel() {
             _localPools.value = poolStore.get()
                 ?.sortedByDescending { it.timeout }
                 ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
             _isLoading.value = false
         }
     }
@@ -131,7 +133,9 @@ class PoolsViewModel : ViewModel() {
                     viewModelScope.launch {
                         val currentTime = (Clock.System.now().toEpochMilliseconds() / 1000)
                         val pools = getPoolsStore().get()
-                        val activePoolsIds = pools?.filter { it.timeout > currentTime }?.map { it.id }
+                        val activePoolsIds = pools
+                            ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
+                            ?.filter { it.timeout > currentTime }?.map { it.id }
                         _otherPoolEvents.value = nostrEvents
                             .sortedByDescending { it.timeout }
                             .filter { it.timeout > currentTime && it.id !in activePoolsIds.orEmpty() }
@@ -274,7 +278,6 @@ class PoolsViewModel : ViewModel() {
     }
 
     fun joinRequest(
-        denomination: Float,
         publicKey: ByteArray,
         privateKey: ByteArray,
         poolPublicKey: String,

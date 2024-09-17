@@ -21,7 +21,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,35 +29,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
 import invincible.privacy.joinstr.theme.greenDark
 import invincible.privacy.joinstr.theme.redDark
-import io.github.alexzhirkevich.compottie.Compottie
-import io.github.alexzhirkevich.compottie.CompottieException
-import io.github.alexzhirkevich.compottie.LottieCompositionSpec
-import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
-import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import joinstr.composeapp.generated.resources.Res
+import joinstr.composeapp.generated.resources.app_name
 import joinstr.composeapp.generated.resources.joinstr_logo
+import joinstr.composeapp.generated.resources.network
+import joinstr.composeapp.generated.resources.node_version
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun HomeScreen(
     homeScreenViewModel: HomeScreenViewModel = viewModel { HomeScreenViewModel() },
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by homeScreenViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
 
-    DisposableEffect(Unit) {
-        val job = scope.launch {
-            homeScreenViewModel.fetchData()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                scope.launch {
+                    homeScreenViewModel.fetchData()
+                }
+            }
         }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
         onDispose {
-            job.cancel()
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -71,83 +79,6 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            LogoAnimation()
-
-            if (uiState.isLoading.not()) {
-                BlockchainInfoDisplay(uiState.blockchainInfo, uiState.networkInfo)
-            }
-        }
-
-        if (uiState.isLoading) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        }
-
-       /* FloatingActionButton(
-            onClick = {
-                scope.launch {
-                    homeScreenViewModel.fetchData()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "Refresh"
-            )
-        }*/
-    }
-}
-
-@OptIn(ExperimentalResourceApi::class)
-@Composable
-fun LogoAnimation() {
-
-    val composition = rememberLottieComposition {
-        LottieCompositionSpec.JsonString(Res.readBytes("files/wave.json").decodeToString())
-    }
-
-    LaunchedEffect(composition) {
-        try {
-            composition.await()
-        } catch (t: CompottieException) {
-            t.printStackTrace()
-        }
-    }
-
-
-    val animationState by animateLottieCompositionAsState(
-        composition = composition.value,
-        iterations = Compottie.IterateForever
-    )
-
-    Box(
-        contentAlignment = Alignment.Center
-    ) {
-        /* Image(
-             painter = rememberLottiePainter(
-                 composition = composition.value,
-                 progress = { animationState },
-             ),
-             contentDescription = "Lottie animation",
-             modifier = Modifier
-                 .fillMaxWidth()
-                 .zIndex(1f),
-             contentScale = ContentScale.FillBounds
-         )*/
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-
-        ) {
             Image(
                 modifier = Modifier.wrapContentSize(),
                 painter = painterResource(Res.drawable.joinstr_logo),
@@ -157,9 +88,28 @@ fun LogoAnimation() {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Joinstr",
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.titleMedium,
             )
+        }
+
+        if (uiState.isLoading.not()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .align(Alignment.Center),
+                contentAlignment = Alignment.Center
+            ) {
+                BlockchainInfoDisplay(uiState.blockchainInfo, uiState.networkInfo)
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator()
+            }
         }
     }
 }
@@ -172,18 +122,20 @@ fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
     val chain = blockchain?.chain?.capitalize(Locale.current) ?: ""
 
     Column(
-        modifier = Modifier.padding(top = 100.dp)
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         InfoTextField(
-            value = if (version.isEmpty() && textInsideParentheses.isEmpty() ) "" else "Bitcoin Core v$version($textInsideParentheses)",
-            label = "Node Version"
+            value = if (version.isEmpty() && textInsideParentheses.isEmpty()) "" else "Bitcoin Core v$version($textInsideParentheses)",
+            label = stringResource(Res.string.node_version)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         InfoTextField(
             value = chain,
-            label = "Network"
+            label = stringResource(Res.string.network)
         )
     }
 }

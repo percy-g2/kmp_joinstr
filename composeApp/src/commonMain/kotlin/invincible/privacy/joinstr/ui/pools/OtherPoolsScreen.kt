@@ -175,7 +175,6 @@ fun OtherPoolsScreen(
                                     showQrCodeDialog.value = Pair(null, false)
                                     joiningPool.value = true
                                     poolsViewModel.joinRequest(
-                                        denomination = poolContent.denomination,
                                         publicKey = publicKey,
                                         privateKey = privateKey,
                                         poolPublicKey = poolContent.publicKey,

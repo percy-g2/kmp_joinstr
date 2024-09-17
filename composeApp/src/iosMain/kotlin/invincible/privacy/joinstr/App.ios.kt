@@ -35,7 +35,6 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
-import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
 import okio.Path.Companion.toPath
@@ -49,8 +48,6 @@ import platform.Foundation.NSCalendarUnitSecond
 import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSDate
 import platform.Foundation.NSDecimalNumber
-import platform.Foundation.NSDecimalNumberHandler
-import platform.Foundation.NSRoundingMode
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
@@ -105,11 +102,6 @@ actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
     )
 }
 
-actual fun Float.convertFloatExponentialToString(): String {
-    val decimalNumber = NSDecimalNumber(string = toString())
-    return decimalNumber.stringValue
-}
-
 actual fun getWebSocketClient(): HttpClient {
     return HttpClient(Darwin) {
         install(WebSockets)
@@ -122,7 +114,7 @@ actual fun getWebSocketClient(): HttpClient {
 
         install(Logging) {
             logger = Logger.SIMPLE
-            level = LogLevel.ALL
+            level = LogLevel.NONE
         }
     }
 }
@@ -460,10 +452,6 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
         }
     )
 
-    //  println("joined psbt>> $psbtBase64")
-    println("joined psbt>> ${finalizedPsbt.right?.extract()?.left}")
-    println("joined psbt>> ${finalizedPsbt.right?.global?.tx.toString()}")
-    println("joined psbt>> ${finalizedPsbt.right?.extract()?.right}")
     val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
     val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
     return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
@@ -484,30 +472,4 @@ actual fun openLink(link: String) {
     }.onFailure { exception ->
         exception.printStackTrace()
     }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-actual fun testOutput() {
-
-    val poolAmount = NSDecimalNumber(0.00995)
-    val selectedTxAmount = NSDecimalNumber(0.01)
-    val estimatedVByteSize = NSDecimalNumber(100 * 2)
-    val estimatedBtcFee = (NSDecimalNumber(4).decimalNumberByMultiplyingBy(estimatedVByteSize))
-        .decimalNumberByDividingBy(NSDecimalNumber(100000000))
-
-    val outputAmount = poolAmount.decimalNumberBySubtracting(estimatedBtcFee)
-
-    val roundedOutputAmount = outputAmount.decimalNumberByRoundingAccordingToBehavior(
-        NSDecimalNumberHandler(
-            roundingMode = NSRoundingMode.NSRoundPlain,
-            scale = 8.toShort(),
-            raiseOnExactness = false,
-            raiseOnOverflow = false,
-            raiseOnUnderflow = false,
-            raiseOnDivideByZero = false
-        )
-    )
-
-    println("outputAmount " + roundedOutputAmount.stringValue)
-    println("outputAmount " + Satoshi((roundedOutputAmount.decimalNumberByMultiplyingBy(NSDecimalNumber(100_000_000))).longValue()).toLong())
 }

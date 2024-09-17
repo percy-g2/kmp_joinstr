@@ -57,7 +57,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import invincible.privacy.joinstr.convertFloatExponentialToString
+import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.theme.greenDark
@@ -240,7 +240,7 @@ fun PoolItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Denomination: ${poolContent.denomination.convertFloatExponentialToString()}",
+                text = "Denomination: ${poolContent.denomination.toBigDecimal().toStringExpanded()}",
                 style = MaterialTheme.typography.labelSmall
             )
 
