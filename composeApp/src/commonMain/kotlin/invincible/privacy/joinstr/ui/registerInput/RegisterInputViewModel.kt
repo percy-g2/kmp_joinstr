@@ -4,6 +4,8 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ionspin.kotlin.bignum.decimal.DecimalMode
+import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.createPsbt
 import invincible.privacy.joinstr.getHistoryStore
@@ -91,98 +93,109 @@ class RegisterInputViewModel : ViewModel() {
                 ?.sortedByDescending { it.timeout }
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
 
-            val poolAmount = selectedPool.denomination
-            val selectedTxAmount = _selectedTx.value?.amount
+            val poolAmount = selectedPool.denomination.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8))
+            val selectedTxAmount = _selectedTx.value?.amount?.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8))
 
-            if (selectedTxAmount != null) {
-                if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
-                        selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
-                ) {
-                    SnackbarController.showMessage(
-                        "Error: Selected input value is not within the specified range for this pool " +
-                            "(denomination: $poolAmount BTC)"
-                    )
+            println("poolAmount" + poolAmount)
+            println("selectedTxAmount" + selectedTxAmount)
+
+            println("check1" + (poolAmount * 100_000_000) + 500)
+            println("check2" + (selectedTxAmount!! * 100_000_000))
+
+            println("check3" + (selectedTxAmount!! * 100_000_000))
+
+            println("check4" + (poolAmount * 100_000_000) + 5000)
+
+            if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
+                    selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
+            ) {
+                SnackbarController.showMessage(
+                    "Error: Selected input value is not within the specified range for this pool " +
+                        "(denomination: $poolAmount BTC)"
+                )
+                return@launch
+            } else {
+                _selectedTx.value?.let {
+                    viewModelScope.launch {
+
+                        val psbtBase64 = createPsbt(
+                            poolId = poolId,
+                            unspentItem = it
+                        )
+
+                        val walletProcessPsbtParams = JsonArray(
+                            listOf(
+                                JsonPrimitive(psbtBase64),
+                                JsonPrimitive(true),
+                                JsonPrimitive("ALL|ANYONECANPAY"),
+                                JsonPrimitive(true),
+                                JsonPrimitive(false)
+                            )
+                        )
+
+                        val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
+                            method = Methods.WALLET_PROCESS_PSBT.value,
+                            params = walletProcessPsbtParams
+                        )
+
+                        val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
+
+                        val jsonObject = buildJsonObject {
+                            put("hex", JsonPrimitive(processPsbt?.psbt))
+                            put("type", JsonPrimitive("input"))
+                        }
+                        val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+                        val sharedSecret = getSharedSecret(
+                            selectedPool.privateKey.hexToByteArray(),
+                            selectedPool.publicKey.hexToByteArray()
+                        )
+                        val encryptedMessage = encrypt(data, sharedSecret)
+                        val nostrEvent = createEvent(
+                            content = encryptedMessage,
+                            event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                            privateKey = selectedPool.privateKey.hexToByteArray(),
+                            publicKey = selectedPool.publicKey.hexToByteArray(),
+                            tagPubKey = selectedPool.publicKey
+                        )
+
+                        val item = Item(
+                            id = 0,
+                            title = "Register Input",
+                            description = "Input registered with event id: ${nostrEvent.id}"
+                        )
+                        onSuccess.invoke(item)
+
+                        nostrClient.sendEvent(
+                            event = nostrEvent,
+                            onSuccess = {
+                                val waitItem = Item(
+                                    id = 1,
+                                    title = "Wait",
+                                    description = "Waiting for other users to register input..."
+                                )
+                                onSuccess.invoke(waitItem)
+                                SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
+                                checkRegisteredInputs(
+                                    selectedPool = selectedPool,
+                                    onSuccess = onSuccess
+                                )
+                            },
+                            onError = { error ->
+                                val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                                SnackbarController.showMessage(msg)
+                                onError.invoke()
+                            }
+                        )
+                    }
+                } ?: run {
+                    if (PlatformUtils.IS_WASM_JS) {
+                        SnackbarController.showMessage("PSBT creation is not yet supported for the web!")
+                    } else {
+                        SnackbarController.showMessage("An error occurred during PSBT creation!")
+                    }
+                    onError.invoke()
                     return@launch
                 }
-            } else return@launch
-            _selectedTx.value?.let {
-                viewModelScope.launch {
-
-                    val psbtBase64 = createPsbt(
-                        poolId = poolId,
-                        unspentItem = it
-                    )
-
-                    val walletProcessPsbtParams = JsonArray(listOf(
-                        JsonPrimitive(psbtBase64),
-                        JsonPrimitive(true),
-                        JsonPrimitive("ALL|ANYONECANPAY"),
-                        JsonPrimitive(true),
-                        JsonPrimitive(false)
-                    ))
-
-                    val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
-                        method = Methods.WALLET_PROCESS_PSBT.value,
-                        params = walletProcessPsbtParams
-                    )
-
-                    val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
-
-                    val jsonObject = buildJsonObject {
-                        put("hex", JsonPrimitive(processPsbt?.psbt))
-                        put("type", JsonPrimitive("input"))
-                    }
-                    val data = json.encodeToString(JsonObject.serializer(), jsonObject)
-                    val sharedSecret = getSharedSecret(
-                        selectedPool.privateKey.hexToByteArray(),
-                        selectedPool.publicKey.hexToByteArray()
-                    )
-                    val encryptedMessage = encrypt(data, sharedSecret)
-                    val nostrEvent = createEvent(
-                        content = encryptedMessage,
-                        event = Event.ENCRYPTED_DIRECT_MESSAGE,
-                        privateKey = selectedPool.privateKey.hexToByteArray(),
-                        publicKey = selectedPool.publicKey.hexToByteArray(),
-                        tagPubKey = selectedPool.publicKey
-                    )
-
-                    val item =  Item(
-                        id = 0,
-                        title = "Register Input",
-                        description = "Input registered with event id: ${nostrEvent.id}"
-                    )
-                    onSuccess.invoke(item)
-
-                    nostrClient.sendEvent(
-                        event = nostrEvent,
-                        onSuccess = {
-                            val waitItem = Item(
-                                id = 1,
-                                title = "Wait",
-                                description = "Waiting for other users to register input..."
-                            )
-                            onSuccess.invoke(waitItem)
-                            SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
-                            checkRegisteredInputs(
-                                selectedPool = selectedPool,
-                                onSuccess = onSuccess
-                            )
-                        },
-                        onError = { error ->
-                            val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
-                            SnackbarController.showMessage(msg)
-                            onError.invoke()
-                        }
-                    )
-                }
-            } ?: run {
-                if (PlatformUtils.IS_WASM_JS) {
-                    SnackbarController.showMessage("PSBT creation is not yet supported for the web!")
-                } else {
-                    SnackbarController.showMessage("An error occurred during PSBT creation!")
-                }
-                onError.invoke()
-                return@launch
             }
         }
     }
@@ -208,7 +221,7 @@ class RegisterInputViewModel : ViewModel() {
                         }
                         val listOfPsbts = registeredAddressList.mapNotNull { it.hex }
                         viewModelScope.launch {
-                            val (psbt, rawTx) = joinPsbts(listOfPsbts.sortedWith(compareBy { it }))
+                            val (psbt, rawTx) = joinPsbts(listOfPsbts)
                             if (rawTx != null && psbt != null) {
                                 val waitItem = Item(
                                     id = 2,

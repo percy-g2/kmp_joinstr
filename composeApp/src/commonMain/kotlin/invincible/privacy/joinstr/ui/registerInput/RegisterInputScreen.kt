@@ -53,7 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import invincible.privacy.joinstr.convertFloatExponentialToString
+import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.theme.greenDark
 import invincible.privacy.joinstr.theme.redDark
@@ -92,7 +92,7 @@ fun RegisterInputScreen(
     val listUnspent by viewModel.listUnspent
     val selectedTxId by viewModel.selectedTx
     var autoRotation by remember { mutableStateOf(false) }
-    val showRegisterInputTimeLine = remember { mutableStateOf(true) }
+    val showRegisterInputTimeLine = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val items = remember { mutableStateListOf<Item>() }
 
@@ -202,7 +202,7 @@ fun RegisterInputScreen(
                                                 } else Color.Transparent
 
                                                 CustomOutlinedButton(
-                                                    text = item.amount.convertFloatExponentialToString(),
+                                                    text = item.amount.toBigDecimal().toStringExpanded(),
                                                     color = color,
                                                     isSelected = item.txid == selectedTxId?.txid && item.vout == selectedTxId?.vout,
                                                     onClick = {

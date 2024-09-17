@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ListUnspentResponseItem(
     val address: String,
-    val amount: Float,
+    val amount: Double,
     val confirmations: Int,
     val desc: String,
     val label: String,

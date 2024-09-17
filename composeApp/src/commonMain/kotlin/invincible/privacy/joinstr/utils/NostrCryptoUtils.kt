@@ -145,6 +145,5 @@ object NostrCryptoUtils {
 enum class Event(val kind: Int) {
     NOTE(1),
     ENCRYPTED_DIRECT_MESSAGE(4),
-    JOIN_STR(2022),
-    TEST_JOIN_STR(2022566)
+    JOIN_STR(2022)
 }

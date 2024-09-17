@@ -37,7 +37,6 @@ import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
-import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
@@ -177,7 +176,7 @@ actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray 
 @OptIn(ExperimentalEncodingApi::class)
 actual suspend fun createPsbt(
     poolId: String,
-    unspentItem: ListUnspentResponseItem
+    unspentItem: ListUnspentResponseItem,
 ): String? {
     val activePools = getPoolsStore().get()
         ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
@@ -217,13 +216,6 @@ actual suspend fun createPsbt(
                 }
             )
         }
-
-    if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
-            selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
-    ) {
-        SnackbarController.showMessage("Selected input value is not within the specified range for this pool " +
-            "(denomination: $poolAmount BTC)")
-    }
 
     val transaction = Transaction(
         version = 1L,
@@ -437,7 +429,7 @@ actual fun openLink(link: String) {
 
 actual fun testOutput() {
     val poolAmount: BigDecimal = BigDecimal(0.00995)
-    val selectedTxAmount: BigDecimal = BigDecimal( 0.01)
+    val selectedTxAmount: BigDecimal = BigDecimal(0.01)
     val estimatedVByteSize = BigDecimal(100).multiply(BigDecimal(2))
     val estimatedBtcFee = (BigDecimal(4).multiply(estimatedVByteSize)).divide(BigDecimal(100000000))
 

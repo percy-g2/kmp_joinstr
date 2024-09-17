@@ -24,7 +24,6 @@ import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
-import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
@@ -261,15 +260,6 @@ actual suspend fun createPsbt(
                     }
                 )
             }
-
-        if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
-                selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
-        ) {
-            SnackbarController.showMessage(
-                "Error: Selected input value is not within the specified range for this pool " +
-                    "(denomination: $poolAmount BTC)"
-            )
-        }
 
         val transaction = Transaction(
             version = 1L,

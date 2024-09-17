@@ -126,6 +126,10 @@ kotlin {
             implementation(libs.qrose)
 
             implementation(libs.compottie)
+
+            implementation("com.ionspin.kotlin:bignum-serialization-kotlinx:0.3.9")
+
+            implementation("com.ionspin.kotlin:bignum:0.3.11-SNAPSHOT")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {

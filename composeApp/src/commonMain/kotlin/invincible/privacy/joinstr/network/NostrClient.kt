@@ -60,7 +60,7 @@ open class NostrClient {
 
             wsSession?.let { session ->
                 var events: List<PoolContent> = emptyList()
-                val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.TEST_JOIN_STR.kind}]}]"""
+                val subscribeMessage = """["REQ", "my-events", {"kinds": [${Event.JOIN_STR.kind}]}]"""
                 session.send(Frame.Text(subscribeMessage))
 
                 for (frame in session.incoming) {
