@@ -244,9 +244,8 @@ class RegisterInputViewModel : ViewModel() {
                                                 publicKey = selectedPool.publicKey,
                                                 privateKey = selectedPool.privateKey,
                                                 amount = selectedPool.denomination,
-                                                address = selectedPool.peersData.find { it.type == "output" }?.address ?: "",
                                                 psbt = psbt,
-                                                tx = txId ?: "",
+                                                tx = txId,
                                                 timestamp = Clock.System.now().toEpochMilliseconds()
                                             )
                                             it?.plus(transaction) ?: listOf(transaction)
