@@ -330,7 +330,7 @@ fun VerticalDynamicTimeLine(
                     elevation = appBarElevation,
                     spotColor = if (isDarkTheme) Color.White else Color.Black
                 ),
-                title = { Text("Status") },
+                title = { /* no title */ },
                 windowInsets = WindowInsets(0.dp),
                 actions = {
                     IconButton(
