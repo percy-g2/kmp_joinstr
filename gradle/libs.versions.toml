@@ -5,6 +5,7 @@ android-minSdk = "24"
 android-targetSdk = "35"
 androidx-activityCompose = "1.9.2"
 androidx-lifecycle = "2.8.2"
+bignum = "0.3.10"
 bitcoinKmp = "0.20.0"
 compose-plugin = "1.7.0-beta02"
 compottie = "2.0.0-beta02"
@@ -22,12 +23,13 @@ qrose = "1.0.1"
 secp256k1Kmp = "0.15.0"
 slf4jApi = "2.0.16"
 startupRuntime = "1.1.1"
-testng = "6.9.6"
+testing = "6.9.6"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "bignum" }
 bitcoin-kmp = { module = "fr.acinq.bitcoin:bitcoin-kmp", version.ref = "bitcoinKmp" }
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
@@ -58,7 +60,7 @@ secp256k1-kmp-jni-android = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-and
 secp256k1-kmp-jni-jvm = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-jvm", version.ref = "secp256k1Kmp" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-testng = { group = "org.testng", name = "testng", version.ref = "testng" }
+testing = { group = "org.testng", name = "testng", version.ref = "testing" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

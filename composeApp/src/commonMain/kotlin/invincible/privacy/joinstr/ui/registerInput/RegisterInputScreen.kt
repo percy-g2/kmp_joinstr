@@ -20,10 +20,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -79,7 +82,6 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalStdlibApi::class)
@@ -87,36 +89,37 @@ import org.jetbrains.compose.resources.stringResource
 fun RegisterInputScreen(
     poolId: String,
     viewModel: RegisterInputViewModel = viewModel { RegisterInputViewModel() },
+    navigateToHome: () -> Unit,
 ) {
     val isLoading by viewModel.isLoading
     val listUnspent by viewModel.listUnspent
     val selectedTxId by viewModel.selectedTx
     var autoRotation by remember { mutableStateOf(false) }
-    val showRegisterInputTimeLine = remember { mutableStateOf(false) }
+    val showRegisterInputTimeLine = remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val items = remember { mutableStateListOf<Item>() }
 
     LaunchedEffect(Unit) {
-        val activePools = getPoolsStore().get()
-            ?.sortedByDescending { it.timeout }
-            ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-        showRegisterInputTimeLine.value = activePools?.find { it.peersData.filter { it.type == "input" }.size == it.peers }?.id?.let { true } ?: false
+        /* val activePools = getPoolsStore().get()
+             ?.sortedByDescending { it.timeout }
+             ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+         showRegisterInputTimeLine.value = activePools?.find { it.peersData.filter { it.type == "input" }.size == it.peers }?.id?.let { true } ?: false
 
-        if (showRegisterInputTimeLine.value) {
-            val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
-            viewModel.checkRegisteredInputs(
-                selectedPool= selectedPool,
-                onSuccess = {
+         if (showRegisterInputTimeLine.value) {
+             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
+             viewModel.checkRegisteredInputs(
+                 selectedPool= selectedPool,
+                 onSuccess = {
 
-                }
-            )
-        }
+                 }
+             )
+         }*/
 
-       // items.addAll(getCharacters())
+        items.addAll(getCharacters())
     }
 
     if (showRegisterInputTimeLine.value) {
-        VerticalDynamicTimeLine(items = items)
+        VerticalDynamicTimeLine(items = items, navigateToHome = navigateToHome)
     } else {
         Surface(modifier = Modifier.fillMaxSize()) {
             if (isLoading) {
@@ -296,6 +299,7 @@ fun CustomOutlinedButton(
 fun VerticalDynamicTimeLine(
     modifier: Modifier = Modifier,
     items: SnapshotStateList<Item>,
+    navigateToHome: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     val theme = SettingsManager.themeState
@@ -325,11 +329,18 @@ fun VerticalDynamicTimeLine(
                     elevation = appBarElevation,
                     spotColor = if (isDarkTheme) Color.White else Color.Black
                 ),
-                title = { Text("Transaction") },
-                windowInsets = WindowInsets(
-                    top = 0.dp,
-                    bottom = 0.dp
-                )
+                title = { Text("Status") },
+                windowInsets = WindowInsets(0.dp),
+                actions = {
+                    IconButton(
+                        onClick = navigateToHome
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -352,7 +363,7 @@ fun VerticalDynamicTimeLine(
                         position = position,
                         pointAnimation = if (index == items.lastIndex && index != 3) JetLimeEventDefaults.pointAnimation() else null,
                         pointType = if (index == items.lastIndex && index != 3) {
-                            EventPointType.filled(0.5f)
+                            EventPointType.filled(fillPercent = 0.5f)
                         } else {
                             EventPointType.custom(
                                 icon = rememberVectorPainter(Icons.Default.CheckCircle),
@@ -371,11 +382,12 @@ fun VerticalDynamicTimeLine(
 fun getCharacters(): MutableList<Item> {
     val eventId = "2e4b14f5d54a4190c0101b87382db1ce5ef9ec5db39dc2265bac5bd9d91cded2"
     val txId = "a40ae97da65ed66f279cc04c54ed5040e94cde39d11b6f2d1ea151855b49c931"
-    val psbt = "cHNidP8BAHEBAAAAAfLM0vZk4Pb/TKeH8PErLIODeXv+M28W/Nu2ezmWyhzCAAAAAAD/////ApgrDwAAAAAAFgAU/+UQ7zfiNo+wVH7RjPFGJkuisOmYKw8AAAAAABYAFJwmTGPsh+qhvUc2XVbHffqMS1ctAAAAAAABAHECAAAAAUocGE+a3XytR2BZDuDs32zXLfQB9IHwf1vqxerhgWsXAAAAAAD9////AkBCDwAAAAAAFgAUXZScFsN1uQJ27p+5u8mQJ47EdQ79DZTllAAAABYAFPz4t4CcMYUtphL4IHbVyFNgu4e1AAAAAAEBH0BCDwAAAAAAFgAUXZScFsN1uQJ27p+5u8mQJ47EdQ4iAgKMROawXPu/6jlDHYDehoDm1AYXKZf/4ocoYOSnRJOSxkcwRAIgewYrIko+RjhNYt5ebkD7y2UmoS0gDoUblEP6So7NgMgCIHxv4zmjKB6o8Yq1y+MpHOKQCP/DigWF1o/uRii0ps2ZgQEDBIEAAAAiBgKMROawXPu/6jlDHYDehoDm1AYXKZf/4ocoYOSnRJOSxhhzPZ7eVAAAgAEAAIAAAACAAAAAABUAAAAAIgIC7ZxyiroDMszdByYUCe6RgU7wplrLFXME5eXqeR2vv8sYcz2e3lQAAIABAACAAAAAgAAAAACXAAAAACICA+AeP0Bd7Vs8RjhidixHZUOGofm+sWLOOOp7M/YQrUBDGHM9nt5UAACAAQAAgAAAAIAAAAAAlgAAAAA="
+    val psbt =
+        "cHNidP8BAHEBAAAAAfLM0vZk4Pb/TKeH8PErLIODeXv+M28W/Nu2ezmWyhzCAAAAAAD/////ApgrDwAAAAAAFgAU/+UQ7zfiNo+wVH7RjPFGJkuisOmYKw8AAAAAABYAFJwmTGPsh+qhvUc2XVbHffqMS1ctAAAAAAABAHECAAAAAUocGE+a3XytR2BZDuDs32zXLfQB9IHwf1vqxerhgWsXAAAAAAD9////AkBCDwAAAAAAFgAUXZScFsN1uQJ27p+5u8mQJ47EdQ79DZTllAAAABYAFPz4t4CcMYUtphL4IHbVyFNgu4e1AAAAAAEBH0BCDwAAAAAAFgAUXZScFsN1uQJ27p+5u8mQJ47EdQ4iAgKMROawXPu/6jlDHYDehoDm1AYXKZf/4ocoYOSnRJOSxkcwRAIgewYrIko+RjhNYt5ebkD7y2UmoS0gDoUblEP6So7NgMgCIHxv4zmjKB6o8Yq1y+MpHOKQCP/DigWF1o/uRii0ps2ZgQEDBIEAAAAiBgKMROawXPu/6jlDHYDehoDm1AYXKZf/4ocoYOSnRJOSxhhzPZ7eVAAAgAEAAIAAAACAAAAAABUAAAAAIgIC7ZxyiroDMszdByYUCe6RgU7wplrLFXME5eXqeR2vv8sYcz2e3lQAAIABAACAAAAAgAAAAACXAAAAACICA+AeP0Bd7Vs8RjhidixHZUOGofm+sWLOOOp7M/YQrUBDGHM9nt5UAACAAQAAgAAAAIAAAAAAlgAAAAA="
     return mutableListOf(
         Item(id = 0, title = "Register Input", description = "Input registered with event id: $eventId"),
         Item(id = 1, title = "Wait", description = "Waiting for other users to register input..."),
         Item(id = 2, title = "Finalize Coinjoin Tx", description = "PSBT: $psbt"),
-        Item(id = 3, title = "Broadcast Tx", description = "TX: $txId", info = "https://mempool.space/signet/tx/a40ae97da65ed66f279cc04c54ed5040e94cde39d11b6f2d1ea151855b49c931"),
+        Item(id = 3, title = "Broadcast Tx", info = "Tx: $txId"),
     )
 }

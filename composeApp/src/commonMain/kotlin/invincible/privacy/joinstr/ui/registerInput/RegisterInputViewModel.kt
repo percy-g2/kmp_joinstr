@@ -231,12 +231,10 @@ class RegisterInputViewModel : ViewModel() {
                                 onSuccess.invoke(waitItem)
                                 val txId = httpClient.broadcastRawTx(rawTx)
                                 if (txId != null) {
-                                    val info = "https://mempool.space/signet/tx/$txId"
                                     val broadcastTxItem = Item(
                                         id = 3,
                                         title = "Broadcast Tx",
-                                        description = "TX: $txId",
-                                        info = info
+                                        info = "Tx: $txId"
                                     )
 
                                     CoroutineScope(Dispatchers.Default).launch {

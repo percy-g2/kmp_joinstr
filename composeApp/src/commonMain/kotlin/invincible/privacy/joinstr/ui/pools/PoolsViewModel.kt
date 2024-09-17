@@ -159,7 +159,7 @@ class PoolsViewModel : ViewModel() {
                     httpClient.fetchHourFee()?.let { hourFee ->
                         val params = JsonArray(
                             listOf(
-                                JsonPrimitive("coin_join"),
+                                JsonPrimitive("coinjoin"),
                                 JsonPrimitive("bech32")
                             )
                         )
@@ -309,7 +309,7 @@ class PoolsViewModel : ViewModel() {
                                     runCatching {
                                         val params = JsonArray(
                                             listOf(
-                                                JsonPrimitive("coin_join"),
+                                                JsonPrimitive("coinjoin"),
                                                 JsonPrimitive("bech32")
                                             )
                                         )

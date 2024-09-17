@@ -127,9 +127,7 @@ kotlin {
 
             implementation(libs.compottie)
 
-            implementation("com.ionspin.kotlin:bignum-serialization-kotlinx:0.3.9")
-
-            implementation("com.ionspin.kotlin:bignum:0.3.11-SNAPSHOT")
+            implementation(libs.bignum)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {
@@ -167,7 +165,7 @@ kotlin {
         }
 
         commonTest.dependencies {
-            implementation(libs.testng)
+            implementation(libs.testing)
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }

@@ -473,10 +473,16 @@ actual fun openLink(link: String) {
     runCatching {
         val nsUrl = NSURL.URLWithString(link)
         if (nsUrl != null) {
-            UIApplication.sharedApplication.openURL(nsUrl)
+            UIApplication.sharedApplication.openURL(
+                url = nsUrl,
+                options = emptyMap<Any?, Any>(),
+                completionHandler = { success ->
+                    println("URL opened successfully: $success")
+                }
+            )
         }
-    }.getOrElse {
-        it.printStackTrace()
+    }.onFailure { exception ->
+        exception.printStackTrace()
     }
 }
 
