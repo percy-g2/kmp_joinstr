@@ -203,6 +203,7 @@ fun App(
                     animatedComposable<InputRegistration> { backStackEntry ->
                         val poolId = backStackEntry.toRoute<InputRegistration>().id
                         RegisterInputScreen(poolId = poolId) {
+                            poolsViewModel.startActiveReadyPoolsCheck()
                             navController.navigate(NavItem.HomeScreen.path)
                         }
                     }
@@ -223,6 +224,7 @@ fun App(
                 if (activePoolReady.first && navBackStackEntry?.destination?.id != InputRegistration.serializer().generateHashCode()) {
                     val pool = InputRegistration(id = activePoolReady.second)
                     navController.navigate(pool)
+                    poolsViewModel.cancelReadyActivePoolsCheck()
                 }
             }
         }

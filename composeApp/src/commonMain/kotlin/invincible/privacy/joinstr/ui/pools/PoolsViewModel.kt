@@ -30,6 +30,7 @@ import invincible.privacy.joinstr.utils.SettingsManager
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,11 +69,21 @@ class PoolsViewModel : ViewModel() {
     private val _activePoolReady = MutableStateFlow(Pair(false, ""))
     val activePoolReady: StateFlow<Pair<Boolean, String>> = _activePoolReady.asStateFlow()
 
+    private var checkForReadyActivePoolsJob: Job? = null
+
     fun startInitialChecks() {
         GlobalScope.launch {
-            nostrClient.activePoolsCredentialsSender()
+            runCatching {
+                nostrClient.activePoolsCredentialsSender()
+            }.getOrElse {
+                it.printStackTrace()
+            }
         }
-        GlobalScope.launch {
+        startActiveReadyPoolsCheck()
+    }
+
+    fun startActiveReadyPoolsCheck() {
+        checkForReadyActivePoolsJob = GlobalScope.launch {
             runCatching {
                 checkForReadyActivePools()
             }.getOrElse {
@@ -93,6 +104,10 @@ class PoolsViewModel : ViewModel() {
         }
     }
 
+    fun cancelReadyActivePoolsCheck() {
+        checkForReadyActivePoolsJob?.cancel()
+        checkForReadyActivePoolsJob = null
+    }
 
     private fun generatePoolId(): String {
         val letters = ('a'..'z').toList()
