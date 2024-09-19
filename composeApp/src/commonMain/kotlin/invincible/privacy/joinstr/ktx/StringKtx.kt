@@ -16,6 +16,11 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 fun String.hexToByteArray(): ByteArray =
     ByteArray(length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 
+fun String.isValidHttpUrl(): Boolean {
+    val regex = "^(https?://)[\\w.-]+(:\\d+)?(/.*)?$".toRegex()
+    return isNotBlank() && regex.matches(this)
+}
+
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun String.lottieAnimationImage(): Painter {

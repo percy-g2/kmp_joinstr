@@ -2,9 +2,10 @@ package invincible.privacy.joinstr.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.utils.NodeConfig
-import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +53,7 @@ class SettingsViewModel : ViewModel() {
         _uiState.update {
             it.copy(
                 nodeUrl = nodeUrl,
-                isNodeUrlValid = isValidHttpUrl(nodeUrl)
+                isNodeUrlValid = nodeUrl.isValidHttpUrl()
             )
         }
     }
@@ -112,7 +113,7 @@ class SettingsViewModel : ViewModel() {
     private fun validateAllFields(state: SettingsUiState): SettingsUiState {
         return state.copy(
             isNostrRelayValid = isValidWebSocketUrl(state.nostrRelay),
-            isNodeUrlValid = isValidHttpUrl(state.nodeUrl),
+            isNodeUrlValid = state.nodeUrl.isValidHttpUrl(),
             isUsernameValid = state.username.isNotBlank(),
             isPasswordValid = state.password.isNotBlank(),
             isPortValid = isValidPort(state.port)
@@ -121,11 +122,6 @@ class SettingsViewModel : ViewModel() {
 
     private fun isValidWebSocketUrl(url: String): Boolean {
         val regex = "^(wss?://)[\\w.-]+(:\\d+)?(/.*)?$".toRegex()
-        return url.isNotBlank() && regex.matches(url)
-    }
-
-    private fun isValidHttpUrl(url: String): Boolean {
-        val regex = "^(https?://)[\\w.-]+(:\\d+)?(/.*)?$".toRegex()
         return url.isNotBlank() && regex.matches(url)
     }
 

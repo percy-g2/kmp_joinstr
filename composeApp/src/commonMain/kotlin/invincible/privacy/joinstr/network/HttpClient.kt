@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr.network
 
+import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.model.MempoolFee
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.utils.NodeConfig
@@ -40,16 +41,20 @@ class HttpClient {
 
     suspend inline fun <reified T> fetchNodeData(body: RpcRequestBody): T? = runCatching {
         val nodeConfig = getNodeConfig()
-        val response: HttpResponse = createHttpClient.post {
-            url("${nodeConfig.url}:${nodeConfig.port}/")
-            basicAuth(
-                username = nodeConfig.userName,
-                password = nodeConfig.password
-            )
-            setBody(body)
-        }
-        if (response.status == HttpStatusCode.OK) {
-            json.decodeFromString<T>(response.bodyAsText())
+        if (nodeConfig.url.isValidHttpUrl() && nodeConfig.userName.isNotBlank()
+            && nodeConfig.password.isNotBlank() && nodeConfig.port in 1..65535
+        ) {
+            val response: HttpResponse = createHttpClient.post {
+                url("${nodeConfig.url}:${nodeConfig.port}/")
+                basicAuth(
+                    username = nodeConfig.userName,
+                    password = nodeConfig.password
+                )
+                setBody(body)
+            }
+            if (response.status == HttpStatusCode.OK) {
+                json.decodeFromString<T>(response.bodyAsText())
+            } else null
         } else null
     }.getOrElse {
         it.printStackTrace()
