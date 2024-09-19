@@ -11,4 +11,10 @@
     <string name="no_history_found">Your coinjoin history is empty.</string>
     <string name="node_version">Node Version</string>
     <string name="network">Network</string>
+    <string name="waiting_for_outputs">Waiting for other users to register outputs...</string>
+    <string name="pool_details">Pool Details</string>
+    <string name="denomination">Denomination (BTC)</string>
+    <string name="denomination_support_txt">Enter denomination from available inputs</string>
+    <string name="invalid_denomination">Input is not a valid BTC amount. Ensure it is up to 8 decimal places and contains only numbers.</string>
+    <string name="denomination_exceeded">Input exceeds the maximum BTC value of 21 million or is invalid.</string>
 </resources>

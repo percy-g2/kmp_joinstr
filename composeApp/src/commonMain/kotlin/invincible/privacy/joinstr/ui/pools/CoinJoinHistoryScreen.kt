@@ -58,6 +58,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.openLink
@@ -151,7 +152,6 @@ private fun BoxScope.HistoryListContent(
     }
 }
 
-
 @Composable
 fun HistoryItem(
     coinJoinHistory: CoinJoinHistory
@@ -198,10 +198,9 @@ fun HistoryItem(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-
                 IconButton(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    onClick = { isDetailExpanded = !isDetailExpanded }
+                    onClick = { isDetailExpanded = !isDetailExpanded },
+                    modifier = Modifier.align(Alignment.Center)
                 ) {
                     Icon(
                         imageVector = if (isDetailExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -212,7 +211,8 @@ fun HistoryItem(
                 Text(
                     text = formatTimestamp(coinJoinHistory.timestamp),
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.align(Alignment.BottomEnd)
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    textAlign = TextAlign.Center
                 )
             }
         }

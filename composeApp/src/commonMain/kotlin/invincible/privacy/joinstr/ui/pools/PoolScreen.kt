@@ -23,21 +23,36 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import invincible.privacy.joinstr.ui.components.ProgressDialog
+import kotlinx.coroutines.launch
 
 @Composable
 fun PoolScreen(
     poolsViewModel: PoolsViewModel
 ) {
     val isLoading by poolsViewModel.isLoading.collectAsState()
+    val tabScrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    val tabTitles = listOf("Create New Pool", "My Pools", "View Other Pools", "History")
+    val tabWidths = remember {
+        tabTitles.map { title ->
+            with(density) {
+                title.length * 10.dp.toPx() + 24.dp.toPx() // Approximate width based on text length + padding
+            }
+        }
+    }
 
     @Composable
     fun Tab(
@@ -72,57 +87,28 @@ fun PoolScreen(
         Row(
             modifier = Modifier
                 .wrapContentSize()
-                .horizontalScroll(rememberScrollState())
+                .horizontalScroll(tabScrollState)
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = {
-                    selectedTab = 0
+            tabTitles.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = {
+                        scope.launch {
+                            selectedTab = index
+                            // Calculate the scroll position for the selected tab
+                            val scrollPosition = tabWidths.take(index).sum().toInt()
+                            tabScrollState.animateScrollTo(scrollPosition)
+                        }
+                    }
+                ) {
+                    val color = if (selectedTab == index) Color.DarkGray else Color.Gray
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium.copy(color = color)
+                    )
                 }
-            ) {
-                val color = if (selectedTab == 0) Color.DarkGray else Color.Gray
-                Text(
-                    text = "Create New Pool",
-                    style = MaterialTheme.typography.labelMedium.copy(color = color)
-                )
-            }
-            Tab(
-                selected = selectedTab == 1,
-                onClick = {
-                    selectedTab = 1
-                }
-            ) {
-                val color = if (selectedTab == 1) Color.DarkGray else Color.Gray
-                Text(
-                    text = "My Pools",
-                    style = MaterialTheme.typography.labelMedium.copy(color = color)
-                )
-            }
-            Tab(
-                selected = selectedTab == 2,
-                onClick = {
-                    selectedTab = 2
-                }
-            ) {
-                val color = if (selectedTab == 2) Color.DarkGray else Color.Gray
-                Text(
-                    text = "View Other Pools",
-                    style = MaterialTheme.typography.labelMedium.copy(color = color)
-                )
-            }
-            Tab(
-                selected = selectedTab == 3,
-                onClick = {
-                    selectedTab = 3
-                }
-            ) {
-                val color = if (selectedTab == 3) Color.DarkGray else Color.Gray
-                Text(
-                    text = "History",
-                    style = MaterialTheme.typography.labelMedium.copy(color = color)
-                )
             }
         }
 

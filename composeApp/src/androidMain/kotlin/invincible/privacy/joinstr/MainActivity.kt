@@ -21,10 +21,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.LightColorScheme
+import invincible.privacy.joinstr.ui.pools.HistoryItem
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
+import kotlinx.datetime.Clock
 
 class MainActivity : ComponentActivity() {
 
@@ -99,5 +102,25 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
+    // set context for App preview
+    ContextProvider.setContext(LocalContext.current)
     App()
+}
+
+@Preview(
+    showBackground = true,
+    showSystemUi = true
+)
+@Composable
+fun CoinjoinHistoryItemPreview() {
+    val coinJoinHistory = CoinJoinHistory(
+        relay = "wss://nostr.fmt.wiz.biz",
+        publicKey = "57ae43228fa2f2a6f83cb327757ef0d077bfcaffa4b917ee4e7d5642e054e8f8",
+        privateKey = "56778fd1c67641deb10f14450b683b15674e62056164cbccb11a03faf2ced119",
+        amount = 0.99956f,
+        psbt = "cHNidP8BAHECAAAAAeX8EYwAAAAAAAAAA/////w8AAAAAAAAAIgAgihVeUpqt5eSA7gWtv7UNObRTkNISXiAVyXNkFsKPf7pAAAAAAABAP0BAAAAAQAAAAABAAAAAAAAgAEAAAABAAAAAQEfAqACAAAAAQAAAAAAAQERKhYAAAAAABYAFKlUwqDXAsFWKvKdl3wtrki1pS8BAgAAAAEAAAAAAAAAIgAg+2M/VTeckRCOuy0y0mK6zCz/CT8J0FQjjDleqUV1zYEAAAAA\n",
+        tx = "a40ae97da65ed66f279cc04c54ed5040e94cde39d11b6f2d1ea151855b49c931",
+        timestamp = Clock.System.now().toEpochMilliseconds()
+    )
+    HistoryItem(coinJoinHistory)
 }

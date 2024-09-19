@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -17,7 +16,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +48,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import invincible.privacy.joinstr.ui.components.SnackbarController
+import joinstr.composeapp.generated.resources.Res
+import joinstr.composeapp.generated.resources.denomination
+import joinstr.composeapp.generated.resources.denomination_exceeded
+import joinstr.composeapp.generated.resources.denomination_support_txt
+import joinstr.composeapp.generated.resources.invalid_denomination
+import joinstr.composeapp.generated.resources.pool_details
+import joinstr.composeapp.generated.resources.waiting_for_outputs
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +91,7 @@ fun CreateNewPoolScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Waiting for other users to register outputs...",
+                            text = stringResource(Res.string.waiting_for_outputs),
                             style = MaterialTheme.typography.labelLarge
                         )
 
@@ -108,6 +114,9 @@ fun CreateNewPoolScreen(
         var denomination by remember { mutableStateOf(TextFieldValue("")) }
         var peers by remember { mutableStateOf("") }
 
+        val invalidDenomination = stringResource(Res.string.invalid_denomination)
+        val denominationExceeded = stringResource(Res.string.denomination_exceeded)
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -122,7 +131,7 @@ fun CreateNewPoolScreen(
         ) {
 
             Text(
-                text = "Pool Details",
+                text = stringResource(Res.string.pool_details),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(vertical = 12.dp)
             )
@@ -148,34 +157,21 @@ fun CreateNewPoolScreen(
                             denomination = TextFieldValue(text = input, selection = TextRange(selectionPosition))
                         } else {
                             if (input.isNotEmpty()) {
-                                SnackbarController.showMessage(
-                                    message = "Input exceeds the maximum BTC value of 21 million or is invalid."
-                                )
+                                SnackbarController.showMessage(message = denominationExceeded)
                             }
                             denomination = TextFieldValue("")
                         }
                     } else {
-                        SnackbarController.showMessage(
-                            message = "Input is not a valid BTC amount. Ensure it is up to 8 decimal places and contains only numbers."
-                        )
+                        SnackbarController.showMessage(message = invalidDenomination)
                         denomination = TextFieldValue("")
                     }
                 },
-                label = { Text("Denomination") },
+                label = { Text(text = stringResource(Res.string.denomination)) },
                 supportingText = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = ""
-                        )
-                        Text(
-                            text = "Enter denomination from available inputs",
-                            color = Color.LightGray
-                        )
-                    }
+                    Text(
+                        text = stringResource(Res.string.denomination_support_txt),
+                        color = Color.LightGray
+                    )
                 },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal,

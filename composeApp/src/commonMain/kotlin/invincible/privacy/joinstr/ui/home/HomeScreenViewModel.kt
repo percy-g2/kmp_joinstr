@@ -19,8 +19,6 @@ class HomeScreenViewModel(
     val uiState: StateFlow<HomeScreenUiState> = _uiState.asStateFlow()
 
     suspend fun fetchData() {
-        _uiState.value = _uiState.value.copy(isLoading = true)
-
         val networkInfo = fetchRpcData<NetworkInfo>(Methods.NETWORK_INFO)
         val blockchainInfo = fetchRpcData<BlockchainInfo>(Methods.BLOCK_CHAIN_INFO)
 
@@ -39,7 +37,7 @@ class HomeScreenViewModel(
 }
 
 data class HomeScreenUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val networkInfo: NetworkInfo? = null,
     val blockchainInfo: BlockchainInfo? = null
 )
