@@ -47,7 +47,6 @@ import platform.Foundation.NSCalendarUnitMonth
 import platform.Foundation.NSCalendarUnitSecond
 import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSDate
-import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
@@ -454,6 +453,10 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 
     val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
     val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
+    if (inDebug.value) {
+        println("psbt" + psbtBase64)
+        println("tx" + finalizedPsbt.right?.extract()?.right.toString())
+    }
     return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
 }
 

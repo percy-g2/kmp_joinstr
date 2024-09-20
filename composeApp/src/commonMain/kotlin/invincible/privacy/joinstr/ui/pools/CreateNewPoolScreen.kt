@@ -170,7 +170,7 @@ fun CreateNewPoolScreen(
                 supportingText = {
                     Text(
                         text = stringResource(Res.string.denomination_support_txt),
-                        color = Color.LightGray
+                        color = Color.Gray
                     )
                 },
                 keyboardOptions = KeyboardOptions(

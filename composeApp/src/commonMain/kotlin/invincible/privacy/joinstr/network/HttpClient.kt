@@ -80,7 +80,7 @@ class HttpClient {
         }
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<String>(response.bodyAsText())
-        } else null
+        } else response.bodyAsText()
     }.getOrElse {
         it.printStackTrace()
         null

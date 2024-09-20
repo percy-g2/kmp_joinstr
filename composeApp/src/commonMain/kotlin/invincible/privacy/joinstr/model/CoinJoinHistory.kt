@@ -7,7 +7,7 @@ data class CoinJoinHistory(
     val relay: String,
     val publicKey: String,
     val privateKey: String,
-    val amount: Float,
+    val amount: Double,
     val psbt: String,
     val tx: String,
     val timestamp: Long

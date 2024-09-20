@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class Credentials(
     val id: String,
     val publicKey: String,
-    val denomination: Float,
+    val denomination: Double,
     val peers: Int,
     val timeout: Long,
     val relay: String,

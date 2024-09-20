@@ -52,9 +52,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import okio.Path.Companion.toPath
-import java.math.BigDecimal
-import java.math.MathContext
-import java.math.RoundingMode
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
@@ -407,6 +404,10 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 
     val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
     val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
+    if (inDebug.value) {
+        println("psbt" + psbtBase64)
+        println("tx" + finalizedPsbt.right?.extract()?.right.toString())
+    }
     return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
 }
 

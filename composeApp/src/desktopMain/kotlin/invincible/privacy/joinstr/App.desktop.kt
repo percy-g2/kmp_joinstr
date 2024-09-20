@@ -42,9 +42,6 @@ import java.awt.SystemTray
 import java.awt.Toolkit
 import java.awt.TrayIcon
 import java.io.File
-import java.math.BigDecimal
-import java.math.MathContext
-import java.math.RoundingMode
 import java.net.URI
 import javax.swing.JOptionPane
 import kotlin.io.encoding.Base64
@@ -389,6 +386,10 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 
     val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
     val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
+    if (inDebug.value) {
+        println("psbt" + psbtBase64)
+        println("tx" + finalizedPsbt.right?.extract()?.right.toString())
+    }
     return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
 }
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.decimal.DecimalMode
+import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.LocalNotification
 import invincible.privacy.joinstr.createPsbt
@@ -91,15 +92,20 @@ class RegisterInputViewModel : ViewModel() {
                 ?.sortedByDescending { it.timeout }
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
 
-            val poolAmount = selectedPool.denomination.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8))
-            val selectedTxAmount = _selectedTx.value?.amount?.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8)) ?: BigDecimal.ZERO
+            val poolAmount = selectedPool.denomination.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8, scale = 8, roundingMode = RoundingMode.CEILING))
+            val selectedTxAmount = _selectedTx.value?.amount?.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8, scale = 8, roundingMode = RoundingMode.CEILING)) ?: BigDecimal.ZERO
 
-            if (!((poolAmount * 100_000_000) + 500 <= selectedTxAmount * 100_000_000 &&
-                    selectedTxAmount * 100_000_000 <= (poolAmount * 100_000_000) + 5000)
-            ) {
+            val min = 0.00_000_500
+            val max = 0.00_005_000
+            val minOffset = min.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8, scale = 8, roundingMode = RoundingMode.CEILING))
+            val maxOffset = max.toBigDecimal(decimalMode = DecimalMode(decimalPrecision = 8, scale = 8, roundingMode = RoundingMode.CEILING))
+
+            val isSelectedTxOutsideRange = !isWithinRange(poolAmount, selectedTxAmount, minOffset, maxOffset)
+
+            if (isSelectedTxOutsideRange && poolAmount > selectedTxAmount) {
                 SnackbarController.showMessage(
                     "Error: Selected input value is not within the specified range for this pool " +
-                        "(denomination: $poolAmount BTC)"
+                        "(denomination: ${poolAmount.toPlainString()} BTC) \n (selected: ${selectedTxAmount.toPlainString()} BTC)"
                 )
                 return@launch
             } else {
@@ -260,6 +266,12 @@ class RegisterInputViewModel : ViewModel() {
                 }
             )
         }
+    }
+
+    fun isWithinRange(poolAmount: BigDecimal, selectedTxAmount: BigDecimal, minOffset: BigDecimal, maxOffset: BigDecimal): Boolean {
+        val minAllowedAmount = poolAmount.plus(minOffset)
+        val maxAllowedAmount = poolAmount.plus(maxOffset)
+        return selectedTxAmount in minAllowedAmount..maxAllowedAmount
     }
 }
 
