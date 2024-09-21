@@ -149,11 +149,11 @@ class PoolsViewModel : ViewModel() {
                         val currentTime = (Clock.System.now().toEpochMilliseconds() / 1000)
                         val pools = getPoolsStore().get()
                         val activePoolsIds = pools
-                            ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
                             ?.filter { it.timeout > currentTime }?.map { it.id }
                         _otherPoolEvents.value = nostrEvents
                             .sortedByDescending { it.timeout }
                             .filter { it.timeout > currentTime && it.id !in activePoolsIds.orEmpty() }
+                            .filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
                         _isLoading.value = false
                     }
                 },
