@@ -215,7 +215,7 @@ class RegisterInputViewModel : ViewModel() {
                         }
                         val listOfPsbts = registeredAddressList.mapNotNull { it.hex }
                         viewModelScope.launch {
-                            val (psbt, rawTx) = joinPsbts(listOfPsbts)
+                            val (psbt, rawTx) = joinPsbts(listOfPsbts.sortedWith(compareBy { it }))
                             if (rawTx != null && psbt != null) {
                                 val waitItem = Item(
                                     id = 2,

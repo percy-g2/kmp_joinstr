@@ -238,11 +238,9 @@ compose.desktop {
     application {
         buildTypes.release.proguard {
             version.set("7.4.0")
-        }
-        mainClass = "invincible.privacy.joinstr.MainKt"
-        buildTypes.release.proguard {
             configurationFiles.from(files("compose-desktop.pro"))
         }
+        mainClass = "invincible.privacy.joinstr.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Joinstr"
