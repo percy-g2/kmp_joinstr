@@ -1,5 +1,7 @@
 # Joinstr - Kotlin Multiplatform
 
+<img src="https://github.com/percy-g2/kmp_joinstr/blob/main/screenshots/Joinstr-Presentation.png" alt="Presentation"/>
+
 A privacy-focused, multiplatform application for coordinating CoinJoin transactions using the Nostr protocol.
 
 ## Overview
