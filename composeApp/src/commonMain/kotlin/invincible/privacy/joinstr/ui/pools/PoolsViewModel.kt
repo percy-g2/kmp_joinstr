@@ -107,6 +107,8 @@ class PoolsViewModel : ViewModel() {
     fun cancelReadyActivePoolsCheck() {
         checkForReadyActivePoolsJob?.cancel()
         checkForReadyActivePoolsJob = null
+        _activePoolReady.value = false to ""
+        joiningPool.value = false
     }
 
     private fun generatePoolId(): String {
