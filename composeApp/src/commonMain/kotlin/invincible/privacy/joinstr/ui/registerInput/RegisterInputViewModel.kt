@@ -102,7 +102,7 @@ class RegisterInputViewModel : ViewModel() {
 
             val isSelectedTxOutsideRange = !isWithinRange(poolAmount, selectedTxAmount, minOffset, maxOffset)
 
-            if (isSelectedTxOutsideRange && poolAmount > selectedTxAmount) {
+            if (isSelectedTxOutsideRange) {
                 SnackbarController.showMessage(
                     "Error: Selected input value is not within the specified range for this pool " +
                         "(denomination: ${poolAmount.toPlainString()} BTC) \n (selected: ${selectedTxAmount.toPlainString()} BTC)"
@@ -268,10 +268,15 @@ class RegisterInputViewModel : ViewModel() {
         }
     }
 
-    fun isWithinRange(poolAmount: BigDecimal, selectedTxAmount: BigDecimal, minOffset: BigDecimal, maxOffset: BigDecimal): Boolean {
+    private fun isWithinRange(
+        poolAmount: BigDecimal,
+        selectedTxAmount: BigDecimal,
+        minOffset: BigDecimal,
+        maxOffset: BigDecimal
+    ): Boolean {
         val minAllowedAmount = poolAmount.plus(minOffset)
         val maxAllowedAmount = poolAmount.plus(maxOffset)
-        return selectedTxAmount in minAllowedAmount..maxAllowedAmount
+        return selectedTxAmount == poolAmount || selectedTxAmount in minAllowedAmount..maxAllowedAmount
     }
 }
 
