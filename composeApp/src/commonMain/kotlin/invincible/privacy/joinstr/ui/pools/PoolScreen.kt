@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +41,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PoolScreen(
-    poolsViewModel: PoolsViewModel
+    poolsViewModel: PoolsViewModel,
 ) {
     val isLoading by poolsViewModel.isLoading.collectAsState()
     val tabScrollState = rememberScrollState()
@@ -49,7 +52,7 @@ fun PoolScreen(
     val tabWidths = remember {
         tabTitles.map { title ->
             with(density) {
-                title.length * 10.dp.toPx() + 24.dp.toPx() // Approximate width based on text length + padding
+                title.length * 10.dp.toPx() + 24.dp.toPx()
             }
         }
     }
@@ -59,7 +62,7 @@ fun PoolScreen(
         selected: Boolean,
         onClick: () -> Unit,
         modifier: Modifier = Modifier,
-        content: @Composable () -> Unit
+        content: @Composable () -> Unit,
     ) {
         Box(
             modifier = modifier
@@ -73,7 +76,14 @@ fun PoolScreen(
         }
     }
 
+    val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     var selectedTab by remember { mutableStateOf(0) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        selectedTab = pagerState.currentPage
+        val scrollPosition = tabWidths.take(selectedTab).sum().toInt()
+        tabScrollState.animateScrollTo(scrollPosition)
+    }
 
     if (isLoading && selectedTab == 0) {
         ProgressDialog()
@@ -96,8 +106,7 @@ fun PoolScreen(
                     selected = selectedTab == index,
                     onClick = {
                         scope.launch {
-                            selectedTab = index
-                            // Calculate the scroll position for the selected tab
+                            pagerState.animateScrollToPage(index)
                             val scrollPosition = tabWidths.take(index).sum().toInt()
                             tabScrollState.animateScrollTo(scrollPosition)
                         }
@@ -122,36 +131,43 @@ fun PoolScreen(
             thickness = 1.dp
         )
 
-        AnimatedVisibility(
-            visible = selectedTab == 0,
-            enter = expandIn(expandFrom = Alignment.Center),
-            exit = shrinkOut(shrinkTowards = Alignment.Center)
-        ) {
-            CreateNewPoolScreen(poolsViewModel = poolsViewModel)
-        }
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f)
+        ) { page ->
+            when (page) {
+                0 -> AnimatedVisibility(
+                    visible = selectedTab == 0,
+                    enter = expandIn(expandFrom = Alignment.Center),
+                    exit = shrinkOut(shrinkTowards = Alignment.Center)
+                ) {
+                    CreateNewPoolScreen(poolsViewModel = poolsViewModel)
+                }
 
-        AnimatedVisibility(
-            visible = selectedTab == 1,
-            enter = expandIn(expandFrom = Alignment.Center),
-            exit = shrinkOut(shrinkTowards = Alignment.Center)
-        ) {
-            MyPoolsScreens(poolsViewModel = poolsViewModel)
-        }
+                1 -> AnimatedVisibility(
+                    visible = selectedTab == 1,
+                    enter = expandIn(expandFrom = Alignment.Center),
+                    exit = shrinkOut(shrinkTowards = Alignment.Center)
+                ) {
+                    MyPoolsScreens(poolsViewModel = poolsViewModel)
+                }
 
-        AnimatedVisibility(
-            visible = selectedTab == 2,
-            enter = expandIn(expandFrom = Alignment.Center),
-            exit = shrinkOut(shrinkTowards = Alignment.Center)
-        ) {
-            OtherPoolsScreen(poolsViewModel = poolsViewModel)
-        }
+                2 -> AnimatedVisibility(
+                    visible = selectedTab == 2,
+                    enter = expandIn(expandFrom = Alignment.Center),
+                    exit = shrinkOut(shrinkTowards = Alignment.Center)
+                ) {
+                    OtherPoolsScreen(poolsViewModel = poolsViewModel)
+                }
 
-        AnimatedVisibility(
-            visible = selectedTab == 3,
-            enter = expandIn(expandFrom = Alignment.Center),
-            exit = shrinkOut(shrinkTowards = Alignment.Center)
-        ) {
-            CoinJoinHistoryScreen(poolsViewModel = poolsViewModel)
+                3 -> AnimatedVisibility(
+                    visible = selectedTab == 3,
+                    enter = expandIn(expandFrom = Alignment.Center),
+                    exit = shrinkOut(shrinkTowards = Alignment.Center)
+                ) {
+                    CoinJoinHistoryScreen(poolsViewModel = poolsViewModel)
+                }
+            }
         }
     }
 }

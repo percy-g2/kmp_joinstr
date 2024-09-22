@@ -37,6 +37,7 @@ import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
 import invincible.privacy.joinstr.theme.greenDark
 import invincible.privacy.joinstr.theme.redDark
+import invincible.privacy.joinstr.theme.redLight
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.app_name
 import joinstr.composeapp.generated.resources.joinstr_logo
@@ -143,10 +144,11 @@ fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
 @Composable
 fun InfoTextField(value: String, label: String) {
     OutlinedTextField(
-        value = value,
+        value = value.ifEmpty { " " },
         onValueChange = { /* no-op */ },
         textStyle = MaterialTheme.typography.bodyMedium,
         enabled = false,
+        isError = value.isEmpty(),
         label = {
             Row(
                 horizontalArrangement = Arrangement.Start,
@@ -164,7 +166,8 @@ fun InfoTextField(value: String, label: String) {
         },
         colors = OutlinedTextFieldDefaults.colors(
             disabledTextColor = MaterialTheme.colorScheme.onBackground,
-            disabledLabelColor = MaterialTheme.colorScheme.onBackground
+            disabledLabelColor = MaterialTheme.colorScheme.onBackground,
+            disabledBorderColor = if (value.isEmpty()) redLight else MaterialTheme.colorScheme.onBackground
         )
     )
 }
