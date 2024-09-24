@@ -87,9 +87,6 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import joinstr.composeapp.generated.resources.waiting_for_pool_credentials
 import org.jetbrains.compose.resources.stringResource
 
-// TODO refactor
-val joiningPool = mutableStateOf(false)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtherPoolsScreen(
@@ -101,6 +98,7 @@ fun OtherPoolsScreen(
     val showWaitingDialog = remember { mutableStateOf(false) }
     val showQrCodeDialog = remember { mutableStateOf(Pair<PoolContent?, Boolean>(null, false)) }
     val activePoolReady by poolsViewModel.activePoolReady.collectAsState()
+    val isJoining = remember { mutableStateOf(false) }
 
     val pullState = rememberPullToRefreshState()
 
@@ -173,7 +171,7 @@ fun OtherPoolsScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 onClick = {
                                     showQrCodeDialog.value = Pair(null, false)
-                                    joiningPool.value = true
+                                    isJoining.value = true
                                     poolsViewModel.joinRequest(
                                         publicKey = publicKey,
                                         privateKey = privateKey,
@@ -189,7 +187,7 @@ fun OtherPoolsScreen(
                                             )
                                         },
                                         onError = {
-                                            joiningPool.value = false
+                                            isJoining.value = false
                                             showJoinDialog.value = false
                                         }
                                     )
@@ -286,7 +284,8 @@ fun OtherPoolsScreen(
         poolContents = poolContents,
         pullState = pullState,
         poolsViewModel = poolsViewModel,
-        showQrCodeDialog = showQrCodeDialog
+        showQrCodeDialog = showQrCodeDialog,
+        isJoining = isJoining
     )
 }
 
@@ -299,7 +298,8 @@ fun PoolList(
     poolContents: List<PoolContent>?,
     pullState: PullToRefreshState,
     poolsViewModel: PoolsViewModel,
-    showQrCodeDialog: MutableState<Pair<PoolContent?, Boolean>>
+    showQrCodeDialog: MutableState<Pair<PoolContent?, Boolean>>,
+    isJoining: MutableState<Boolean>
 ) {
     BoxWithConstraints(
         contentAlignment = TopCenter
@@ -310,6 +310,7 @@ fun PoolList(
                 poolContents = poolContents,
                 pullState = pullState,
                 onRefresh = { poolsViewModel.fetchOtherPools() },
+                isJoining = isJoining,
                 onJoinRequest = { poolContent ->
                     showQrCodeDialog.value = poolContent to true
                 },
@@ -326,6 +327,7 @@ fun PoolList(
 private fun BoxScope.PoolListContent(
     poolContents: List<PoolContent>?,
     pullState: PullToRefreshState,
+    isJoining: MutableState<Boolean>,
     onRefresh: () -> Unit,
     onJoinRequest: (PoolContent) -> Unit,
     onTimeout: (String) -> Unit
@@ -346,7 +348,8 @@ private fun BoxScope.PoolListContent(
                         PoolItemWrapper(
                             poolContent = poolContent,
                             onJoinRequest = onJoinRequest,
-                            onTimeout = onTimeout
+                            onTimeout = onTimeout,
+                            isJoining = isJoining
                         )
                     }
                 }
@@ -365,7 +368,8 @@ private fun BoxScope.PoolListContent(
 private fun PoolItemWrapper(
     poolContent: PoolContent,
     onJoinRequest: (PoolContent) -> Unit,
-    onTimeout: (String) -> Unit
+    onTimeout: (String) -> Unit,
+    isJoining: MutableState<Boolean>
 ) {
     var isVisible by remember { mutableStateOf(true) }
     AnimatedVisibility(
@@ -376,6 +380,7 @@ private fun PoolItemWrapper(
         PoolItem(
             poolContent = copyToLocalPoolContent(poolContent),
             onJoinRequest = { onJoinRequest(poolContent) },
+            isJoining = isJoining.value,
             onTimeout = {
                 isVisible = false
                 onTimeout(poolContent.id)

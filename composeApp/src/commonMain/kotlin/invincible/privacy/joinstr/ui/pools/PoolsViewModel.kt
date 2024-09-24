@@ -108,7 +108,6 @@ class PoolsViewModel : ViewModel() {
         checkForReadyActivePoolsJob?.cancel()
         checkForReadyActivePoolsJob = null
         _activePoolReady.value = false to ""
-        joiningPool.value = false
     }
 
     private fun generatePoolId(): String {
@@ -150,11 +149,9 @@ class PoolsViewModel : ViewModel() {
                     viewModelScope.launch {
                         val currentTime = (Clock.System.now().toEpochMilliseconds() / 1000)
                         val pools = getPoolsStore().get()
-                        val activePoolsIds = pools
-                            ?.filter { it.timeout > currentTime }?.map { it.id }
                         _otherPoolEvents.value = nostrEvents
                             .sortedByDescending { it.timeout }
-                            .filter { it.timeout > currentTime && it.id !in activePoolsIds.orEmpty() }
+                            .filter { it.timeout > currentTime && it.id !in pools?.map { pool -> pool.id }.orEmpty() }
                             .filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
                         _isLoading.value = false
                     }

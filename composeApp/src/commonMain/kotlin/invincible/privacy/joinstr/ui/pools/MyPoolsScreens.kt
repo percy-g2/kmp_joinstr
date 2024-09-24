@@ -192,6 +192,7 @@ private fun PoolItemWrapper(
 fun PoolItem(
     poolContent: LocalPoolContent,
     isInternal: Boolean = false,
+    isJoining: Boolean = false,
     onJoinRequest: (() -> Unit)? = null,
     onTimeout: () -> Unit,
 ) {
@@ -274,10 +275,10 @@ fun PoolItem(
                         Button(
                             shape = RoundedCornerShape(8.dp),
                             onClick = onJoinRequest,
-                            enabled = joiningPool.value.not()
+                            enabled = isJoining.not()
                         ) {
                             Text(
-                                text = stringResource(Res.string.join),
+                                text = if (isJoining) "Joining..." else stringResource(Res.string.join),
                                 fontSize = 16.sp,
                             )
                         }
