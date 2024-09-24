@@ -122,7 +122,7 @@ class RegisterInputViewModel : ViewModel() {
                                 JsonPrimitive(psbtBase64),
                                 JsonPrimitive(true),
                                 JsonPrimitive("ALL|ANYONECANPAY"),
-                                JsonPrimitive(true),
+                                JsonPrimitive(false),
                                 JsonPrimitive(false)
                             )
                         )
