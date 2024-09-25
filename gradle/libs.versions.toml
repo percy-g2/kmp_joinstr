@@ -15,6 +15,7 @@ kotlinxDatetime = "0.6.1"
 ktor = "3.0.0-rc-1"
 logbackAndroid = "3.0.0"
 logbackClassic = "1.5.6"
+napier = "2.7.1"
 navigationCompose = "2.8.0-alpha10"
 kstore = "0.8.0"
 harawata-appdirs = "1.2.2"
@@ -35,6 +36,7 @@ compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "comp
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 logback-android = { module = "com.github.tony19:logback-android", version.ref = "logbackAndroid" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logbackClassic" }
+napier = { module = "io.github.aakira:napier", version.ref = "napier" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 kstore = { module = "io.github.xxfast:kstore", version.ref = "kstore" }
 kstore-file = { module = "io.github.xxfast:kstore-file", version.ref = "kstore" }

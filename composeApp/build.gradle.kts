@@ -128,11 +128,14 @@ kotlin {
             implementation(libs.compottie)
 
             implementation(libs.bignum)
+
+            implementation(libs.napier)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {
                 exclude("org.jetbrains.compose.material")
             }
+
             implementation(libs.ktor.client.cio)
 
             implementation(libs.kstore.file)
