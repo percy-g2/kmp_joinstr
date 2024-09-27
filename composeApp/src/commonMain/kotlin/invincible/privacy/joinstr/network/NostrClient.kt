@@ -16,6 +16,7 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.decrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.SettingsStore
+import io.github.aakira.napier.Napier
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
@@ -66,7 +67,6 @@ open class NostrClient {
 
                 for (frame in session.incoming) {
                     if (frame is Frame.Text) {
-                        println(frame.readText())
                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                         if (elem[0].jsonPrimitive.content == "EVENT") {
                             runCatching {
@@ -74,7 +74,7 @@ open class NostrClient {
                                 val event = json.decodeFromString<PoolContent>(nostrEventContent)
                                 events = listOf(event) + events
                             }.getOrElse {
-                                it.printStackTrace()
+                                Napier.e("Error", it)
                                 closeSession()
                             }
                         }
@@ -91,7 +91,7 @@ open class NostrClient {
                 throw IllegalStateException("Failed to establish WebSocket connection")
             }
         }.getOrElse { error ->
-            error.printStackTrace()
+            Napier.e("Error", error)
             onError(error.message)
             closeSession()
         }
@@ -113,21 +113,17 @@ open class NostrClient {
                 val sendMessage = """["EVENT", $eventJson]"""
                 session.send(Frame.Text(sendMessage))
 
-                println("Sent event: $sendMessage")
-
                 for (frame in session.incoming) {
                     when (frame) {
                         is Frame.Text -> {
                             val response = frame.readText()
-                            println("Received raw response: $response")
                             try {
                                 val responseArray = json.decodeFromString<List<JsonElement>>(response)
-                                println("Parsed response: $responseArray")
                                 when (responseArray[0].jsonPrimitive.content) {
                                     "OK" -> {
                                         if (responseArray[2].jsonPrimitive.boolean) {
                                             onSuccess(responseArray[1].jsonPrimitive.content)
-                                            println("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
+                                            Napier.v("Event accepted with ID: ${responseArray[1].jsonPrimitive.content}")
                                         } else {
                                             onError("Error: ${responseArray[3].jsonPrimitive.content}")
                                         }
@@ -148,7 +144,7 @@ open class NostrClient {
                                 closeSession()
                             } catch (e: Exception) {
                                 onError("Failed to parse response: ${e.message}")
-                                e.printStackTrace()
+                                Napier.e("Error", e)
                                 closeSession()
                             }
                         }
@@ -165,7 +161,7 @@ open class NostrClient {
                 throw IllegalStateException("Failed to establish WebSocket connection")
             }
         }.getOrElse { error ->
-            error.printStackTrace()
+            Napier.e("Error", error)
             onError(error.message)
             closeSession()
         }
@@ -193,14 +189,12 @@ open class NostrClient {
                         launch {
                             registeredAddressList = mutableListOf()
                             session.send(Frame.Text(subscribeMessage))
-                            println("Sent message: $subscribeMessage")
                         }
 
                         val responseJob = launch {
                             for (frame in session.incoming) {
                                 if (frame is Frame.Text) {
                                     val response = frame.readText()
-                                    println("Received response: $response")
                                     if (response.contains(poolPublicKey)) {
                                         runCatching {
                                             val elem = json.parseToJsonElement(frame.readText()).jsonArray
@@ -226,7 +220,7 @@ open class NostrClient {
                                             it.printStackTrace()
                                         }
                                     } else {
-                                        println("waiting for response from server")
+                                        Napier.v("waiting for response from server")
                                     }
                                 }
                             }
@@ -242,7 +236,7 @@ open class NostrClient {
                 throw IllegalStateException("Failed to establish WebSocket connection")
             }
         }.getOrElse { error ->
-            error.printStackTrace()
+            Napier.e("Error", error)
             onError(error.message)
             closeSession()
         }
@@ -270,14 +264,12 @@ open class NostrClient {
                         launch {
                             registeredAddressList = mutableListOf()
                             session.send(Frame.Text(subscribeMessage))
-                            println("Sent message: $subscribeMessage")
                         }
 
                         val responseJob = launch {
                             for (frame in session.incoming) {
                                 if (frame is Frame.Text) {
                                     val response = frame.readText()
-                                    println("Received response: $response")
                                     if (response.contains(poolPublicKey)) {
                                         runCatching {
                                             val elem = json.parseToJsonElement(frame.readText()).jsonArray
@@ -299,10 +291,10 @@ open class NostrClient {
                                                 // this@withContext.cancel()
                                             }
                                         }.getOrElse {
-                                            it.printStackTrace()
+                                            Napier.e("Error", it)
                                         }
                                     } else {
-                                        println("waiting for response from server")
+                                        Napier.v("waiting for response from server")
                                     }
                                 }
                             }
@@ -342,14 +334,12 @@ open class NostrClient {
                             """["REQ", "Join-Channel", {"kinds": [${Event.ENCRYPTED_DIRECT_MESSAGE.kind}],"#p":["$requestPublicKey"]}]""".trimMargin()
                         launch {
                             session.send(Frame.Text(subscribeMessage))
-                            println("Sent message: $subscribeMessage")
                         }
 
                         val responseJob = launch {
                             for (frame in session.incoming) {
                                 if (frame is Frame.Text) {
                                     val response = frame.readText()
-                                    println("Received response: $response")
                                     if (response.contains(requestPublicKey)) {
                                         runCatching {
                                             val elem = json.parseToJsonElement(frame.readText()).jsonArray
@@ -360,10 +350,10 @@ open class NostrClient {
                                                 // this@withContext.cancel()
                                             }
                                         }.getOrElse {
-                                            it.printStackTrace()
+                                            Napier.e("Error", it)
                                         }
                                     } else {
-                                        println("waiting for response from server")
+                                        Napier.v("waiting for response from server")
                                     }
                                 }
                             }
@@ -411,7 +401,6 @@ open class NostrClient {
                             if (activePoolsPublicKeys.isNotEmpty()) {
                                 registeredAddressList = mutableListOf()
                                 session.send(Frame.Text(subscribeMessage))
-                                println("Sent message: $subscribeMessage")
                             }
                         }
 
@@ -438,7 +427,6 @@ open class NostrClient {
                                                         val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
                                                         val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
                                                         registeredAddressList += registeredAddress
-                                                        println("registeredAddressList >> " + registeredAddressList.joinToString(","))
                                                         if (registeredAddressList.size == totalPeers && pool.peersData.isEmpty()) {
                                                             getPoolsStore().update { existingPools ->
                                                                 existingPools?.map {
@@ -447,10 +435,10 @@ open class NostrClient {
                                                                     } else it
                                                                 } ?: emptyList()
                                                             }
-                                                            println("registeredAddressList >> Updated")
+                                                            Napier.v("Peers data updated for pool:${pool.id}")
                                                         }
                                                     }.getOrElse {
-                                                        it.printStackTrace()
+                                                        Napier.e("Error", it)
                                                     }
 
                                                     if (nostrEvent.pubKey != pool.publicKey &&
@@ -479,7 +467,6 @@ open class NostrClient {
                                                         sendEvent(
                                                             event = credentialEvent,
                                                             onSuccess = {
-                                                                println("Credentials sent successfully")
                                                                 CoroutineScope(Dispatchers.Default).launch {
                                                                     getPoolsStore().update { existingPools ->
                                                                         existingPools?.map {
@@ -488,10 +475,13 @@ open class NostrClient {
                                                                             } else it
                                                                         } ?: emptyList()
                                                                     }
+                                                                    Napier.v("Credentials shared with peer. Pool:${pool.id}")
                                                                 }
                                                             },
                                                             onError = { error ->
-                                                                println("Error sending credentials: $error")
+                                                                if (error != null) {
+                                                                    Napier.e(error)
+                                                                }
                                                             }
                                                         )
                                                     }

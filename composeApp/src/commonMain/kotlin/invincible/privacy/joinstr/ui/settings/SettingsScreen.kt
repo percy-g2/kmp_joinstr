@@ -160,7 +160,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(16.dp)
+                    .padding(bottom = 4.dp)
             ) {
                 Text(if (saveOperation is SaveOperation.InProgress) "Saving..." else "Save")
             }
