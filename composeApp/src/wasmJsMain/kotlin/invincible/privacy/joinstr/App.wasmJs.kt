@@ -6,6 +6,7 @@ import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
+import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
 import io.ktor.client.*
@@ -30,7 +31,7 @@ import kotlin.time.Duration.Companion.seconds
 
 actual object LocalNotification {
     actual fun showNotification(title: String, message: String) {
-        println("Attempting to show notification")
+        Napier.v("Attempting to show notification")
         try {
             val options = NotificationOptions(
                 body = message,
@@ -40,24 +41,24 @@ actual object LocalNotification {
 
             )
             val notification = Notification(title, options)
-            println("Notification created:"  + notification)
+            Napier.v("Notification created:$notification")
 
             notification.onclick = { event: Event ->
                 event.preventDefault() // Prevent the default action
-                println("Notification clicked")
+                Napier.v("Notification clicked")
                 try {
                     window.focus()
                     notification.close()
                 } catch (e: Throwable) {
-                    println("Error handling notification click:" + e.printStackTrace())
+                    Napier.e("Error handling notification click:", e)
                 }
             }
 
             notification.onerror = { error ->
-                println("Error showing notification:" + error)
+                Napier.e("Error showing notification:$error")
             }
         } catch (e: Throwable) {
-            println("Error creating notification:"+ e.printStackTrace())
+            Napier.e("Error creating notification:", e)
             // Fallback to alert if notification creation fails
             window.alert("Notification: $title\n$message")
         }

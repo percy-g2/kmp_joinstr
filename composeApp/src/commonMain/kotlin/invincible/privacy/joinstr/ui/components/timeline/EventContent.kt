@@ -89,7 +89,6 @@ fun VerticalEventContent(item: Item, modifier: Modifier = Modifier) {
                 }
             }
             val url = "https://mempool.space/signet/tx/${id.trim()}"
-            println(url)
             SelectionContainer {
                 Text(
                     modifier = Modifier

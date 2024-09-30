@@ -407,8 +407,6 @@ open class NostrClient {
                         val responseJob = launch {
                             for (frame in session.incoming) {
                                 if (frame is Frame.Text) {
-                                    val response = frame.readText()
-                                    println("Received response: $response")
                                     runCatching {
                                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                                         if (elem[0].jsonPrimitive.content == "EVENT") {

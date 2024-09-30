@@ -27,6 +27,7 @@ import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
+import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
 import io.ktor.client.*
@@ -136,7 +137,7 @@ class NotificationDelegate : NSObject(), UNUserNotificationCenterDelegateProtoco
         didReceiveNotificationResponse: UNNotificationResponse,
         withCompletionHandler: () -> Unit
     ) {
-        println("Received notification response: ${didReceiveNotificationResponse.notification.request.identifier}")
+        Napier.i("Received notification response: ${didReceiveNotificationResponse.notification.request.identifier}")
         withCompletionHandler()
     }
 }
@@ -173,9 +174,9 @@ actual object LocalNotification {
 
         UNUserNotificationCenter.currentNotificationCenter().addNotificationRequest(request) { requestError ->
             if (requestError != null) {
-                println("Error showing notification: ${requestError.localizedDescription}")
+                Napier.e("Error showing notification: ${requestError.localizedDescription}")
             } else {
-                println("Notification scheduled successfully with ID: $uuid")
+                Napier.i("Notification scheduled successfully with ID: $uuid")
             }
         }
     }
@@ -185,7 +186,7 @@ actual object LocalNotification {
             UNAuthorizationOptionAlert or UNAuthorizationOptionSound or UNAuthorizationOptionBadge
         ) { granted, error ->
             if (error != null) {
-                println("Error requesting notification permission: ${error.localizedDescription}")
+                Napier.e("Error requesting notification permission: ${error.localizedDescription}")
             }
             continuation.resume(granted)
         }
@@ -212,13 +213,12 @@ actual suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
 ): String? {
-    return runCatching {
+    runCatching {
         val activePools = getPoolsStore().get()
             ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
             ?.sortedByDescending { it.timeout }
 
-        val selectedPool = activePools?.find { it.id == poolId }
-            ?: throw IllegalStateException("Selected pool not found")
+        val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
 
         val poolAmount = selectedPool.denomination
         val selectedTxAmount = unspentItem.amount
@@ -240,7 +240,7 @@ actual suspend fun createPsbt(
             .mapNotNull { peerData ->
                 Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, peerData.address ?: "").fold(
                     { error ->
-                        println("Error creating output script for address ${peerData.address}: ${error.message}")
+                        Napier.e("Error creating output script for address ${peerData.address}: ${error.message}")
                         null
                     },
                     { scriptElts ->
@@ -276,8 +276,7 @@ actual suspend fun createPsbt(
 
         return psbtBase64
     }.getOrElse {
-        println("createPsbt")
-        it.printStackTrace()
+        Napier.e("Error", it)
         return null
     }
 }
@@ -348,26 +347,26 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 
     // Log information about the joined PSBT
     joinedPsbt.fold(
-        { error -> println("Error joining PSBTs: $error") },
+        { error ->  Napier.e("Error joining PSBTs: $error") },
         { psbt ->
-            println("Joined PSBT information:")
-            println("Number of inputs: ${psbt.inputs.size}")
-            println("Number of outputs: ${psbt.outputs.size}")
+            Napier.i("Joined PSBT information:")
+            Napier.i("Number of inputs: ${psbt.inputs.size}")
+            Napier.i("Number of outputs: ${psbt.outputs.size}")
             psbt.inputs.forEachIndexed { index, input ->
-                println("Input $index:")
+                Napier.i("Input $index:")
                 when (input) {
                     is Input.WitnessInput.PartiallySignedWitnessInput -> {
-                        println("  Type: Witness Input")
-                        println("  Partial signatures: ${input.partialSigs.size}")
+                        Napier.i("  Type: Witness Input")
+                        Napier.i("  Partial signatures: ${input.partialSigs.size}")
                         input.partialSigs.forEach { (pubKey, sig) ->
-                            println("    Public Key: ${pubKey.value.toHex()}")
-                            println("    Signature: ${sig.toHex()}")
+                            Napier.i("    Public Key: ${pubKey.value.toHex()}")
+                            Napier.i("    Signature: ${sig.toHex()}")
                         }
-                        println("  Witness UTXO: ${input.txOut}")
-                        println("  Redeem script: ${input.redeemScript}")
-                        println("  Witness script: ${input.witnessScript}")
+                        Napier.i("  Witness UTXO: ${input.txOut}")
+                        Napier.i("  Redeem script: ${input.redeemScript}")
+                        Napier.i("  Witness script: ${input.witnessScript}")
                     }
-                    else -> println("  Type: Other (${input})")
+                    else ->  Napier.i("  Type: Other (${input})")
                 }
             }
         }
@@ -400,21 +399,21 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 
     finalizedPsbt.fold(
         { error ->
-            println("Error finalizing PSBT: $error")
+            Napier.e("Error finalizing PSBT: $error")
             null
         },
         { psbt ->
             // Log information about the finalized PSBT
-            println("Finalized PSBT information:")
+            Napier.i("Finalized PSBT information:")
             psbt.inputs.forEachIndexed { index, input ->
-                println("Input $index:")
+                Napier.i("Input $index:")
                 when (input) {
                     is Input.WitnessInput.FinalizedWitnessInput -> {
-                        println("  Type: Finalized Witness Input")
-                        println("  Script Witness: ${input.scriptWitness}")
-                        println("  Script Sig: ${input.scriptSig}")
+                        Napier.i("  Type: Finalized Witness Input")
+                        Napier.i("  Script Witness: ${input.scriptWitness}")
+                        Napier.i("  Script Sig: ${input.scriptSig}")
                     }
-                    else -> println("  Type: Other (${input})")
+                    else ->  Napier.i("  Type: Other (${input})")
                 }
             }
 
@@ -422,28 +421,28 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
             val extractedTx = psbt.extract()
             extractedTx.fold(
                 { error ->
-                    println("Error extracting transaction: $error")
+                    Napier.e("Error extracting transaction: $error")
                     null
                 },
                 { tx ->
                     // Convert the transaction to hex string
                     val txHex = Transaction.write(tx)
-                    println("Joined and finalized transaction: $txHex")
+                    Napier.i("Joined and finalized transaction: $txHex")
                     // Log detailed information about the extracted transaction
-                    println("Extracted transaction information:")
-                    println("Version: ${tx.version}")
-                    println("Locktime: ${tx.lockTime}")
+                    Napier.i("Extracted transaction information:")
+                    Napier.i("Version: ${tx.version}")
+                    Napier.i("Locktime: ${tx.lockTime}")
                     tx.txIn.forEachIndexed { index, txIn ->
-                        println("Input $index:")
-                        println("  Outpoint: ${txIn.outPoint}")
-                        println("  Sequence: ${txIn.sequence}")
-                        println("  ScriptSig: ${txIn.signatureScript.toHex()}")
-                        println("  Witness: ${txIn.witness}")
+                        Napier.i("Input $index:")
+                        Napier.i("  Outpoint: ${txIn.outPoint}")
+                        Napier.i("  Sequence: ${txIn.sequence}")
+                        Napier.i("  ScriptSig: ${txIn.signatureScript.toHex()}")
+                        Napier.i("  Witness: ${txIn.witness}")
                     }
                     tx.txOut.forEachIndexed { index, txOut ->
-                        println("Output $index:")
-                        println("  Amount: ${txOut.amount}")
-                        println("  ScriptPubKey: ${txOut.publicKeyScript.toHex()}")
+                        Napier.i("Output $index:")
+                        Napier.i("  Amount: ${txOut.amount}")
+                        Napier.i("  ScriptPubKey: ${txOut.publicKeyScript.toHex()}")
                     }
                     txHex
                 }
@@ -453,10 +452,6 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 
     val psbtBytes = finalizedPsbt.right?.let { Psbt.write(it) }
     val psbtBase64 = psbtBytes?.toByteArray()?.let { Base64.encode(it) }
-    if (inDebug.value) {
-        println("psbt" + psbtBase64)
-        println("tx" + finalizedPsbt.right?.extract()?.right.toString())
-    }
     return Pair(psbtBase64, finalizedPsbt.right?.extract()?.right.toString())
 }
 
@@ -468,7 +463,7 @@ actual fun openLink(link: String) {
                 url = nsUrl,
                 options = emptyMap<Any?, Any>(),
                 completionHandler = { success ->
-                    println("URL opened successfully: $success")
+                    Napier.i("URL opened successfully: $success")
                 }
             )
         }

@@ -66,13 +66,12 @@ import invincible.privacy.joinstr.ui.settings.SettingsScreen
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-val inDebug = MutableStateFlow(false)
 
 @Composable
 @Preview
@@ -87,6 +86,7 @@ fun App(
         SettingsManager.store.get()?.let { settings ->
             SettingsManager.themeState.value = settings.selectedTheme
         }
+        Napier.base(DebugAntilog())
     }
 
     DisposableEffect(lifecycleOwner) {
