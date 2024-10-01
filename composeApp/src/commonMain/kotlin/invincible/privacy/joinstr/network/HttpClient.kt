@@ -5,6 +5,7 @@ import invincible.privacy.joinstr.model.MempoolFee
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsManager
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -55,7 +56,7 @@ class HttpClient {
             json.decodeFromString<T>(response.bodyAsText())
         } else null
     }.getOrElse {
-        it.printStackTrace()
+        Napier.e("FetchNodeData ${body.method}", it)
         null
     }
 
@@ -67,7 +68,7 @@ class HttpClient {
             json.decodeFromString<MempoolFee>(response.bodyAsText()).hourFee
         } else null
     }.getOrElse {
-        it.printStackTrace()
+        Napier.e("FetchHourFee", it)
         null
     }
 
@@ -80,7 +81,7 @@ class HttpClient {
             json.decodeFromString<String>(response.bodyAsText())
         } else response.bodyAsText()
     }.getOrElse {
-        it.printStackTrace()
+        Napier.e("BroadcastRawTx", it)
         null
     }
 }
