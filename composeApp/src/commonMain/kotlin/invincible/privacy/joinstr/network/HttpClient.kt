@@ -62,7 +62,7 @@ class HttpClient {
 
     suspend fun fetchHourFee(): Int? = runCatching {
         val response: HttpResponse = createHttpClient.get {
-            url("https://mempool.space/api/v1/fees/recommended")
+            url("https://mempool.space/signet/api/v1/fees/recommended")
         }
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<MempoolFee>(response.bodyAsText()).hourFee
