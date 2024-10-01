@@ -24,11 +24,15 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType.Companion.PrimaryEditable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -149,6 +153,11 @@ fun SettingsScreen(
                     onPasswordChange = viewModel::updatePassword,
                     onPortChange = viewModel::updatePort
                 )
+
+                WalletDropdown(
+                    selectedWallet = uiState.selectedWallet,
+                    viewModel = viewModel
+                )
             }
 
             // Save button
@@ -163,6 +172,50 @@ fun SettingsScreen(
                     .padding(bottom = 4.dp)
             ) {
                 Text(if (saveOperation is SaveOperation.InProgress) "Saving..." else "Save")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WalletDropdown(
+    selectedWallet: String,
+    viewModel: SettingsViewModel
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val wallets by viewModel.walletList.collectAsState()
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = selectedWallet,
+            onValueChange = { },
+            label = { Text("Wallet") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor(PrimaryEditable, true)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            wallets.forEach { wallet ->
+                DropdownMenuItem(
+                    text = { Text(wallet) },
+                    onClick = {
+                        viewModel.updateSelectedWallet(wallet)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
             }
         }
     }
@@ -242,6 +295,7 @@ fun ConfigurationFields(
         isValid = uiState.isPortValid,
         errorMessage = "Invalid port number"
     )
+    Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable

@@ -17,7 +17,7 @@ enum class Methods(val value: String) {
     NEW_ADDRESS("getnewaddress"),
     WALLET_PROCESS_PSBT("walletprocesspsbt"),
     NETWORK_INFO("getnetworkinfo"),
-    CREATE_PSBT("createpsbt"),
+    LIST_WALLETS("listwalletdir"),
     BLOCK_CHAIN_INFO("getblockchaininfo");
 }
 

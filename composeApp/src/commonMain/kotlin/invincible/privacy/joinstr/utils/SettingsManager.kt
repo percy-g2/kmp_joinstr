@@ -40,7 +40,8 @@ data class NodeConfig(
     val url: String = "",
     val userName: String = "",
     val password: String = "",
-    val port: Int = 0
+    val port: Int = 0,
+    val selectedWallet: String = ""
 )
 
 enum class Theme(val id: Int, val title: String, val description: String? = null) {

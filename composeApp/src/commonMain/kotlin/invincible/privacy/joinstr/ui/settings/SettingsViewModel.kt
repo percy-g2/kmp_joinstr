@@ -3,6 +3,11 @@ package invincible.privacy.joinstr.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import invincible.privacy.joinstr.ktx.isValidHttpUrl
+import invincible.privacy.joinstr.model.Methods
+import invincible.privacy.joinstr.model.RpcRequestBody
+import invincible.privacy.joinstr.model.RpcResponse
+import invincible.privacy.joinstr.model.WalletResult
+import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.SettingsStore
@@ -15,11 +20,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SettingsViewModel : ViewModel() {
+    private val httpClient = HttpClient()
+
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     private val _saveOperation = MutableStateFlow<SaveOperation>(SaveOperation.Idle)
     val saveOperation: StateFlow<SaveOperation> = _saveOperation.asStateFlow()
+
+    private val _walletList = MutableStateFlow(emptyList<String>())
+    val walletList: StateFlow<List<String>> = _walletList.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -31,13 +41,15 @@ class SettingsViewModel : ViewModel() {
                         username = settings?.nodeConfig?.userName ?: SettingsStore().nodeConfig.userName,
                         password = settings?.nodeConfig?.password ?: SettingsStore().nodeConfig.password,
                         port = settings?.nodeConfig?.port?.toString() ?: SettingsStore().nodeConfig.port.toString(),
-                        selectedTheme = settings?.selectedTheme ?: Theme.SYSTEM.id
+                        selectedTheme = settings?.selectedTheme ?: Theme.SYSTEM.id,
+                        selectedWallet = settings?.nodeConfig?.selectedWallet ?: ""
                     ).also { newState ->
                         validateAllFields(newState)
                     }
                 }
             }
         }
+        fetchWalletList()
     }
 
     fun updateNostrRelay(relay: String) {
@@ -46,6 +58,16 @@ class SettingsViewModel : ViewModel() {
                 nostrRelay = relay,
                 isNostrRelayValid = isValidWebSocketUrl(relay)
             )
+        }
+    }
+
+    private fun fetchWalletList() {
+        viewModelScope.launch {
+            val walletListBody = RpcRequestBody(
+                method = Methods.LIST_WALLETS.value
+            )
+            _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
+                ?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
         }
     }
 
@@ -100,7 +122,8 @@ class SettingsViewModel : ViewModel() {
                     url = _uiState.value.nodeUrl,
                     userName = _uiState.value.username,
                     password = _uiState.value.password,
-                    port = _uiState.value.port.toInt()
+                    port = _uiState.value.port.toInt(),
+                    selectedWallet = _uiState.value.selectedWallet
                 )
                 SettingsManager.updateNodeConfig(nodeConfig, _uiState.value.nostrRelay)
                 _saveOperation.value = SaveOperation.Success
@@ -108,6 +131,10 @@ class SettingsViewModel : ViewModel() {
                 _saveOperation.value = SaveOperation.Error(e.message ?: "An error occurred")
             }
         }
+    }
+
+    fun updateSelectedWallet(wallet: String) {
+        _uiState.update { it.copy(selectedWallet = wallet) }
     }
 
     private fun validateAllFields(state: SettingsUiState): SettingsUiState {
@@ -136,6 +163,7 @@ data class SettingsUiState(
     val username: String = "",
     val password: String = "",
     val port: String = "",
+    val selectedWallet: String = "",
     val selectedTheme: Int = Theme.SYSTEM.id,
     val isNostrRelayValid: Boolean = true,
     val isNodeUrlValid: Boolean = true,
