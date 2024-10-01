@@ -6,18 +6,22 @@ import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
+import invincible.privacy.joinstr.model.Wallet
 import invincible.privacy.joinstr.model.WalletResult
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 
 class SettingsViewModel : ViewModel() {
     private val httpClient = HttpClient()
@@ -126,6 +130,18 @@ class SettingsViewModel : ViewModel() {
                     selectedWallet = _uiState.value.selectedWallet
                 )
                 SettingsManager.updateNodeConfig(nodeConfig, _uiState.value.nostrRelay)
+
+                if (_uiState.value.selectedWallet.isNotEmpty()) {
+                    val params = JsonArray(listOf(JsonPrimitive(_uiState.value.selectedWallet)))
+                    val loadWalletBody = RpcRequestBody(
+                        method = Methods.LOAD_WALLET.value,
+                        params = params
+                    )
+                    val loadWallet = httpClient.fetchNodeData<RpcResponse<Wallet>>(loadWalletBody)
+                    if (loadWallet?.error != null) {
+                        Napier.e(loadWallet.error.message)
+                    } else Napier.i("Wallet ${_uiState.value.selectedWallet} loaded successfully")
+                }
                 _saveOperation.value = SaveOperation.Success
             } catch (e: Exception) {
                 _saveOperation.value = SaveOperation.Error(e.message ?: "An error occurred")

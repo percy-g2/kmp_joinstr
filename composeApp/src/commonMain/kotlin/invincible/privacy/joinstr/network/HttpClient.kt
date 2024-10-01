@@ -29,7 +29,7 @@ class HttpClient {
             }
             install(Logging) {
                 logger = Logger.SIMPLE
-                level = LogLevel.NONE
+                level = LogLevel.ALL
             }
             install(ContentNegotiation) {
                 json(json)
@@ -52,9 +52,7 @@ class HttpClient {
                 )
                 setBody(body)
             }
-            if (response.status == HttpStatusCode.OK) {
-                json.decodeFromString<T>(response.bodyAsText())
-            } else null
+            json.decodeFromString<T>(response.bodyAsText())
         } else null
     }.getOrElse {
         it.printStackTrace()

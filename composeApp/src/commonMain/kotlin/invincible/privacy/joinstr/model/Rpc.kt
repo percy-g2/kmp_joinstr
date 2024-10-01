@@ -18,12 +18,19 @@ enum class Methods(val value: String) {
     WALLET_PROCESS_PSBT("walletprocesspsbt"),
     NETWORK_INFO("getnetworkinfo"),
     LIST_WALLETS("listwalletdir"),
+    LOAD_WALLET("loadwallet"),
     BLOCK_CHAIN_INFO("getblockchaininfo");
 }
 
 @Serializable
 data class RpcResponse<T>(
-    val result: T,
-    val error: String? = null,
+    val result: T? = null,
+    val error: ErrorDetails? = null,
     val id: String
+)
+
+@Serializable
+data class ErrorDetails(
+    val code: Int,
+    val message: String
 )
