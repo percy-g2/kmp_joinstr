@@ -16,6 +16,7 @@ import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
+import invincible.privacy.joinstr.model.Wallet
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
@@ -185,7 +186,10 @@ class PoolsViewModel : ViewModel() {
                             method = Methods.NEW_ADDRESS.value,
                             params = params
                         )
-                        httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
+                        httpClient.fetchNodeData<RpcResponse<String>>(
+                            body = addressBody,
+                            wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+                        )?.result?.let { address ->
                             val privateKey = generatePrivateKey()
                             val publicKey = getPublicKey(privateKey)
                             val poolId = generatePoolId()
@@ -334,7 +338,10 @@ class PoolsViewModel : ViewModel() {
                                             method = Methods.NEW_ADDRESS.value,
                                             params = params
                                         )
-                                        httpClient.fetchNodeData<RpcResponse<String>>(addressBody)?.result?.let { address ->
+                                        httpClient.fetchNodeData<RpcResponse<String>>(
+                                            body = addressBody,
+                                            wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+                                        )?.result?.let { address ->
                                             val decryptedContent = decrypt(eventWithCredentials.content, sharedSecret)
                                             val credentials = json.decodeFromString<Credentials>(decryptedContent)
                                             val pool = LocalPoolContent(

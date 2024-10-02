@@ -82,8 +82,10 @@ class SettingsViewModel : ViewModel() {
                 method = Methods.UNLOCK_WALLET.value,
                 params = params
             )
-            _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
-                ?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
+            _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(
+                body = walletListBody,
+                wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+            )?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
             _showPassphraseDialog.value = false
         }
     }

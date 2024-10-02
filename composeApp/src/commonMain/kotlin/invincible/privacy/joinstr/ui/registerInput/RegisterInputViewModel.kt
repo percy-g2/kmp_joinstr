@@ -21,6 +21,7 @@ import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
+import invincible.privacy.joinstr.model.Wallet
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
@@ -29,6 +30,7 @@ import invincible.privacy.joinstr.ui.components.timeline.data.Item
 import invincible.privacy.joinstr.utils.Event
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.createEvent
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
+import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,10 +64,11 @@ class RegisterInputViewModel : ViewModel() {
     private fun fetchListUnspent() {
         viewModelScope.launch {
             _isLoading.value = true
-            val rpcRequestBody = RpcRequestBody(
-                method = Methods.LIST_UNSPENT.value
-            )
-            _listUnspent.value = httpClient.fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(rpcRequestBody)?.result
+            val rpcRequestBody = RpcRequestBody(method = Methods.LIST_UNSPENT.value)
+            _listUnspent.value = httpClient.fetchNodeData<RpcResponse<List<ListUnspentResponseItem>>>(
+                body = rpcRequestBody,
+                wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+            )?.result
             _isLoading.value = false
         }
     }
@@ -132,7 +135,10 @@ class RegisterInputViewModel : ViewModel() {
                             params = walletProcessPsbtParams
                         )
 
-                        val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(rpcWalletProcessPsbtParamsRequestBody)?.result
+                        val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(
+                            body = rpcWalletProcessPsbtParamsRequestBody,
+                            wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+                        )?.result
 
                         val jsonObject = buildJsonObject {
                             put("hex", JsonPrimitive(processPsbt?.psbt))

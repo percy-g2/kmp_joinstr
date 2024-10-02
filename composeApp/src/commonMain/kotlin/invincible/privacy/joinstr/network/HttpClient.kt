@@ -31,7 +31,7 @@ class HttpClient {
             }
             install(Logging) {
                 logger = Logger.SIMPLE
-                level = LogLevel.NONE
+                level = LogLevel.ALL
             }
             install(ContentNegotiation) {
                 json(json)

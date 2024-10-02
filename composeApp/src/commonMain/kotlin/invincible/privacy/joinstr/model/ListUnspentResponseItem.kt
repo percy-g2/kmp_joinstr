@@ -8,7 +8,7 @@ data class ListUnspentResponseItem(
     val amount: Double,
     val confirmations: Int,
     val desc: String,
-    val label: String,
+    val label: String? = null,
     val parent_descs: List<String>,
     val safe: Boolean,
     val scriptPubKey: String,
