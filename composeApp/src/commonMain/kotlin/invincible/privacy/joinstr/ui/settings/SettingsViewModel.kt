@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -182,8 +183,10 @@ class SettingsViewModel : ViewModel() {
                         wallet = Wallet(name = _uiState.value.selectedWallet)
                     )?.result?.unlockedUntil
 
-                    if (unlockedUntil == 0) {
-                        _showPassphraseDialog.value = true
+                    if (unlockedUntil != null) {
+                        if (unlockedUntil == 0 || unlockedUntil < (Clock.System.now().toEpochMilliseconds() / 1000)) {
+                            _showPassphraseDialog.value = true
+                        }
                     }
                 }
                 _saveOperation.value = SaveOperation.Success
