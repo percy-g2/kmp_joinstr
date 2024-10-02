@@ -3,6 +3,7 @@ package invincible.privacy.joinstr.network
 import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.model.MempoolFee
 import invincible.privacy.joinstr.model.RpcRequestBody
+import invincible.privacy.joinstr.model.Wallet
 import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.github.aakira.napier.Napier
@@ -30,7 +31,7 @@ class HttpClient {
             }
             install(Logging) {
                 logger = Logger.SIMPLE
-                level = LogLevel.NONE
+                level = LogLevel.ALL
             }
             install(ContentNegotiation) {
                 json(json)
@@ -40,13 +41,18 @@ class HttpClient {
             }
     }
 
-    suspend inline fun <reified T> fetchNodeData(body: RpcRequestBody): T? = runCatching {
+    suspend inline fun <reified T> fetchNodeData(
+        body: RpcRequestBody,
+        wallet: Wallet? = null
+    ): T? = runCatching {
         val nodeConfig = getNodeConfig()
         if (nodeConfig.url.isValidHttpUrl() && nodeConfig.userName.isNotBlank()
             && nodeConfig.password.isNotBlank() && nodeConfig.port in 1..65535
         ) {
             val response: HttpResponse = createHttpClient.post {
-                url("${nodeConfig.url}:${nodeConfig.port}/")
+                if (wallet != null) {
+                    url("${nodeConfig.url}:${nodeConfig.port}/wallet/${wallet.name}")
+                } else url("${nodeConfig.url}:${nodeConfig.port}/")
                 basicAuth(
                     username = nodeConfig.userName,
                     password = nodeConfig.password

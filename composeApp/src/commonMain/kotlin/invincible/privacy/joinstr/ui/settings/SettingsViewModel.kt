@@ -7,6 +7,7 @@ import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.model.Wallet
+import invincible.privacy.joinstr.model.WalletInfo
 import invincible.privacy.joinstr.model.WalletResult
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.utils.NodeConfig
@@ -132,15 +133,28 @@ class SettingsViewModel : ViewModel() {
                 SettingsManager.updateNodeConfig(nodeConfig, _uiState.value.nostrRelay)
 
                 if (_uiState.value.selectedWallet.isNotEmpty()) {
-                    val params = JsonArray(listOf(JsonPrimitive(_uiState.value.selectedWallet)))
+                    val loadWalletParams = JsonArray(listOf(JsonPrimitive(_uiState.value.selectedWallet)))
                     val loadWalletBody = RpcRequestBody(
                         method = Methods.LOAD_WALLET.value,
-                        params = params
+                        params = loadWalletParams
                     )
                     val loadWallet = httpClient.fetchNodeData<RpcResponse<Wallet>>(loadWalletBody)
                     if (loadWallet?.error != null) {
                         Napier.e(loadWallet.error.message)
                     } else Napier.i("Wallet ${_uiState.value.selectedWallet} loaded successfully")
+
+                    val walletInfoBody = RpcRequestBody(
+                        method = Methods.WALLET_INFO.value
+                    )
+
+                    val unlockedUntil = httpClient.fetchNodeData<RpcResponse<WalletInfo>>(
+                        body = walletInfoBody,
+                        wallet = Wallet(name = _uiState.value.selectedWallet)
+                    )?.result?.unlockedUntil
+
+                    if (unlockedUntil == 0) {
+                        // TODO show a dialog for wallet passphrase and unlock it
+                    }
                 }
                 _saveOperation.value = SaveOperation.Success
             } catch (e: Exception) {

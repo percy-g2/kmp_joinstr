@@ -19,7 +19,8 @@ enum class Methods(val value: String) {
     NETWORK_INFO("getnetworkinfo"),
     LIST_WALLETS("listwalletdir"),
     LOAD_WALLET("loadwallet"),
-    BLOCK_CHAIN_INFO("getblockchaininfo");
+    BLOCK_CHAIN_INFO("getblockchaininfo"),
+    WALLET_INFO("getwalletinfo"),;
 }
 
 @Serializable

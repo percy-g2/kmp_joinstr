@@ -49,7 +49,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun HomeScreen(
-    homeScreenViewModel: HomeScreenViewModel = viewModel { HomeScreenViewModel() },
+    homeScreenViewModel: HomeScreenViewModel = viewModel { HomeScreenViewModel() }
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by homeScreenViewModel.uiState.collectAsState()

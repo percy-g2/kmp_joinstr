@@ -27,6 +27,7 @@ import invincible.privacy.joinstr.theme.LightColorScheme
 import invincible.privacy.joinstr.ui.pools.HistoryItem
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
+import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
 
 class MainActivity : ComponentActivity() {
@@ -79,9 +80,9 @@ class MainActivity : ComponentActivity() {
             contract = ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             if (isGranted) {
-                println("permission granted")
+                Napier.i("permission granted")
             } else {
-                println("permission not granted")
+                Napier.v("permission not granted")
             }
         }
 
