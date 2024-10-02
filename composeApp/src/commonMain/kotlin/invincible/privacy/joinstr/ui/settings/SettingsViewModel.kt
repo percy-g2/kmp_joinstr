@@ -36,6 +36,9 @@ class SettingsViewModel : ViewModel() {
     private val _walletList = MutableStateFlow(emptyList<String>())
     val walletList: StateFlow<List<String>> = _walletList.asStateFlow()
 
+    private val _showPassphraseDialog = MutableStateFlow(false)
+    val showPassphraseDialog: StateFlow<Boolean> = _showPassphraseDialog.asStateFlow()
+
     init {
         viewModelScope.launch {
             SettingsManager.store.updates.collect { settings ->
@@ -55,6 +58,33 @@ class SettingsViewModel : ViewModel() {
             }
         }
         fetchWalletList()
+    }
+
+    fun dismissShowPassphraseDialog() {
+        viewModelScope.launch {
+            _showPassphraseDialog.value = false
+        }
+    }
+
+    fun unlockWallet(
+        passphrase: String,
+        timeout: Long
+    ) {
+        viewModelScope.launch {
+            val params = JsonArray(
+                listOf(
+                    JsonPrimitive(passphrase),
+                    JsonPrimitive(timeout)
+                )
+            )
+            val walletListBody = RpcRequestBody(
+                method = Methods.UNLOCK_WALLET.value,
+                params = params
+            )
+            _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
+                ?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
+            _showPassphraseDialog.value = false
+        }
     }
 
     fun updateNostrRelay(relay: String) {
@@ -153,7 +183,7 @@ class SettingsViewModel : ViewModel() {
                     )?.result?.unlockedUntil
 
                     if (unlockedUntil == 0) {
-                        // TODO show a dialog for wallet passphrase and unlock it
+                        _showPassphraseDialog.value = true
                     }
                 }
                 _saveOperation.value = SaveOperation.Success

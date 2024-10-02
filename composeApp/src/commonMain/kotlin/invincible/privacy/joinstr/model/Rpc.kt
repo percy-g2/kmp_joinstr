@@ -19,6 +19,7 @@ enum class Methods(val value: String) {
     NETWORK_INFO("getnetworkinfo"),
     LIST_WALLETS("listwalletdir"),
     LOAD_WALLET("loadwallet"),
+    UNLOCK_WALLET("walletpassphrase"),
     BLOCK_CHAIN_INFO("getblockchaininfo"),
     WALLET_INFO("getwalletinfo"),;
 }
