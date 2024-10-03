@@ -50,7 +50,7 @@ class HttpClient {
             && nodeConfig.password.isNotBlank() && nodeConfig.port in 1..65535
         ) {
             val response: HttpResponse = createHttpClient.post {
-                if (wallet != null) {
+                if (wallet != null && wallet.name.isEmpty().not()) {
                     url("${nodeConfig.url}:${nodeConfig.port}/wallet/${wallet.name}")
                 } else url("${nodeConfig.url}:${nodeConfig.port}/")
                 basicAuth(
