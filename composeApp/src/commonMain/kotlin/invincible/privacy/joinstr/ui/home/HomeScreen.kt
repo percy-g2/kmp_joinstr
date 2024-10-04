@@ -128,7 +128,11 @@ fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
         verticalArrangement = Arrangement.Center
     ) {
         InfoTextField(
-            value = if (version.isEmpty() && textInsideParentheses.isEmpty()) "" else "Bitcoin Core v$version($textInsideParentheses)",
+            value = when {
+                version.isEmpty() && textInsideParentheses.isEmpty() -> ""
+                textInsideParentheses.isEmpty() -> "Bitcoin Core v$version"
+                else -> "Bitcoin Core v$version($textInsideParentheses)"
+            },
             label = stringResource(Res.string.node_version)
         )
 
