@@ -22,7 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenuItem
@@ -37,7 +36,6 @@ import androidx.compose.material3.MenuAnchorType.Companion.PrimaryEditable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -63,7 +61,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Theme
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +69,6 @@ fun SettingsScreen(
     onBackPress: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val showPassphraseDialog by viewModel.showPassphraseDialog.collectAsState()
     val saveOperation by viewModel.saveOperation.collectAsState()
     val listState = rememberScrollState()
     val focusManager = LocalFocusManager.current
@@ -140,85 +136,6 @@ fun SettingsScreen(
                     }
                 }
         ) {
-            if (showPassphraseDialog) {
-                var unlockTime by remember { mutableStateOf(600L) } // Default 10 minutes (600 seconds)
-                var passphrase by remember { mutableStateOf("") }
-                var showPassphrase by remember { mutableStateOf(false) }
-
-                AlertDialog(
-                    onDismissRequest = {
-                        viewModel.dismissShowPassphraseDialog()
-                    },
-                    title = { Text(text = "Unlock Wallet") },
-                    text = {
-                        Column {
-                            // Passphrase Input
-                            OutlinedTextField(
-                                value = passphrase,
-                                onValueChange = { passphrase = it },
-                                label = { Text("Passphrase") },
-                                modifier = Modifier.fillMaxWidth(),
-                                trailingIcon = {
-                                    if (passphrase.isNotEmpty()) {
-                                        Row {
-                                            IconButton(onClick = { showPassphrase = !showPassphrase }) {
-                                                Icon(
-                                                    imageVector = if (showPassphrase) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                                    contentDescription = if (showPassphrase) "Hide password" else "Show password"
-                                                )
-                                            }
-
-                                            IconButton(onClick = { passphrase = "" }) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Close,
-                                                    contentDescription = "Clear text"
-                                                )
-                                            }
-                                        }
-                                    }
-                                },
-                                singleLine = true,
-                                visualTransformation = if (showPassphrase) VisualTransformation.None else PasswordVisualTransformation()
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Unlock Time Slider (display in minutes, store in seconds)
-                            Text(text = "Unlock Time: ${(unlockTime / 60f).roundToInt()} minutes")
-                            Slider(
-                                value = unlockTime.toFloat(),
-                                onValueChange = { unlockTime = it.toLong() },
-                                valueRange = 60f..3600f, // Range between 1 minute to 1 hour
-                                steps = 59
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        Button(
-                            enabled = passphrase.isBlank().not(),
-                            shape = RoundedCornerShape(8.dp),
-                            onClick = {
-                                viewModel.unlockWallet(
-                                    passphrase = passphrase,
-                                    timeout = unlockTime
-                                )
-                            }
-                        ) {
-                            Text("Unlock")
-                        }
-                    },
-                    dismissButton = {
-                        Button(
-                            shape = RoundedCornerShape(8.dp),
-                            onClick = {
-                                viewModel.dismissShowPassphraseDialog()
-                            }
-                        ) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
 
             // Theme section
             SettingsSection(title = "Theme") {

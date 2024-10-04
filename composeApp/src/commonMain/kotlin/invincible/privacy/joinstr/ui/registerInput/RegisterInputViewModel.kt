@@ -22,6 +22,8 @@ import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.model.Wallet
+import invincible.privacy.joinstr.model.WalletInfo
+import invincible.privacy.joinstr.model.WalletResult
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.network.NostrClient
 import invincible.privacy.joinstr.network.json
@@ -34,6 +36,9 @@ import invincible.privacy.joinstr.utils.SettingsManager
 import io.ktor.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
@@ -56,6 +61,9 @@ class RegisterInputViewModel : ViewModel() {
 
     private val _selectedTx = mutableStateOf<ListUnspentResponseItem?>(null)
     val selectedTx: State<ListUnspentResponseItem?> = _selectedTx
+
+    private val _showPassphraseDialog = MutableStateFlow(false)
+    val showPassphraseDialog: StateFlow<Boolean> = _showPassphraseDialog.asStateFlow()
 
     init {
         fetchListUnspent()
@@ -81,6 +89,36 @@ class RegisterInputViewModel : ViewModel() {
     fun getSelectedTxInfo(): Pair<String, Int>? {
         return _selectedTx.value?.let {
             Pair(it.txid, it.vout)
+        }
+    }
+
+    fun dismissShowPassphraseDialog() {
+        viewModelScope.launch {
+            _showPassphraseDialog.value = false
+        }
+    }
+
+    fun unlockWallet(
+        passphrase: String,
+        timeout: Long
+    ) {
+        viewModelScope.launch {
+            val params = JsonArray(
+                listOf(
+                    JsonPrimitive(passphrase),
+                    JsonPrimitive(timeout)
+                )
+            )
+            val walletListBody = RpcRequestBody(
+                method = Methods.UNLOCK_WALLET.value,
+                params = params
+            )
+            httpClient.fetchNodeData<RpcResponse<WalletResult>>(
+                body = walletListBody,
+                wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+            )?.result?.wallets
+
+            _showPassphraseDialog.value = false
         }
     }
 
@@ -113,80 +151,100 @@ class RegisterInputViewModel : ViewModel() {
                 return@launch
             } else {
                 _selectedTx.value?.let {
-                    viewModelScope.launch {
+                        val selectedWallet = SettingsManager.store.get()?.nodeConfig?.selectedWallet
 
-                        val psbtBase64 = createPsbt(
-                            poolId = poolId,
-                            unspentItem = it
-                        )
-
-                        val walletProcessPsbtParams = JsonArray(
-                            listOf(
-                                JsonPrimitive(psbtBase64),
-                                JsonPrimitive(true),
-                                JsonPrimitive("ALL|ANYONECANPAY"),
-                                JsonPrimitive(false),
-                                JsonPrimitive(false)
+                        if (selectedWallet.isNullOrEmpty()) {
+                            SnackbarController.showMessage("Wallet not selected. Please choose one in the settings!")
+                            return@launch
+                        } else {
+                            val walletInfoBody = RpcRequestBody(
+                                method = Methods.WALLET_INFO.value
                             )
-                        )
 
-                        val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
-                            method = Methods.WALLET_PROCESS_PSBT.value,
-                            params = walletProcessPsbtParams
-                        )
+                            val unlockedUntil = httpClient.fetchNodeData<RpcResponse<WalletInfo>>(
+                                body = walletInfoBody,
+                                wallet = Wallet(name = selectedWallet)
+                            )?.result?.unlockedUntil
 
-                        val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(
-                            body = rpcWalletProcessPsbtParamsRequestBody,
-                            wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
-                        )?.result
-
-                        val jsonObject = buildJsonObject {
-                            put("hex", JsonPrimitive(processPsbt?.psbt))
-                            put("type", JsonPrimitive("input"))
-                        }
-                        val data = json.encodeToString(JsonObject.serializer(), jsonObject)
-                        val sharedSecret = getSharedSecret(
-                            selectedPool.privateKey.hexToByteArray(),
-                            selectedPool.publicKey.hexToByteArray()
-                        )
-                        val encryptedMessage = encrypt(data, sharedSecret)
-                        val nostrEvent = createEvent(
-                            content = encryptedMessage,
-                            event = Event.ENCRYPTED_DIRECT_MESSAGE,
-                            privateKey = selectedPool.privateKey.hexToByteArray(),
-                            publicKey = selectedPool.publicKey.hexToByteArray(),
-                            tagPubKey = selectedPool.publicKey
-                        )
-
-                        val item = Item(
-                            id = 0,
-                            title = "Register Input",
-                            description = "Input registered with event id: ${nostrEvent.id}"
-                        )
-                        onSuccess.invoke(item)
-
-                        nostrClient.sendEvent(
-                            event = nostrEvent,
-                            onSuccess = {
-                                val waitItem = Item(
-                                    id = 1,
-                                    title = "Wait",
-                                    description = "Waiting for other users to register input..."
-                                )
-                                onSuccess.invoke(waitItem)
-                                SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
-                                checkRegisteredInputs(
-                                    selectedPool = selectedPool,
-                                    onSuccess = onSuccess
-                                )
-                            },
-                            onError = { error ->
-                                val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
-                                SnackbarController.showMessage(msg)
-                                onError.invoke()
+                            if (unlockedUntil != null) {
+                                if (unlockedUntil == 0 || unlockedUntil < (Clock.System.now().toEpochMilliseconds() / 1000)) {
+                                    _showPassphraseDialog.value = true
+                                    return@launch
+                                }
                             }
-                        )
-                    }
+
+                            val psbtBase64 = createPsbt(
+                                poolId = poolId,
+                                unspentItem = it
+                            )
+
+                            val walletProcessPsbtParams = JsonArray(
+                                listOf(
+                                    JsonPrimitive(psbtBase64),
+                                    JsonPrimitive(true),
+                                    JsonPrimitive("ALL|ANYONECANPAY"),
+                                    JsonPrimitive(false),
+                                    JsonPrimitive(false)
+                                )
+                            )
+
+                            val rpcWalletProcessPsbtParamsRequestBody = RpcRequestBody(
+                                method = Methods.WALLET_PROCESS_PSBT.value,
+                                params = walletProcessPsbtParams
+                            )
+
+                            val processPsbt = httpClient.fetchNodeData<RpcResponse<PsbtResponse>>(
+                                body = rpcWalletProcessPsbtParamsRequestBody,
+                                wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
+                            )?.result
+
+                            val jsonObject = buildJsonObject {
+                                put("hex", JsonPrimitive(processPsbt?.psbt))
+                                put("type", JsonPrimitive("input"))
+                            }
+                            val data = json.encodeToString(JsonObject.serializer(), jsonObject)
+                            val sharedSecret = getSharedSecret(
+                                selectedPool.privateKey.hexToByteArray(),
+                                selectedPool.publicKey.hexToByteArray()
+                            )
+                            val encryptedMessage = encrypt(data, sharedSecret)
+                            val nostrEvent = createEvent(
+                                content = encryptedMessage,
+                                event = Event.ENCRYPTED_DIRECT_MESSAGE,
+                                privateKey = selectedPool.privateKey.hexToByteArray(),
+                                publicKey = selectedPool.publicKey.hexToByteArray(),
+                                tagPubKey = selectedPool.publicKey
+                            )
+
+                            val item = Item(
+                                id = 0,
+                                title = "Register Input",
+                                description = "Input registered with event id: ${nostrEvent.id}"
+                            )
+                            onSuccess.invoke(item)
+
+                            nostrClient.sendEvent(
+                                event = nostrEvent,
+                                onSuccess = {
+                                    val waitItem = Item(
+                                        id = 1,
+                                        title = "Wait",
+                                        description = "Waiting for other users to register input..."
+                                    )
+                                    onSuccess.invoke(waitItem)
+                                    SnackbarController.showMessage("Signed input registered for coinjoin.\nEvent ID: ${nostrEvent.id}")
+                                    checkRegisteredInputs(
+                                        selectedPool = selectedPool,
+                                        onSuccess = onSuccess
+                                    )
+                                },
+                                onError = { error ->
+                                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
+                                    SnackbarController.showMessage(msg)
+                                    onError.invoke()
+                                }
+                            )
+                        }
                 } ?: run {
                     if (PlatformUtils.IS_WASM_JS) {
                         SnackbarController.showMessage("PSBT creation is not yet supported for the web!")

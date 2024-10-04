@@ -7,7 +7,6 @@ import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
 import invincible.privacy.joinstr.model.Wallet
-import invincible.privacy.joinstr.model.WalletInfo
 import invincible.privacy.joinstr.model.WalletResult
 import invincible.privacy.joinstr.network.HttpClient
 import invincible.privacy.joinstr.utils.NodeConfig
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -59,35 +57,6 @@ class SettingsViewModel : ViewModel() {
             }
         }
         fetchWalletList()
-    }
-
-    fun dismissShowPassphraseDialog() {
-        viewModelScope.launch {
-            _showPassphraseDialog.value = false
-        }
-    }
-
-    fun unlockWallet(
-        passphrase: String,
-        timeout: Long
-    ) {
-        viewModelScope.launch {
-            val params = JsonArray(
-                listOf(
-                    JsonPrimitive(passphrase),
-                    JsonPrimitive(timeout)
-                )
-            )
-            val walletListBody = RpcRequestBody(
-                method = Methods.UNLOCK_WALLET.value,
-                params = params
-            )
-            _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(
-                body = walletListBody,
-                wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
-            )?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
-            _showPassphraseDialog.value = false
-        }
     }
 
     fun updateNostrRelay(relay: String) {
@@ -175,21 +144,6 @@ class SettingsViewModel : ViewModel() {
                     if (loadWallet?.error != null) {
                         Napier.e(loadWallet.error.message)
                     } else Napier.i("Wallet ${_uiState.value.selectedWallet} loaded successfully")
-
-                    val walletInfoBody = RpcRequestBody(
-                        method = Methods.WALLET_INFO.value
-                    )
-
-                    val unlockedUntil = httpClient.fetchNodeData<RpcResponse<WalletInfo>>(
-                        body = walletInfoBody,
-                        wallet = Wallet(name = _uiState.value.selectedWallet)
-                    )?.result?.unlockedUntil
-
-                    if (unlockedUntil != null) {
-                        if (unlockedUntil == 0 || unlockedUntil < (Clock.System.now().toEpochMilliseconds() / 1000)) {
-                            _showPassphraseDialog.value = true
-                        }
-                    }
                 }
                 _saveOperation.value = SaveOperation.Success
             } catch (e: Exception) {

@@ -9,9 +9,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -21,6 +24,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,12 +34,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -51,6 +60,8 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,6 +95,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -97,6 +109,7 @@ fun RegisterInputScreen(
     val selectedTxId by viewModel.selectedTx
     var autoRotation by remember { mutableStateOf(false) }
     val showRegisterInputTimeLine = remember { mutableStateOf(false) }
+    val showPassphraseDialog by viewModel.showPassphraseDialog.collectAsState()
     val scope = rememberCoroutineScope()
     val items = remember { mutableStateListOf<Item>() }
 
@@ -117,6 +130,86 @@ fun RegisterInputScreen(
          }
 
        // items.addAll(getCharacters())
+    }
+
+    if (showPassphraseDialog) {
+        var unlockTime by remember { mutableStateOf(600L) } // Default 10 minutes (600 seconds)
+        var passphrase by remember { mutableStateOf("") }
+        var showPassphrase by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.dismissShowPassphraseDialog()
+            },
+            title = { Text(text = "Unlock Wallet") },
+            text = {
+                Column {
+                    // Passphrase Input
+                    OutlinedTextField(
+                        value = passphrase,
+                        onValueChange = { passphrase = it },
+                        label = { Text("Passphrase") },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            if (passphrase.isNotEmpty()) {
+                                Row {
+                                    IconButton(onClick = { showPassphrase = !showPassphrase }) {
+                                        Icon(
+                                            imageVector = if (showPassphrase) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                            contentDescription = if (showPassphrase) "Hide password" else "Show password"
+                                        )
+                                    }
+
+                                    IconButton(onClick = { passphrase = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = "Clear text"
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        visualTransformation = if (showPassphrase) VisualTransformation.None else PasswordVisualTransformation()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Unlock Time Slider (display in minutes, store in seconds)
+                    Text(text = "Unlock Time: ${(unlockTime / 60f).roundToInt()} minutes")
+                    Slider(
+                        value = unlockTime.toFloat(),
+                        onValueChange = { unlockTime = it.toLong() },
+                        valueRange = 60f..3600f, // Range between 1 minute to 1 hour
+                        steps = 59
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = passphrase.isBlank().not(),
+                    shape = RoundedCornerShape(8.dp),
+                    onClick = {
+                        viewModel.unlockWallet(
+                            passphrase = passphrase,
+                            timeout = unlockTime
+                        )
+                    }
+                ) {
+                    Text("Unlock")
+                }
+            },
+            dismissButton = {
+                Button(
+                    shape = RoundedCornerShape(8.dp),
+                    onClick = {
+                        viewModel.dismissShowPassphraseDialog()
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showRegisterInputTimeLine.value) {
