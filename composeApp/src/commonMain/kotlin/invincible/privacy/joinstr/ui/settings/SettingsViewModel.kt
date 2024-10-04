@@ -35,9 +35,6 @@ class SettingsViewModel : ViewModel() {
     private val _walletList = MutableStateFlow(emptyList<String>())
     val walletList: StateFlow<List<String>> = _walletList.asStateFlow()
 
-    private val _showPassphraseDialog = MutableStateFlow(false)
-    val showPassphraseDialog: StateFlow<Boolean> = _showPassphraseDialog.asStateFlow()
-
     init {
         viewModelScope.launch {
             SettingsManager.store.updates.collect { settings ->
