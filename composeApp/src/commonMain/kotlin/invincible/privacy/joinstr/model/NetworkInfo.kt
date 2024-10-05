@@ -18,8 +18,7 @@ data class NetworkInfo(
     val networks: List<Network>,
     val relayfee: Double,
     val incrementalfee: Double,
-    val localaddresses: List<LocalAddress>,
-    val warnings: String
+    val localaddresses: List<LocalAddress>
 )
 
 @Serializable

@@ -18,6 +18,5 @@ data class BlockchainInfo(
     val pruned: Boolean = false,
     val pruneheight: Int = 0,
     val automatic_pruning: Boolean = false,
-    val prune_target_size: Long = 0L,
-    val warnings: String = ""
+    val prune_target_size: Long = 0L
 )
