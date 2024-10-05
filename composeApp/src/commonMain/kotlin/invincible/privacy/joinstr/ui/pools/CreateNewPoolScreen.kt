@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.denomination

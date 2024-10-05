@@ -69,10 +69,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
 import invincible.privacy.joinstr.model.PoolContent
 import invincible.privacy.joinstr.model.copyToLocalPoolContent
+import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.components.CenterColumnText
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
@@ -91,9 +93,10 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun OtherPoolsScreen(
     poolsViewModel: PoolsViewModel,
+    viewModel: OtherPoolViewModel = viewModel { OtherPoolViewModel() }
 ) {
-    val poolContents by poolsViewModel.otherPoolEvents.collectAsState()
-    val isLoading by poolsViewModel.isLoading.collectAsState()
+    val poolContents by viewModel.otherPoolEvents.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val showJoinDialog = remember { mutableStateOf(false) }
     val showWaitingDialog = remember { mutableStateOf(false) }
     val showQrCodeDialog = remember { mutableStateOf(Pair<PoolContent?, Boolean>(null, false)) }
@@ -103,7 +106,7 @@ fun OtherPoolsScreen(
     val pullState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
-        poolsViewModel.fetchOtherPools()
+        viewModel.fetchOtherPools()
     }
 
     if (showWaitingDialog.value && activePoolReady.first) {
@@ -283,7 +286,7 @@ fun OtherPoolsScreen(
         isLoading = isLoading,
         poolContents = poolContents,
         pullState = pullState,
-        poolsViewModel = poolsViewModel,
+        viewModel = viewModel,
         showQrCodeDialog = showQrCodeDialog,
         isJoining = isJoining
     )
@@ -293,11 +296,11 @@ fun OtherPoolsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PoolList(
+private fun PoolList(
     isLoading: Boolean,
     poolContents: List<PoolContent>?,
     pullState: PullToRefreshState,
-    poolsViewModel: PoolsViewModel,
+    viewModel: OtherPoolViewModel,
     showQrCodeDialog: MutableState<Pair<PoolContent?, Boolean>>,
     isJoining: MutableState<Boolean>
 ) {
@@ -309,13 +312,13 @@ fun PoolList(
             else -> PoolListContent(
                 poolContents = poolContents,
                 pullState = pullState,
-                onRefresh = { poolsViewModel.fetchOtherPools() },
+                onRefresh = { viewModel.fetchOtherPools() },
                 isJoining = isJoining,
                 onJoinRequest = { poolContent ->
                     showQrCodeDialog.value = poolContent to true
                 },
                 onTimeout = { id ->
-                    poolsViewModel.removeOtherPool(id)
+                    viewModel.removeOtherPool(id)
                 }
             )
         }

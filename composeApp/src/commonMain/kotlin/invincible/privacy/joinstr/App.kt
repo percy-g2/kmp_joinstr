@@ -60,7 +60,7 @@ import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.home.HomeScreen
 import invincible.privacy.joinstr.ui.pools.PoolScreen
-import invincible.privacy.joinstr.ui.pools.PoolsViewModel
+import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
 import invincible.privacy.joinstr.utils.SettingsManager

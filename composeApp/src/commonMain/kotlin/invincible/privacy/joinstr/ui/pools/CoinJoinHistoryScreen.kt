@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.openLink
 import invincible.privacy.joinstr.theme.lightBlue
@@ -73,20 +74,22 @@ import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CoinJoinHistoryScreen(poolsViewModel: PoolsViewModel) {
-    val events by poolsViewModel.coinJoinHistory.collectAsState()
-    val isLoading by poolsViewModel.isLoading.collectAsState()
+fun CoinJoinHistoryScreen(
+    viewModel: CoinJoinHistoryViewModel = viewModel { CoinJoinHistoryViewModel() }
+) {
+    val events by viewModel.coinJoinHistory.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val pullState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
-        poolsViewModel.fetchCoinJoinHistory()
+        viewModel.fetchCoinJoinHistory()
     }
 
     HistoryList(
         isLoading = isLoading,
         events = events,
         pullRefreshState = pullState,
-        poolsViewModel = poolsViewModel
+        viewModel = viewModel
     )
 }
 
@@ -96,7 +99,7 @@ fun HistoryList(
     isLoading: Boolean,
     events: List<CoinJoinHistory>?,
     pullRefreshState: PullToRefreshState,
-    poolsViewModel: PoolsViewModel,
+    viewModel: CoinJoinHistoryViewModel
 ) {
     BoxWithConstraints(
         contentAlignment = TopCenter
@@ -108,7 +111,7 @@ fun HistoryList(
                 events = events,
                 pullRefreshState = pullRefreshState,
                 onRefresh = {
-                    poolsViewModel.fetchCoinJoinHistory()
+                    viewModel.fetchCoinJoinHistory()
                 }
             )
         }

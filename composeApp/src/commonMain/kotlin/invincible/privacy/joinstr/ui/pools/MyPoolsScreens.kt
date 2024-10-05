@@ -57,6 +57,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.ktx.displayDateTime
 import invincible.privacy.joinstr.model.LocalPoolContent
@@ -81,21 +82,21 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPoolsScreens(
-    poolsViewModel: PoolsViewModel
+    viewModel: MyPoolsViewModel = viewModel { MyPoolsViewModel() }
 ) {
-    val events by poolsViewModel.localPools.collectAsState()
-    val isLoading by poolsViewModel.isLoading.collectAsState()
+    val events by viewModel.localPools.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val pullState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
-        poolsViewModel.fetchLocalPools()
+        viewModel.fetchLocalPools()
     }
 
     PoolList(
         isLoading = isLoading,
         events = events,
         pullRefreshState = pullState,
-        poolsViewModel = poolsViewModel
+        poolsViewModel = viewModel
     )
 }
 
@@ -105,7 +106,7 @@ fun PoolList(
     isLoading: Boolean,
     events: List<LocalPoolContent>?,
     pullRefreshState: PullToRefreshState,
-    poolsViewModel: PoolsViewModel,
+    poolsViewModel: MyPoolsViewModel
 ) {
     BoxWithConstraints(
         contentAlignment = TopCenter

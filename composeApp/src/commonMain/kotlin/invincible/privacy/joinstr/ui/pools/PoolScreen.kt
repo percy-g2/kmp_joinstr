@@ -36,12 +36,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.components.ProgressDialog
 import kotlinx.coroutines.launch
 
 @Composable
 fun PoolScreen(
-    poolsViewModel: PoolsViewModel,
+    poolsViewModel: PoolsViewModel
 ) {
     val isLoading by poolsViewModel.isLoading.collectAsState()
     val tabScrollState = rememberScrollState()
@@ -149,7 +150,7 @@ fun PoolScreen(
                     enter = expandIn(expandFrom = Alignment.Center),
                     exit = shrinkOut(shrinkTowards = Alignment.Center)
                 ) {
-                    MyPoolsScreens(poolsViewModel = poolsViewModel)
+                    MyPoolsScreens()
                 }
 
                 2 -> AnimatedVisibility(
@@ -165,7 +166,7 @@ fun PoolScreen(
                     enter = expandIn(expandFrom = Alignment.Center),
                     exit = shrinkOut(shrinkTowards = Alignment.Center)
                 ) {
-                    CoinJoinHistoryScreen(poolsViewModel = poolsViewModel)
+                    CoinJoinHistoryScreen()
                 }
             }
         }

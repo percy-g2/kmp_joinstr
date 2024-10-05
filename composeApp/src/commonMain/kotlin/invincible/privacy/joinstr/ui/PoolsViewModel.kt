@@ -1,4 +1,4 @@
-package invincible.privacy.joinstr.ui.pools
+package invincible.privacy.joinstr.ui
 
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
@@ -8,7 +8,6 @@ import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
-import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.Credentials
 import invincible.privacy.joinstr.model.JoinedPoolContent
 import invincible.privacy.joinstr.model.LocalPoolContent
@@ -28,6 +27,7 @@ import invincible.privacy.joinstr.utils.NostrCryptoUtils.encrypt
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.generatePrivateKey
 import invincible.privacy.joinstr.utils.NostrCryptoUtils.getPublicKey
 import invincible.privacy.joinstr.utils.SettingsManager
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -52,20 +52,9 @@ class PoolsViewModel : ViewModel() {
     private val nostrClient = NostrClient()
     private val httpClient = HttpClient()
     private val poolStore = getPoolsStore()
-    private val historyStore
-        get() = getHistoryStore()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _otherPoolEvents = MutableStateFlow<List<PoolContent>?>(null)
-    val otherPoolEvents: StateFlow<List<PoolContent>?> = _otherPoolEvents.asStateFlow()
-
-    private val _localPools = MutableStateFlow<List<LocalPoolContent>?>(null)
-    val localPools: StateFlow<List<LocalPoolContent>?> = _localPools.asStateFlow()
-
-    private val _coinJoinHistory = MutableStateFlow<List<CoinJoinHistory>?>(null)
-    val coinJoinHistory: StateFlow<List<CoinJoinHistory>?> = _coinJoinHistory.asStateFlow()
 
     private val _activePoolReady = MutableStateFlow(Pair(false, ""))
     val activePoolReady: StateFlow<Pair<Boolean, String>> = _activePoolReady.asStateFlow()
@@ -77,7 +66,7 @@ class PoolsViewModel : ViewModel() {
             runCatching {
                 nostrClient.activePoolsCredentialsSender()
             }.getOrElse {
-                it.printStackTrace()
+                Napier.e("startInitialChecks", it)
             }
         }
         startActiveReadyPoolsCheck()
@@ -88,7 +77,7 @@ class PoolsViewModel : ViewModel() {
             runCatching {
                 checkForReadyActivePools()
             }.getOrElse {
-                it.printStackTrace()
+                Napier.e("startActiveReadyPoolsCheck", it)
             }
         }
     }
@@ -118,52 +107,6 @@ class PoolsViewModel : ViewModel() {
             .joinToString("")
         val timestamp = Clock.System.now().toEpochMilliseconds() / 1000
         return randomString + timestamp.toString()
-    }
-
-    fun fetchLocalPools() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            delay(2.seconds)
-            _localPools.value = poolStore.get()
-                ?.sortedByDescending { it.timeout }
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
-                ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
-            _isLoading.value = false
-        }
-    }
-
-    fun fetchCoinJoinHistory() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            delay(2.seconds)
-            _coinJoinHistory.value = historyStore.get()?.sortedByDescending { it.timestamp }
-            _isLoading.value = false
-        }
-    }
-
-    fun fetchOtherPools() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _otherPoolEvents.value = null
-            nostrClient.fetchOtherPools(
-                onSuccess = { nostrEvents ->
-                    viewModelScope.launch {
-                        val currentTime = (Clock.System.now().toEpochMilliseconds() / 1000)
-                        val pools = getPoolsStore().get()
-                        _otherPoolEvents.value = nostrEvents
-                            .sortedByDescending { it.timeout }
-                            .filter { it.timeout > currentTime && it.id !in pools?.map { pool -> pool.id }.orEmpty() }
-                            .filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
-                        _isLoading.value = false
-                    }
-                },
-                onError = { error ->
-                    _isLoading.value = false
-                    val msg = error ?: "Something went wrong while communicating with the relay.\nPlease try again."
-                    SnackbarController.showMessage(msg)
-                }
-            )
-        }
     }
 
     fun createPool(
@@ -436,19 +379,6 @@ class PoolsViewModel : ViewModel() {
             )
         }
     }
-
-    fun removeLocalPool(id: String) {
-        viewModelScope.launch {
-            _localPools.value = _localPools.value?.filter { it.id != id }
-        }
-    }
-
-    fun removeOtherPool(id: String) {
-        viewModelScope.launch {
-            _otherPoolEvents.value = _otherPoolEvents.value?.filter { it.id != id }
-        }
-    }
-
 
     override fun onCleared() {
         super.onCleared()
