@@ -212,6 +212,7 @@ android {
     }
     buildFeatures {
         compose = true
+        aidl = true
     }
     dependencies {
         implementation(fileTree("dir" to "libs", "include" to listOf("*.jar")))
