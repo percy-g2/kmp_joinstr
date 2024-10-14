@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity(), Handler.Callback {
             val extras = Bundle()
             extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
 
-            val profile = mService?.addNewVPNProfileWithExtras("test", false, completeConfig, extras)
+            val profile = mService?.addNewVPNProfileWithExtras("test", true, completeConfig, extras)
             if (profile != null) {
                 Napier.i("VPN profile added: ${profile.mUUID}")
                 mService?.startVPNwithExtras(completeConfig, extras)
