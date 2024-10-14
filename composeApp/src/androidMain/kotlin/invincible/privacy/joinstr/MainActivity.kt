@@ -45,9 +45,6 @@ import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
-import java.io.BufferedReader
-import java.io.InputStream
-import java.io.InputStreamReader
 
 
 class MainActivity : ComponentActivity(), Handler.Callback {
@@ -141,42 +138,33 @@ class MainActivity : ComponentActivity(), Handler.Callback {
      * Start the VPN
      */
     private fun startVpn() {
-
-
         try {
-
-            /* Try opening test.local.conf first */
-            var conf: InputStream = this.getAssets().open("test.conf")
-
-            val br = BufferedReader(InputStreamReader(conf))
-            val config = StringBuilder()
-            var line: String?
-            while (true) {
-                line = br.readLine()
-                if (line == null) break
-                config.append(line).append("\n")
-            }
-            br.close()
+            val conf = assets.open("test.conf")
+            val config = conf.bufferedReader().use { it.readText() }
             conf.close()
 
-            val profile = mService?.addNewVPNProfile("test", false, config.toString())
+            val splitTunnelingConfig = """
+                route 0.0.0.0 128.0.0.0 net_gateway
+                route 128.0.0.0 128.0.0.0 net_gateway
+                pull-filter ignore "route"
+                pull-filter ignore "redirect-gateway"
+            """.trimIndent()
+
+            val completeConfig = "$config\n$splitTunnelingConfig"
+
+            val extras = Bundle()
+            extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
+
+            val profile = mService?.addNewVPNProfileWithExtras("test", false, completeConfig, extras)
             if (profile != null) {
-                Napier.i("profile.mUUID")
-
-                // Update log
-                Napier.i("Connecting...")
-
-                mService?.startProfile(profile.mUUID)
-                mService?.startVPN(config.toString())
-
-                auth_failed = false
+                Napier.i("VPN profile added: ${profile.mUUID}")
+                mService?.startVPNwithExtras(completeConfig, extras)
+                Napier.i("VPN started")
             } else {
-                Napier.e("profile.mUUID null")
+                Napier.e("Failed to add VPN profile")
             }
-
         } catch (e: Exception) {
-            e.printStackTrace()
-            Napier.e("openvpn server connection failed: " + e.message)
+            Napier.e("Error starting VPN: ${e.message}")
         }
     }
 
