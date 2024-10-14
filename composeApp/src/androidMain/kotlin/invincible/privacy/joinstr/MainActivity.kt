@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import de.blinkt.openvpn.api.IOpenVPNAPIService
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -31,6 +32,8 @@ import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
 
 class MainActivity : ComponentActivity() {
+
+    protected var mService: IOpenVPNAPIService? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
