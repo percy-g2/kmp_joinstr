@@ -44,7 +44,17 @@ import invincible.privacy.joinstr.ui.pools.HistoryItem
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import java.io.IOException
+import java.lang.reflect.InvocationTargetException
+import java.net.NetworkInterface
+import java.net.URL
+import java.net.UnknownHostException
+import kotlin.time.Duration.Companion.seconds
 
 
 class MainActivity : ComponentActivity(), Handler.Callback {
@@ -69,10 +79,9 @@ class MainActivity : ComponentActivity(), Handler.Callback {
 
         if (requestCode == ICS_OPENVPN_PERMISSION) {
             try {
-                mService!!.registerStatusCallback(mCallback)
+                mService?.registerStatusCallback(mCallback)
             } catch (e: RemoteException) {
                 Napier.e("openvpn status callback failed: " + e.message)
-                e.printStackTrace()
             }
         }
     }
@@ -116,21 +125,48 @@ class MainActivity : ComponentActivity(), Handler.Callback {
                 ) {
                     ActivityCompat.requestPermissions(
                         this@MainActivity,
-                        arrayOf<String>(Manifest.permission.POST_NOTIFICATIONS),
+                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                         NOTIFICATIONS_PERMISSION_REQUEST_CODE
                     )
                 }
-                //    bindTimerService()
-            } else {
-                //    unbindTimerService()
+                CoroutineScope(Dispatchers.IO).launch {
+                    while (true) {
+                        println(getMyOwnIP())
+                       // getRoutingTable()
+                       // getNetworkInterfaces()
+                        delay(5.seconds.inWholeMilliseconds)
+                    }
+                }
             }
+        }
+    }
+
+    private fun getRoutingTable() {
+        try {
+            val routingTable = Runtime.getRuntime().exec("ip route").inputStream.bufferedReader().use { it.readText() }
+            Napier.i("Routing table: $routingTable")
+        } catch (e: Exception) {
+            Napier.e("Failed to get routing table: ${e.message}")
+        }
+    }
+
+    private fun getNetworkInterfaces() {
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces().toList()
+            interfaces.forEach { networkInterface ->
+                Napier.i("Interface: ${networkInterface.name}")
+                networkInterface.inetAddresses.toList().forEach { address ->
+                    Napier.i("  Address: ${address.hostAddress}")
+                }
+            }
+        } catch (e: Exception) {
+            Napier.e("Failed to get network interfaces: ${e.message}")
         }
     }
 
     private fun bindService() {
         val icsopenvpnService = Intent(IOpenVPNAPIService::class.java.name)
         icsopenvpnService.setPackage("invincible.privacy.joinstr")
-
         this.bindService(icsopenvpnService, mConnection, Context.BIND_AUTO_CREATE)
     }
 
@@ -144,10 +180,7 @@ class MainActivity : ComponentActivity(), Handler.Callback {
             conf.close()
 
             val splitTunnelingConfig = """
-                route 0.0.0.0 128.0.0.0 net_gateway
-                route 128.0.0.0 128.0.0.0 net_gateway
-                pull-filter ignore "route"
-                pull-filter ignore "redirect-gateway"
+            route 192.168.1.0 255.255.255.0 net_gateway
             """.trimIndent()
 
             val completeConfig = "$config\n$splitTunnelingConfig"
@@ -166,6 +199,21 @@ class MainActivity : ComponentActivity(), Handler.Callback {
         } catch (e: Exception) {
             Napier.e("Error starting VPN: ${e.message}")
         }
+    }
+
+    @Throws(
+        UnknownHostException::class,
+        IOException::class,
+        RemoteException::class,
+        IllegalArgumentException::class,
+        IllegalAccessException::class,
+        InvocationTargetException::class,
+        NoSuchMethodException::class
+    )
+    fun getMyOwnIP() {
+        val url = URL("https://api.ipify.org")
+        val publicIP = url.readText()
+        Napier.i("Public IP: $publicIP")
     }
 
     public override fun onStart() {
@@ -215,7 +263,7 @@ class MainActivity : ComponentActivity(), Handler.Callback {
 
             try {
                 // Request permission to use the API
-                val i = mService?.prepare(this@MainActivity.getPackageName())
+                val i = mService?.prepare(this@MainActivity.packageName)
                 if (i != null) {
                     startActivityForResult(i, ICS_OPENVPN_PERMISSION)
                 } else {
@@ -303,11 +351,11 @@ class MainActivity : ComponentActivity(), Handler.Callback {
         LaunchedEffect(Unit) {
             if (ContextCompat.checkSelfPermission(
                     context,
-                    android.Manifest.permission.POST_NOTIFICATIONS
+                    Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
         }
