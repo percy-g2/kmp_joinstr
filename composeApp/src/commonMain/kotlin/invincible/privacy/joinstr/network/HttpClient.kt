@@ -129,10 +129,18 @@ class HttpClient {
             }
             .map { gateway ->
                 val ip = gateway["ip_address"]?.jsonPrimitive?.content ?: ""
+                val host = gateway["host"]?.jsonPrimitive?.content ?: ""
+                val location = gateway["location"]?.jsonPrimitive?.content ?: ""
                 val transport = gateway["capabilities"]?.jsonObject?.get("transport")?.jsonArray?.firstOrNull()?.jsonObject
                 val ports = transport?.get("ports")?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
                 val protocols = transport?.get("protocols")?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
-                VpnGateway(ip, ports, protocols)
+                VpnGateway(
+                    host = host,
+                    ipAddress = ip,
+                    ports = ports,
+                    protocols = protocols,
+                    location =  location
+                )
             }
     }
 }
