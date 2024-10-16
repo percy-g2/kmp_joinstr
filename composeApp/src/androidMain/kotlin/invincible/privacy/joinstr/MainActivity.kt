@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity(), Handler.Callback {
 
     private var mHandler: Handler? = null
 
-    private var auth_failed = false
+    private var authFailed = false
 
     private val MSG_UPDATE_STATE: Int = 0
 
@@ -99,9 +99,9 @@ class MainActivity : ComponentActivity(), Handler.Callback {
             val msg: Message = Message.obtain(mHandler, MSG_UPDATE_STATE, "$state|$message")
 
             if (state == "AUTH_FAILED" || state == "CONNECTRETRY") {
-                auth_failed = true
+                authFailed = true
             }
-            if (!auth_failed) {
+            if (!authFailed) {
                 try {
                     //  setStatus(state)
                     // updateConnectionStatus(state)
@@ -112,12 +112,12 @@ class MainActivity : ComponentActivity(), Handler.Callback {
                 msg.sendToTarget()
             }
 
-            if (auth_failed) {
+            if (authFailed) {
                 Napier.i("AUTHORIZATION FAILED!!")
                 Napier.i("CONNECTRETRY")
             }
             if (state == "CONNECTED") {
-                auth_failed = false
+                authFailed = false
                 if (ActivityCompat.checkSelfPermission(
                         this@MainActivity,
                         Manifest.permission.POST_NOTIFICATIONS
