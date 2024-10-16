@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType.Companion.PrimaryEditable
+import androidx.compose.material3.MenuAnchorType.Companion.PrimaryNotEditable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -56,9 +57,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.model.VpnGateway
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Theme
 
@@ -160,6 +163,13 @@ fun SettingsScreen(
                     selectedWallet = uiState.selectedWallet,
                     viewModel = viewModel
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                VpnGatewayDropDown(
+                    selectedGateway = uiState.selectedVpnGateway,
+                    viewModel = viewModel
+                )
             }
 
             // Save button
@@ -174,6 +184,57 @@ fun SettingsScreen(
                     .padding(bottom = 4.dp)
             ) {
                 Text(if (saveOperation is SaveOperation.InProgress) "Saving..." else "Save")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VpnGatewayDropDown(
+    selectedGateway: VpnGateway?,
+    viewModel: SettingsViewModel,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val vpnGateways by viewModel.vpnGatewayList.collectAsState()
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = selectedGateway?.let { "(${it.location}) ${it.host}" } ?: "",
+            onValueChange = { },
+            label = { Text("VPN Gateway") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor(PrimaryNotEditable, true)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            vpnGateways.forEach { vpnGateway ->
+                DropdownMenuItem(
+                    text = {
+                        val displayText = "(${vpnGateway.location}) ${vpnGateway.host}"
+                        Text(
+                            text = displayText,
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    onClick = {
+                        viewModel.updateSelectedVpnGateway(vpnGateway)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
             }
         }
     }

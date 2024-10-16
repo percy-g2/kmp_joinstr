@@ -6,6 +6,7 @@ import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.model.Methods
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.RpcResponse
+import invincible.privacy.joinstr.model.VpnGateway
 import invincible.privacy.joinstr.model.Wallet
 import invincible.privacy.joinstr.model.WalletResult
 import invincible.privacy.joinstr.network.HttpClient
@@ -35,6 +36,9 @@ class SettingsViewModel : ViewModel() {
     private val _walletList = MutableStateFlow(emptyList<String>())
     val walletList: StateFlow<List<String>> = _walletList.asStateFlow()
 
+    private val _vpnGatewayList = MutableStateFlow(emptyList<VpnGateway>())
+    val vpnGatewayList: StateFlow<List<VpnGateway>> = _vpnGatewayList.asStateFlow()
+
     init {
         viewModelScope.launch {
             SettingsManager.store.updates.collect { settings ->
@@ -54,6 +58,7 @@ class SettingsViewModel : ViewModel() {
             }
         }
         fetchWalletList()
+        fetchVpnGatewayList()
     }
 
     fun updateNostrRelay(relay: String) {
@@ -72,6 +77,12 @@ class SettingsViewModel : ViewModel() {
             )
             _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
                 ?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
+        }
+    }
+
+    private fun fetchVpnGatewayList() {
+        viewModelScope.launch {
+            _vpnGatewayList.value = httpClient.fetchVpnGateways() ?: emptyList()
         }
     }
 
@@ -153,6 +164,10 @@ class SettingsViewModel : ViewModel() {
         _uiState.update { it.copy(selectedWallet = wallet) }
     }
 
+    fun updateSelectedVpnGateway(vpnGateway: VpnGateway) {
+        _uiState.update { it.copy(selectedVpnGateway = vpnGateway) }
+    }
+
     private fun validateAllFields(state: SettingsUiState): SettingsUiState {
         return state.copy(
             isNostrRelayValid = isValidWebSocketUrl(state.nostrRelay),
@@ -180,6 +195,7 @@ data class SettingsUiState(
     val password: String = "",
     val port: String = "",
     val selectedWallet: String = "",
+    val selectedVpnGateway: VpnGateway? = null,
     val selectedTheme: Int = Theme.SYSTEM.id,
     val isNostrRelayValid: Boolean = true,
     val isNodeUrlValid: Boolean = true,

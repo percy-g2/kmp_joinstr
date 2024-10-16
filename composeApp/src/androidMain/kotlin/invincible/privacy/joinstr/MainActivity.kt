@@ -1,8 +1,21 @@
 package invincible.privacy.joinstr
 
+import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Message
+import android.os.RemoteException
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,7 +33,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import de.blinkt.openvpn.api.IOpenVPNAPIService
+import de.blinkt.openvpn.api.IOpenVPNStatusCallback
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -28,9 +44,255 @@ import invincible.privacy.joinstr.ui.pools.HistoryItem
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import java.io.IOException
+import java.lang.reflect.InvocationTargetException
+import java.net.NetworkInterface
+import java.net.URL
+import java.net.UnknownHostException
+import kotlin.time.Duration.Companion.seconds
 
-class MainActivity : ComponentActivity() {
+
+class MainActivity : ComponentActivity(), Handler.Callback {
+
+    protected var mService: IOpenVPNAPIService? = null
+
+    private var mHandler: Handler? = null
+
+    private var auth_failed = false
+
+    private val MSG_UPDATE_STATE: Int = 0
+
+    private val ICS_OPENVPN_PERMISSION: Int = 7
+
+    private val NOTIFICATIONS_PERMISSION_REQUEST_CODE: Int = 11
+
+    /**
+     * Taking permission for network access
+     */
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == ICS_OPENVPN_PERMISSION) {
+            try {
+                mService?.registerStatusCallback(mCallback)
+            } catch (e: RemoteException) {
+                Napier.e("openvpn status callback failed: " + e.message)
+            }
+        }
+    }
+
+    private val mCallback: IOpenVPNStatusCallback = object : IOpenVPNStatusCallback.Stub() {
+        /**
+         * This is called by the remote service regularly to tell us about
+         * new values.  Note that IPC calls are dispatched through a thread
+         * pool running in each process, so the code executing here will
+         * NOT be running in our main thread like most other things -- so,
+         * to update the UI, we need to use a Handler to hop over there.
+         */
+        @Throws(RemoteException::class)
+        override fun newStatus(uuid: String, state: String, message: String, level: String) {
+            val msg: Message = Message.obtain(mHandler, MSG_UPDATE_STATE, "$state|$message")
+
+            if (state == "AUTH_FAILED" || state == "CONNECTRETRY") {
+                auth_failed = true
+            }
+            if (!auth_failed) {
+                try {
+                    //  setStatus(state)
+                    // updateConnectionStatus(state)
+                } catch (e: Exception) {
+                    Napier.e("openvpn status callback failed: " + e.message)
+                    e.printStackTrace()
+                }
+                msg.sendToTarget()
+            }
+
+            if (auth_failed) {
+                Napier.i("AUTHORIZATION FAILED!!")
+                Napier.i("CONNECTRETRY")
+            }
+            if (state == "CONNECTED") {
+                auth_failed = false
+                if (ActivityCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    ActivityCompat.requestPermissions(
+                        this@MainActivity,
+                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                        NOTIFICATIONS_PERMISSION_REQUEST_CODE
+                    )
+                }
+                CoroutineScope(Dispatchers.IO).launch {
+                    while (true) {
+                        println(getMyOwnIP())
+                       // getRoutingTable()
+                       // getNetworkInterfaces()
+                        delay(5.seconds.inWholeMilliseconds)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getRoutingTable() {
+        try {
+            val routingTable = Runtime.getRuntime().exec("ip route").inputStream.bufferedReader().use { it.readText() }
+            Napier.i("Routing table: $routingTable")
+        } catch (e: Exception) {
+            Napier.e("Failed to get routing table: ${e.message}")
+        }
+    }
+
+    private fun getNetworkInterfaces() {
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces().toList()
+            interfaces.forEach { networkInterface ->
+                Napier.i("Interface: ${networkInterface.name}")
+                networkInterface.inetAddresses.toList().forEach { address ->
+                    Napier.i("  Address: ${address.hostAddress}")
+                }
+            }
+        } catch (e: Exception) {
+            Napier.e("Failed to get network interfaces: ${e.message}")
+        }
+    }
+
+    private fun bindService() {
+        val icsopenvpnService = Intent(IOpenVPNAPIService::class.java.name)
+        icsopenvpnService.setPackage("invincible.privacy.joinstr")
+        this.bindService(icsopenvpnService, mConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    /**
+     * Start the VPN
+     */
+    private fun startVpn() {
+        try {
+            val conf = assets.open("test.conf")
+            val config = conf.bufferedReader().use { it.readText() }
+            conf.close()
+
+            val splitTunnelingConfig = """
+            route 192.168.1.0 255.255.255.0 net_gateway
+            """.trimIndent()
+
+            val completeConfig = "$config\n$splitTunnelingConfig"
+
+            val extras = Bundle()
+            extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
+
+            val profile = mService?.addNewVPNProfileWithExtras("test", true, completeConfig, extras)
+            if (profile != null) {
+                Napier.i("VPN profile added: ${profile.mUUID}")
+                mService?.startVPNwithExtras(completeConfig, extras)
+                Napier.i("VPN started")
+            } else {
+                Napier.e("Failed to add VPN profile")
+            }
+        } catch (e: Exception) {
+            Napier.e("Error starting VPN: ${e.message}")
+        }
+    }
+
+    @Throws(
+        UnknownHostException::class,
+        IOException::class,
+        RemoteException::class,
+        IllegalArgumentException::class,
+        IllegalAccessException::class,
+        InvocationTargetException::class,
+        NoSuchMethodException::class
+    )
+    fun getMyOwnIP() {
+        val url = URL("https://api.ipify.org")
+        val publicIP = url.readText()
+        Napier.i("Public IP: $publicIP")
+    }
+
+    public override fun onStart() {
+        super.onStart()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val chan = NotificationChannel("openvpn_newstat", "VPN foreground service", NotificationManager.IMPORTANCE_NONE)
+            chan.lightColor = Color.BLUE
+            chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+            val chanBgVPN = NotificationChannel("openvpn_bg", "VPN background service", NotificationManager.IMPORTANCE_NONE)
+            chanBgVPN.lightColor = Color.BLUE
+            chanBgVPN.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+            val service = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            service.createNotificationChannel(chan)
+            service.createNotificationChannel(chanBgVPN)
+        }
+
+        mHandler = Handler(this)
+        bindService()
+
+
+        // Checking permission for network monitor
+        val intent = mService?.prepareVPNService()
+
+        if (intent != null) {
+            startActivityForResult(intent, 1)
+        } else {
+            startVpn() //Already have permission
+        }
+    }
+
+    /**
+     * Class for interacting with the main interface of the service.
+     */
+    private val mConnection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(
+            className: ComponentName,
+            service: IBinder,
+        ) {
+            // This is called when the connection with the service has been
+            // established, giving us the service object we can use to
+            // interact with the service.  We are communicating with our
+            // service through an IDL interface, so get a client-side
+            // representation of that from the raw service object.
+
+            mService = IOpenVPNAPIService.Stub.asInterface(service)
+
+            try {
+                // Request permission to use the API
+                val i = mService?.prepare(this@MainActivity.packageName)
+                if (i != null) {
+                    startActivityForResult(i, ICS_OPENVPN_PERMISSION)
+                } else {
+                    onActivityResult(ICS_OPENVPN_PERMISSION, RESULT_OK, null)
+                }
+            } catch (e: RemoteException) {
+                Napier.e("openvpn service connection failed: " + e.message)
+                e.printStackTrace()
+            }
+        }
+
+        override fun onServiceDisconnected(className: ComponentName) {
+            // This is called when the connection with the service has been
+            // unexpectedly disconnected -- that is, its process crashed.
+            mService = null
+        }
+    }
+
+    override fun handleMessage(msg: Message): Boolean {
+        if (msg.what == MSG_UPDATE_STATE) {
+            val messageText = msg.obj as String
+            val stateDetails = messageText.split("\\|".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+            val currState = stateDetails[0]
+
+            Napier.i(currState)
+        }
+        return true
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,11 +351,11 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(Unit) {
             if (ContextCompat.checkSelfPermission(
                     context,
-                    android.Manifest.permission.POST_NOTIFICATIONS
+                    Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
         }
