@@ -40,17 +40,7 @@ android {
             assets.srcDirs("src/main/assets", "build/ovpnassets")
 
         }
-
-        create("ui") {
-        }
-
         create("skeleton") {
-        }
-
-        getByName("debug") {
-        }
-
-        getByName("release") {
         }
     }
 
@@ -64,10 +54,6 @@ android {
     flavorDimensions += listOf("implementation")
 
     productFlavors {
-        create("ui") {
-            dimension = "implementation"
-        }
-
         create("skeleton") {
             dimension = "implementation"
         }
@@ -92,6 +78,17 @@ android {
             useLegacyPackaging = true
         }
     }
+
+    buildTypes {
+        debug {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        getByName("release") {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
 }
 
 dependencies {
@@ -99,24 +96,24 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.core.ktx)
 
-    uiImplementation(libs.android.view.material)
-    uiImplementation(libs.androidx.activity)
-    uiImplementation(libs.androidx.activity.ktx)
-    uiImplementation(libs.androidx.appcompat)
-    uiImplementation(libs.androidx.cardview)
-    uiImplementation(libs.androidx.viewpager2)
-    uiImplementation(libs.androidx.constraintlayout)
-    uiImplementation(libs.androidx.core.ktx)
-    uiImplementation(libs.androidx.fragment.ktx)
-    uiImplementation(libs.androidx.lifecycle.runtime.ktx)
-    uiImplementation(libs.androidx.lifecycle.viewmodel.ktx)
-    uiImplementation(libs.androidx.preference.ktx)
-    uiImplementation(libs.androidx.recyclerview)
-    uiImplementation(libs.androidx.security.crypto)
-    uiImplementation(libs.androidx.webkit)
-    uiImplementation(libs.kotlin)
-    uiImplementation(libs.mpandroidchart)
-    uiImplementation(libs.square.okhttp)
+    implementation(libs.android.view.material)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.cardview)
+    implementation(libs.androidx.viewpager2)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.preference.ktx)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.webkit)
+    implementation(libs.kotlin)
+    implementation(libs.mpandroidchart)
+    implementation(libs.square.okhttp)
 
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.junit)
@@ -124,6 +121,3 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.robolectric)
 }
-
-fun DependencyHandler.uiImplementation(dependencyNotation: Any): Dependency? =
-    add("uiImplementation", dependencyNotation)

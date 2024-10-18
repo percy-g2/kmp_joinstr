@@ -183,19 +183,6 @@ android {
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
-    flavorDimensions("implementation")
-
-    productFlavors {
-        create("ui") {
-            setDimension("implementation")
-            buildConfigField("boolean", "openvpn3", "true")
-        }
-        create("skeleton") {
-            setDimension("implementation")
-            buildConfigField("boolean", "openvpn3", "false")
-        }
-    }
-
     defaultConfig {
         applicationId = "invincible.privacy.joinstr"
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -225,9 +212,6 @@ android {
     }
     buildFeatures {
         compose = true
-        aidl = true
-        buildConfig = true
-        dataBinding = true
     }
     dependencies {
         implementation(fileTree("dir" to "libs", "include" to listOf("*.jar")))

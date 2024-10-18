@@ -279,7 +279,7 @@ fun PoolItem(
                             enabled = isJoining.not()
                         ) {
                             Text(
-                                text = if (isJoining) "Joining..." else stringResource(Res.string.join),
+                                text = stringResource(Res.string.join),
                                 fontSize = 16.sp,
                             )
                         }
