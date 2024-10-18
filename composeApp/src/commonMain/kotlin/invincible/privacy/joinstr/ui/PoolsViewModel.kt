@@ -133,8 +133,12 @@ class PoolsViewModel : ViewModel() {
                             body = addressBody,
                             wallet = Wallet(name = SettingsManager.store.get()?.nodeConfig?.selectedWallet ?: "")
                         )?.result?.let { address ->
-                            val privateKey = generatePrivateKey()
-                            val publicKey = getPublicKey(privateKey)
+                            val eventPrivateKey = generatePrivateKey()
+                            val eventPublicKey = getPublicKey(eventPrivateKey)
+
+                            val poolPrivateKey = generatePrivateKey()
+                            val poolPublicKey = getPublicKey(poolPrivateKey)
+
                             val poolId = generatePoolId()
                             val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
                             val poolContent = PoolContent(
@@ -145,14 +149,14 @@ class PoolsViewModel : ViewModel() {
                                 relay = nostrRelay,
                                 feeRate = hourFee,
                                 timeout = timeout,
-                                publicKey = publicKey.toHexString()
+                                publicKey = poolPublicKey.toHexString()
                             )
                             val content = nostrClient.json.encodeToString(poolContent)
                             val nostrEvent = createEvent(
                                 content = content,
                                 event = Event.JOIN_STR,
-                                privateKey = privateKey,
-                                publicKey = publicKey
+                                privateKey = eventPrivateKey,
+                                publicKey = eventPublicKey
                             )
                             nostrClient.sendEvent(
                                 event = nostrEvent,
@@ -167,8 +171,8 @@ class PoolsViewModel : ViewModel() {
                                                 relay = nostrRelay,
                                                 feeRate = hourFee,
                                                 timeout = timeout,
-                                                publicKey = publicKey.toHexString(),
-                                                privateKey = privateKey.toHexString()
+                                                publicKey = poolPublicKey.toHexString(),
+                                                privateKey = poolPrivateKey.toHexString()
                                             )
                                             it?.plus(pool) ?: listOf(pool)
                                         }
@@ -178,8 +182,8 @@ class PoolsViewModel : ViewModel() {
                                     SnackbarController.showMessage("New pool created!\nEvent ID: ${nostrEvent.id}")
                                     registerOutput(
                                         address = address,
-                                        publicKey = publicKey,
-                                        privateKey = privateKey
+                                        publicKey = poolPublicKey,
+                                        privateKey = poolPrivateKey
                                     )
                                 },
                                 onError = { error ->

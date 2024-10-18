@@ -120,18 +120,13 @@ fun OtherPoolsScreen(
             },
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
             content = {
-
                 showQrCodeDialog.value.first?.let { poolContent ->
                     val privateKey = generatePrivateKey()
                     val publicKey = getPublicKey(privateKey)
                     val qrCodeColor = MaterialTheme.colorScheme.onBackground
                     val painter = rememberQrCodePainter(
                         data = poolContent.publicKey,
-                        colors = QrColors(
-                            dark = QrBrush.solid(
-                                color = qrCodeColor
-                            )
-                        )
+                        colors = QrColors(dark = QrBrush.solid(color = qrCodeColor))
                     )
 
                     Box(
