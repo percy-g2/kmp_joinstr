@@ -124,7 +124,17 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 _isLoading.value = true
+                if (getSettingsStore().get()?.nodeConfig?.selectedWallet.isNullOrEmpty()) {
+                    _isLoading.value = false
+                    SnackbarController.showMessage("Wallet not selected in settings!")
+                    return@launch
+                }
                 if (getPlatform() == Platform.ANDROID) {
+                    if (getSettingsStore().get()?.vpnGateway == null) {
+                        _isLoading.value = false
+                        SnackbarController.showMessage("VPN Gateway not selected in settings!")
+                        return@launch
+                    }
                     val vpnHost = getSettingsStore().get()?.vpnGateway?.host?.split(".")?.get(0) ?: ""
                     val vpnIpAddress = getSettingsStore().get()?.vpnGateway?.ipAddress ?: ""
                     val vpnPort = getSettingsStore().get()?.vpnGateway?.port ?: ""
@@ -283,9 +293,25 @@ class PoolsViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             showJoinDialog.value = true
+            if (getSettingsStore().get()?.nodeConfig?.selectedWallet.isNullOrEmpty()) {
+                _isLoading.value = false
+                onError.invoke()
+                showJoinDialog.value = false
+                SnackbarController.showMessage("Wallet not selected in settings!")
+                return@launch
+            }
             if (getPlatform() == Platform.ANDROID) {
-                val vpnHost = poolContent.vpnGateway?.split(".")?.get(0) ?: ""
-                val vpnGateway = httpClient.fetchVpnGateways()?.find { it.host == poolContent.vpnGateway }
+                if (getSettingsStore().get()?.vpnGateway == null) {
+                    _isLoading.value = false
+                    SnackbarController.showMessage("VPN Gateway not selected in settings!")
+                    return@launch
+                }
+                val vpnGateway = if (poolContent.vpnGateway.isNullOrEmpty()) {
+                    getSettingsStore().get()?.vpnGateway
+                } else {
+                    httpClient.fetchVpnGateways()?.find { it.host == poolContent.vpnGateway }
+                }
+                val vpnHost = vpnGateway?.host?.split(".")?.firstOrNull() ?: ""
                 val vpnIpAddress = vpnGateway?.ipAddress ?: ""
                 val vpnPort = vpnGateway?.port ?: ""
                 connectVpn(

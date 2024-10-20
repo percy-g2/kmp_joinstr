@@ -41,10 +41,10 @@ data class SettingsStore(
 
 @Serializable
 data class NodeConfig(
-    val url: String = "http://192.168.1.5",
-    val userName: String = "user",
-    val password: String = "pass",
-    val port: Int = 38332,
+    val url: String = "",
+    val userName: String = "",
+    val password: String = "",
+    val port: Int = 0,
     val selectedWallet: String = ""
 )
 
