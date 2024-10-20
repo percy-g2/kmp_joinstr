@@ -173,7 +173,7 @@ fun OtherPoolsScreen(
                                     poolsViewModel.joinRequest(
                                         publicKey = publicKey,
                                         privateKey = privateKey,
-                                        poolPublicKey = poolContent.publicKey,
+                                        poolContent = poolContent,
                                         showJoinDialog = showJoinDialog,
                                         onSuccess =  { pool ->
                                             showWaitingDialog.value = true

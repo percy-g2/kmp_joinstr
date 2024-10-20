@@ -1,7 +1,9 @@
 package invincible.privacy.joinstr.network
 
 import invincible.privacy.joinstr.ktx.isValidHttpUrl
+import invincible.privacy.joinstr.model.Gateway
 import invincible.privacy.joinstr.model.MempoolFee
+import invincible.privacy.joinstr.model.RiseupVPN
 import invincible.privacy.joinstr.model.RpcRequestBody
 import invincible.privacy.joinstr.model.VpnGateway
 import invincible.privacy.joinstr.model.Wallet
@@ -17,12 +19,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration.Companion.seconds
 
 class HttpClient {
@@ -38,7 +34,7 @@ class HttpClient {
             }
             install(Logging) {
                 logger = Logger.SIMPLE
-                level = LogLevel.ALL
+                level = LogLevel.NONE
             }
             install(ContentNegotiation) {
                 json(json)
@@ -105,10 +101,8 @@ class HttpClient {
         }
 
         if (response.status == HttpStatusCode.OK) {
-            val configData = json.parseToJsonElement(response.bodyAsText()).jsonObject
-            val gateways = configData["gateways"]?.jsonArray ?: return emptyList()
-
-            filterGateways(gateways)
+            val configData = json.decodeFromString<RiseupVPN>(response.bodyAsText())
+            filterGateways(configData.gateways)
         } else {
             null
         }
@@ -149,27 +143,20 @@ class HttpClient {
         null
     }
 
-    private fun filterGateways(gateways: JsonArray): List<VpnGateway> {
-        return gateways.mapNotNull { it as? JsonObject }
-            .filter { gateway ->
-                gateway["capabilities"]?.jsonObject?.get("transport")?.jsonArray?.any { transport ->
-                    val ports = transport.jsonObject["ports"]?.jsonArray
-                    val protocols = transport.jsonObject["protocols"]?.jsonArray
-                    ports?.contains(JsonPrimitive("53")) == true && protocols?.contains(JsonPrimitive("udp")) == true
-                } == true
+    private fun filterGateways(gateways: List<Gateway>): List<VpnGateway> {
+        return gateways.filter { gateway ->
+            gateway.capabilities.transport.any { transport ->
+                transport.ports.contains("53") && transport.protocols.contains("udp")
             }
-            .map { gateway ->
-                val ip = gateway["ip_address"]?.jsonPrimitive?.content ?: ""
-                val host = gateway["host"]?.jsonPrimitive?.content ?: ""
-                val location = gateway["location"]?.jsonPrimitive?.content ?: ""
-                VpnGateway(
-                    host = host,
-                    ipAddress = ip,
-                    port = "53",
-                    protocol = "udp",
-                    location =  location
-                )
-            }
+        }.map { gateway ->
+            VpnGateway(
+                host = gateway.host,
+                ipAddress = gateway.ip_address,
+                port = "53",
+                protocol = "udp",
+                location = gateway.location
+            )
+        }
     }
 }
 

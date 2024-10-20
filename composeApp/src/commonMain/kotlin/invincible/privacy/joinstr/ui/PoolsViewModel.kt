@@ -8,6 +8,7 @@ import invincible.privacy.joinstr.connectVpn
 import invincible.privacy.joinstr.getHistoryStore
 import invincible.privacy.joinstr.getPlatform
 import invincible.privacy.joinstr.getPoolsStore
+import invincible.privacy.joinstr.getSettingsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.ktx.hexToByteArray
 import invincible.privacy.joinstr.ktx.toHexString
@@ -65,7 +66,7 @@ class PoolsViewModel : ViewModel() {
 
     private var checkForReadyActivePoolsJob: Job? = null
 
-    val vpnStatus = vpnConnected.asStateFlow()
+    private val vpnStatus = vpnConnected.asStateFlow()
 
     fun startInitialChecks() {
         GlobalScope.launch {
@@ -124,7 +125,14 @@ class PoolsViewModel : ViewModel() {
             runCatching {
                 _isLoading.value = true
                 if (getPlatform() == Platform.ANDROID) {
-                    connectVpn()
+                    val vpnHost = getSettingsStore().get()?.vpnGateway?.host?.split(".")?.get(0) ?: ""
+                    val vpnIpAddress = getSettingsStore().get()?.vpnGateway?.ipAddress ?: ""
+                    val vpnPort = getSettingsStore().get()?.vpnGateway?.port ?: ""
+                    connectVpn(
+                        vpnHost = vpnHost,
+                        vpnIpAddress = vpnIpAddress,
+                        vpnPort = vpnPort
+                    )
                     delay(5.seconds.inWholeMilliseconds)
                 }
                 if (vpnStatus.value || getPlatform() != Platform.ANDROID) {
@@ -268,25 +276,37 @@ class PoolsViewModel : ViewModel() {
     fun joinRequest(
         publicKey: ByteArray,
         privateKey: ByteArray,
-        poolPublicKey: String,
+        poolContent: PoolContent,
         showJoinDialog: MutableState<Boolean>,
         onSuccess: (LocalPoolContent) -> Unit,
         onError: () -> Unit,
     ) {
         viewModelScope.launch {
             showJoinDialog.value = true
+            if (getPlatform() == Platform.ANDROID) {
+                val vpnHost = poolContent.vpnGateway?.split(".")?.get(0) ?: ""
+                val vpnGateway = httpClient.fetchVpnGateways()?.find { it.host == poolContent.vpnGateway }
+                val vpnIpAddress = vpnGateway?.ipAddress ?: ""
+                val vpnPort = vpnGateway?.port ?: ""
+                connectVpn(
+                    vpnHost = vpnHost,
+                    vpnIpAddress = vpnIpAddress,
+                    vpnPort = vpnPort
+                )
+                delay(5.seconds.inWholeMilliseconds)
+            }
             val jsonObject = buildJsonObject {
                 put("type", JsonPrimitive("join_pool"))
             }
             val data = json.encodeToString(JsonObject.serializer(), jsonObject)
-            val sharedSecret = getSharedSecret(privateKey, poolPublicKey.hexToByteArray())
+            val sharedSecret = getSharedSecret(privateKey, poolContent.publicKey.hexToByteArray())
             val encryptedMessage = encrypt(data, sharedSecret)
             val nostrEvent = createEvent(
                 content = encryptedMessage,
                 event = Event.ENCRYPTED_DIRECT_MESSAGE,
                 privateKey = privateKey,
                 publicKey = publicKey,
-                tagPubKey = poolPublicKey
+                tagPubKey = poolContent.publicKey
             )
             nostrClient.sendEvent(
                 event = nostrEvent,

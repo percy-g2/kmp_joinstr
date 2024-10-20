@@ -418,15 +418,17 @@ actual fun openLink(link: String) {
     context.startActivity(intent)
 }
 
-actual suspend fun connectVpn() {
+actual suspend fun connectVpn(
+    vpnHost: String,
+    vpnIpAddress: String,
+    vpnPort: String
+) {
     try {
         val extras = Bundle()
         extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
 
         val nodeUrl = getSettingsStore().get()?.nodeConfig?.url ?: "192.168.1.0"
-        val vpnHost = getSettingsStore().get()?.vpnGateway?.host?.split(".")?.get(0) ?: ""
-        val vpnIpAddress = getSettingsStore().get()?.vpnGateway?.ipAddress ?: ""
-        val vpnPort = getSettingsStore().get()?.vpnGateway?.port ?: ""
+
         val httpClient = invincible.privacy.joinstr.network.HttpClient()
         val serverCertificate = httpClient.fetchCaCertificate() ?: ""
         val clientCertificateAndKey = splitKeyAndCertificate(httpClient.fetchClientsPublicCertificateAndKey() ?: "")
@@ -440,7 +442,7 @@ actual suspend fun connectVpn() {
             vpnHost = vpnHost
         )
 
-        val profile = mService?.addNewVPNProfileWithExtras(vpnHost, false, vpnConfig, extras)
+        val profile = mService?.addNewVPNProfileWithExtras(vpnHost, true, vpnConfig, extras)
         if (profile != null) {
             Napier.i("VPN profile added: ${profile.mUUID}")
             mService?.startVPNwithExtras(vpnConfig, extras)
@@ -463,4 +465,12 @@ fun splitKeyAndCertificate(input: String): Pair<String, String> {
     val certificate = certPattern.find(input)?.value ?: throw IllegalArgumentException("Certificate not found")
 
     return Pair(privateKey.trim(), certificate.trim())
+}
+
+actual fun disconnectVpn() {
+    runCatching {
+        mService?.disconnect()
+    }.getOrElse {
+        Napier.e("Error disconnecting VPN: ${it.message}")
+    }
 }

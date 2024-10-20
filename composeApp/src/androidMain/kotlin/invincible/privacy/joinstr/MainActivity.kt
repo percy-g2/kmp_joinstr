@@ -48,7 +48,6 @@ import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.net.URL
 import java.net.UnknownHostException
 
 
@@ -140,11 +139,6 @@ class MainActivity : ComponentActivity(), Handler.Callback {
         InvocationTargetException::class,
         NoSuchMethodException::class
     )
-    fun getMyOwnIP() {
-        val url = URL("https://api.ipify.org")
-        val publicIP = url.readText()
-        Napier.i("Public IP: $publicIP")
-    }
 
     public override fun onStart() {
         super.onStart()

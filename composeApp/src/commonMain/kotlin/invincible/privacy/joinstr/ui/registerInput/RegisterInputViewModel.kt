@@ -9,8 +9,11 @@ import com.ionspin.kotlin.bignum.decimal.DecimalMode
 import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import com.ionspin.kotlin.bignum.decimal.toBigDecimal
 import invincible.privacy.joinstr.LocalNotification
+import invincible.privacy.joinstr.Platform
 import invincible.privacy.joinstr.createPsbt
+import invincible.privacy.joinstr.disconnectVpn
 import invincible.privacy.joinstr.getHistoryStore
+import invincible.privacy.joinstr.getPlatform
 import invincible.privacy.joinstr.getPoolsStore
 import invincible.privacy.joinstr.getSharedSecret
 import invincible.privacy.joinstr.joinPsbts
@@ -314,6 +317,9 @@ class RegisterInputViewModel : ViewModel() {
                                                 title = "Coinjoin tx broadcast successful",
                                                 message = "Check pool history for more details."
                                             )
+                                            if (getPlatform() == Platform.ANDROID) {
+                                                disconnectVpn()
+                                            }
                                         }
                                     }
                                     onSuccess.invoke(broadcastTxItem)

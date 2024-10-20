@@ -281,5 +281,12 @@ actual fun openLink(link: String) {
 
 actual fun getPlatform(): Platform = Platform.WASM_JS
 
-actual suspend fun connectVpn() {
+actual suspend fun connectVpn(
+    vpnHost: String,
+    vpnIpAddress: String,
+    vpnPort: String
+) {
+}
+
+actual fun disconnectVpn() {
 }
