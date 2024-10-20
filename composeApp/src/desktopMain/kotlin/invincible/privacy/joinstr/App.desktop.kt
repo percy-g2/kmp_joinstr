@@ -393,3 +393,7 @@ actual suspend fun joinPsbts(listOfPsbts: List<String>): Pair<String?, String?> 
 actual fun openLink(link: String) {
     Desktop.getDesktop().browse(URI(link))
 }
+
+actual fun getPlatform(): Platform = Platform.DESKTOP
+actual suspend fun connectVpn() {
+}

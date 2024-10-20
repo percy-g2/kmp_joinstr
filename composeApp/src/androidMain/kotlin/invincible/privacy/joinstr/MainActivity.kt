@@ -37,6 +37,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import de.blinkt.openvpn.api.IOpenVPNAPIService
 import de.blinkt.openvpn.api.IOpenVPNStatusCallback
+import invincible.privacy.joinstr.VpnUtil.mService
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.LightColorScheme
@@ -44,26 +45,17 @@ import invincible.privacy.joinstr.ui.pools.HistoryItem
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.net.NetworkInterface
 import java.net.URL
 import java.net.UnknownHostException
-import kotlin.time.Duration.Companion.seconds
 
 
 class MainActivity : ComponentActivity(), Handler.Callback {
 
-    protected var mService: IOpenVPNAPIService? = null
 
     private var mHandler: Handler? = null
-
-    private var authFailed = false
 
     private val MSG_UPDATE_STATE: Int = 0
 
@@ -99,9 +91,9 @@ class MainActivity : ComponentActivity(), Handler.Callback {
             val msg: Message = Message.obtain(mHandler, MSG_UPDATE_STATE, "$state|$message")
 
             if (state == "AUTH_FAILED" || state == "CONNECTRETRY") {
-                authFailed = true
+                vpnConnected.value = false
             }
-            if (!authFailed) {
+            if (vpnConnected.value) {
                 try {
                     //  setStatus(state)
                     // updateConnectionStatus(state)
@@ -112,12 +104,12 @@ class MainActivity : ComponentActivity(), Handler.Callback {
                 msg.sendToTarget()
             }
 
-            if (authFailed) {
+            if (vpnConnected.value.not()) {
                 Napier.i("AUTHORIZATION FAILED!!")
                 Napier.i("CONNECTRETRY")
             }
             if (state == "CONNECTED") {
-                authFailed = false
+                vpnConnected.value = true
                 if (ActivityCompat.checkSelfPermission(
                         this@MainActivity,
                         Manifest.permission.POST_NOTIFICATIONS
@@ -129,38 +121,7 @@ class MainActivity : ComponentActivity(), Handler.Callback {
                         NOTIFICATIONS_PERMISSION_REQUEST_CODE
                     )
                 }
-                CoroutineScope(Dispatchers.IO).launch {
-                    while (true) {
-                        println(getMyOwnIP())
-                       // getRoutingTable()
-                       // getNetworkInterfaces()
-                        delay(5.seconds.inWholeMilliseconds)
-                    }
-                }
             }
-        }
-    }
-
-    private fun getRoutingTable() {
-        try {
-            val routingTable = Runtime.getRuntime().exec("ip route").inputStream.bufferedReader().use { it.readText() }
-            Napier.i("Routing table: $routingTable")
-        } catch (e: Exception) {
-            Napier.e("Failed to get routing table: ${e.message}")
-        }
-    }
-
-    private fun getNetworkInterfaces() {
-        try {
-            val interfaces = NetworkInterface.getNetworkInterfaces().toList()
-            interfaces.forEach { networkInterface ->
-                Napier.i("Interface: ${networkInterface.name}")
-                networkInterface.inetAddresses.toList().forEach { address ->
-                    Napier.i("  Address: ${address.hostAddress}")
-                }
-            }
-        } catch (e: Exception) {
-            Napier.e("Failed to get network interfaces: ${e.message}")
         }
     }
 
@@ -168,37 +129,6 @@ class MainActivity : ComponentActivity(), Handler.Callback {
         val icsopenvpnService = Intent(IOpenVPNAPIService::class.java.name)
         icsopenvpnService.setPackage("invincible.privacy.joinstr")
         this.bindService(icsopenvpnService, mConnection, Context.BIND_AUTO_CREATE)
-    }
-
-    /**
-     * Start the VPN
-     */
-    private fun startVpn() {
-        try {
-            val conf = assets.open("test.conf")
-            val config = conf.bufferedReader().use { it.readText() }
-            conf.close()
-
-            val splitTunnelingConfig = """
-            route 192.168.1.0 255.255.255.0 net_gateway
-            """.trimIndent()
-
-            val completeConfig = "$config\n$splitTunnelingConfig"
-
-            val extras = Bundle()
-            extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
-
-            val profile = mService?.addNewVPNProfileWithExtras("test", true, completeConfig, extras)
-            if (profile != null) {
-                Napier.i("VPN profile added: ${profile.mUUID}")
-                mService?.startVPNwithExtras(completeConfig, extras)
-                Napier.i("VPN started")
-            } else {
-                Napier.e("Failed to add VPN profile")
-            }
-        } catch (e: Exception) {
-            Napier.e("Error starting VPN: ${e.message}")
-        }
     }
 
     @Throws(
@@ -241,7 +171,7 @@ class MainActivity : ComponentActivity(), Handler.Callback {
         if (intent != null) {
             startActivityForResult(intent, 1)
         } else {
-            startVpn() //Already have permission
+          //  connectVpn()
         }
     }
 

@@ -278,3 +278,8 @@ actual suspend fun joinPsbts(
 actual fun openLink(link: String) {
     window.open(link)
 }
+
+actual fun getPlatform(): Platform = Platform.WASM_JS
+
+actual suspend fun connectVpn() {
+}

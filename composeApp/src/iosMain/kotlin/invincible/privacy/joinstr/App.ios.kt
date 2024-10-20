@@ -471,3 +471,7 @@ actual fun openLink(link: String) {
         exception.printStackTrace()
     }
 }
+
+actual fun getPlatform(): Platform = Platform.IOS
+actual suspend fun connectVpn() {
+}

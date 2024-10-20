@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -34,10 +35,12 @@ import fr.acinq.bitcoin.utils.flatMap
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import fr.acinq.secp256k1.Secp256k1.Companion.pubKeyTweakMul
+import invincible.privacy.joinstr.VpnUtil.mService
 import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
+import invincible.privacy.joinstr.utils.OpenVpnConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
@@ -414,3 +417,26 @@ actual fun openLink(link: String) {
     }
     context.startActivity(intent)
 }
+
+actual suspend fun connectVpn() {
+    try {
+        val extras = Bundle()
+        extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
+
+        val nodeUrl = getSettingsStore().get()?.nodeConfig?.url ?: "192.168.1.0"
+        val vpnConfig = OpenVpnConfig.config(nodeUrl)
+
+        val profile = mService?.addNewVPNProfileWithExtras("test", true, vpnConfig, extras)
+        if (profile != null) {
+            Napier.i("VPN profile added: ${profile.mUUID}")
+            mService?.startVPNwithExtras(vpnConfig, extras)
+            Napier.i("VPN started")
+        } else {
+            Napier.e("Failed to add VPN profile")
+        }
+    } catch (e: Exception) {
+        Napier.e("Error starting VPN: ${e.message}")
+    }
+}
+
+actual fun getPlatform(): Platform = Platform.ANDROID

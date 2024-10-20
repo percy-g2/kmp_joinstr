@@ -24,9 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -56,11 +58,11 @@ import invincible.privacy.joinstr.model.Settings
 import invincible.privacy.joinstr.theme.DarkColorScheme
 import invincible.privacy.joinstr.theme.JoinstrTheme
 import invincible.privacy.joinstr.theme.LightColorScheme
+import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.home.HomeScreen
 import invincible.privacy.joinstr.ui.pools.PoolScreen
-import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
 import invincible.privacy.joinstr.utils.SettingsManager
@@ -70,6 +72,8 @@ import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.ktor.client.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -268,6 +272,18 @@ expect fun getWebSocketClient(): HttpClient
 expect fun getSettingsStore(): KStore<SettingsStore>
 expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 expect fun getHistoryStore(): KStore<List<CoinJoinHistory>>
+
+val vpnConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
+expect suspend fun connectVpn()
+
+expect fun getPlatform(): Platform
+
+enum class Platform {
+    ANDROID,
+    IOS,
+    DESKTOP,
+    WASM_JS
+}
 
 expect suspend fun createPsbt(
     poolId: String,
