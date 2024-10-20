@@ -20,7 +20,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -31,15 +30,15 @@ class HttpClient {
     val getNodeConfig: suspend () -> NodeConfig
         get() = suspend { SettingsManager.store.get()?.nodeConfig ?: NodeConfig() }
 
-    val createHttpClient: HttpClient =  HttpClient {
+    fun createHttpClient(timeout: Int = 5): HttpClient =  HttpClient {
             install(HttpTimeout) {
-                requestTimeoutMillis = 5.seconds.inWholeMilliseconds
-                connectTimeoutMillis = 5.seconds.inWholeMilliseconds
-                socketTimeoutMillis = 5.seconds.inWholeMilliseconds
+                requestTimeoutMillis = timeout.seconds.inWholeMilliseconds
+                connectTimeoutMillis = timeout.seconds.inWholeMilliseconds
+                socketTimeoutMillis = timeout.seconds.inWholeMilliseconds
             }
             install(Logging) {
                 logger = Logger.SIMPLE
-                level = LogLevel.NONE
+                level = LogLevel.ALL
             }
             install(ContentNegotiation) {
                 json(json)
@@ -57,7 +56,7 @@ class HttpClient {
         if (nodeConfig.url.isValidHttpUrl() && nodeConfig.userName.isNotBlank()
             && nodeConfig.password.isNotBlank() && nodeConfig.port in 1..65535
         ) {
-            val response: HttpResponse = createHttpClient.post {
+            val response: HttpResponse = createHttpClient().post {
                 if (wallet != null && wallet.name.isEmpty().not()) {
                     url("${nodeConfig.url}:${nodeConfig.port}/wallet/${wallet.name}")
                 } else url("${nodeConfig.url}:${nodeConfig.port}/")
@@ -75,7 +74,7 @@ class HttpClient {
     }
 
     suspend fun fetchHourFee(): Int? = runCatching {
-        val response: HttpResponse = createHttpClient.get {
+        val response: HttpResponse = createHttpClient().get {
             url("https://mempool.space/signet/api/v1/fees/recommended")
         }
         if (response.status == HttpStatusCode.OK) {
@@ -87,7 +86,7 @@ class HttpClient {
     }
 
     suspend fun broadcastRawTx(rawTx: String): String? = runCatching {
-        val response: HttpResponse = createHttpClient.post {
+        val response: HttpResponse = createHttpClient().post {
             url("https://mempool.space/signet/api/tx")
             setBody(rawTx)
         }
@@ -101,7 +100,7 @@ class HttpClient {
 
     suspend fun fetchVpnGateways(): List<VpnGateway>? = runCatching {
         val configUrl = "https://api.black.riseup.net:443/3/config/eip-service.json"
-        val response: HttpResponse = createHttpClient.get(configUrl) {
+        val response: HttpResponse = createHttpClient(timeout = 60).get(configUrl) {
             header("Accept", "application/json")
         }
 
@@ -118,6 +117,38 @@ class HttpClient {
         null
     }
 
+    suspend fun fetchCaCertificate(): String? = runCatching {
+        val configUrl = "https://black.riseup.net/ca.crt"
+        val response: HttpResponse = createHttpClient().get(configUrl) {
+            header("Accept", "application/json")
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            response.bodyAsText()
+        } else {
+            null
+        }
+    }.getOrElse {
+        Napier.e("fetchCaCertificate", it)
+        null
+    }
+
+    suspend fun fetchClientsPublicCertificateAndKey(): String? = runCatching {
+        val configUrl = "https://api.black.riseup.net/3/cert"
+        val response: HttpResponse = createHttpClient().get(configUrl) {
+            header("Accept", "application/json")
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            response.bodyAsText()
+        } else {
+            null
+        }
+    }.getOrElse {
+        Napier.e("fetchClientsPublicCertificateAndKey", it)
+        null
+    }
+
     private fun filterGateways(gateways: JsonArray): List<VpnGateway> {
         return gateways.mapNotNull { it as? JsonObject }
             .filter { gateway ->
@@ -131,14 +162,11 @@ class HttpClient {
                 val ip = gateway["ip_address"]?.jsonPrimitive?.content ?: ""
                 val host = gateway["host"]?.jsonPrimitive?.content ?: ""
                 val location = gateway["location"]?.jsonPrimitive?.content ?: ""
-                val transport = gateway["capabilities"]?.jsonObject?.get("transport")?.jsonArray?.firstOrNull()?.jsonObject
-                val ports = transport?.get("ports")?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
-                val protocols = transport?.get("protocols")?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
                 VpnGateway(
                     host = host,
                     ipAddress = ip,
-                    ports = ports,
-                    protocols = protocols,
+                    port = "53",
+                    protocol = "udp",
                     location =  location
                 )
             }

@@ -450,7 +450,9 @@ open class NostrClient {
                                                             timeout = pool.timeout,
                                                             relay = pool.relay,
                                                             feeRate = pool.feeRate,
-                                                            privateKey = pool.privateKey
+                                                            privateKey = pool.privateKey,
+                                                            transport = pool.transport,
+                                                            vpnGateway = pool.vpnGateway
                                                         )
                                                         val data = json.encodeToString(credentials)
                                                         val sharedSecret = getSharedSecret(privateKey, nostrEvent.pubKey.hexToByteArray())

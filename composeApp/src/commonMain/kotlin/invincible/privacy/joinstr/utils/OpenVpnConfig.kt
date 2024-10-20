@@ -2,11 +2,19 @@ package invincible.privacy.joinstr.utils
 
 object OpenVpnConfig {
 
-    fun config(nodeUrl: String): String = "client\n" +
+    fun config(
+        nodeUrl: String,
+        serverCertificate: String,
+        clientCertificate: String,
+        key: String,
+        vpnPort: String,
+        vpnIpAddress: String,
+        vpnHost: String
+    ): String = "client\n" +
         "tls-client\n" +
         "dev tun\n" +
         "proto tcp\n" +
-        "remote 204.13.164.252 53\n" +
+        "remote $vpnIpAddress $vpnPort\n" +
         "auth SHA512\n" +
         "cipher AES-256-GCM\n" +
         "keepalive 10 30\n" +
@@ -24,65 +32,15 @@ object OpenVpnConfig {
         "tls-version-min 1.2\n" +
         "remote-cert-tls server\n" +
         "remote-cert-eku \"TLS Web Server Authentication\"\n" +
-        "verify-x509-name vpn01-sea name\n" +
+        "verify-x509-name $vpnHost name\n" +
         "route ${nodeUrl.removePrefix("http://")} 255.255.255.0 net_gateway\n" +
         "<ca>\n" +
-        "-----BEGIN CERTIFICATE-----\n" +
-        "MIIBYjCCAQigAwIBAgIBATAKBggqhkjOPQQDAjAXMRUwEwYDVQQDEwxMRUFQIFJv\n" +
-        "b3QgQ0EwHhcNMjExMTAyMTkwNTM3WhcNMjYxMTAyMTkxMDM3WjAXMRUwEwYDVQQD\n" +
-        "EwxMRUFQIFJvb3QgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQxOXBGu+gf\n" +
-        "pjHzVteGTWL6XnFxtEnKMFpKaJkA/VOHmESzoLsZRQxt88GssxaqC01J17idQiqv\n" +
-        "zgNpedmtvFtyo0UwQzAOBgNVHQ8BAf8EBAMCAqQwEgYDVR0TAQH/BAgwBgEB/wIB\n" +
-        "ATAdBgNVHQ4EFgQUZdoUlJrCIUNFrpffAq+LQjnwEz4wCgYIKoZIzj0EAwIDSAAw\n" +
-        "RQIgfr3w4tnRG+NdI3LsGPlsRktGK20xHTzsB3orB0yC6cICIQCB+/9y8nmSStfN\n" +
-        "VUMUyk2hNd7/kC8nL222TTD7VZUtsg==\n" +
-        "-----END CERTIFICATE-----\n" +
+        "$serverCertificate\n" +
         "</ca>\n" +
         "<cert>\n" +
-        "-----BEGIN CERTIFICATE-----\n" +
-        "MIICdjCCAh2gAwIBAgIQBiKFRyiwR/FOSQNtYkHAhTAKBggqhkjOPQQDAjAzMTEw\n" +
-        "LwYDVQQDDChMRUFQIFJvb3QgQ0EgKGNsaWVudCBjZXJ0aWZpY2F0ZXMgb25seSEp\n" +
-        "MB4XDTI0MTAwNzE5Mzc0NFoXDTI0MTExMTE5Mzc0NFowFDESMBAGA1UEAxMJVU5M\n" +
-        "SU1JVEVEMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArXzkpNA7Pz6f\n" +
-        "vQw28TZ0A5Qw+l92pPIG+NkMUaAd9vnV9n7m4D+HhZ+dMuT7+4x42cEWXktZ4Oq6\n" +
-        "QqfbcnyBI0PtFZ4RKftFRUwnKSeMj5lO+NhfvZ3YWaeyYZEOuc8Ja4DE4r8v93Rp\n" +
-        "Jg5Am9HsAjPvxFQJHm6WKaxCcn8OQ9Qd3WDwwZS67UdRwdPCxyFQIKQn8ScKLL5W\n" +
-        "O45Wc1faAn4pN4Fw8YFS/tM6qygJiRpRfuLGS37d/R+4hjg1JUU4NKXdVT8lN44r\n" +
-        "ytFIvLQYIBseOVEiucpFReFrvBGGjU/yB9KnjuEm8IHfRAkZT2XCrvIngXtLoWym\n" +
-        "Cp/BJ0c55QIDAQABo2cwZTAOBgNVHQ8BAf8EBAMCB4AwEwYDVR0lBAwwCgYIKwYB\n" +
-        "BQUHAwIwHQYDVR0OBBYEFIvx5KDDXnJGpYlKTGSLr9wtSym0MB8GA1UdIwQYMBaA\n" +
-        "FH1KYtj/K0nEebaisdyOPmMHXKj+MAoGCCqGSM49BAMCA0cAMEQCIGCE6ywhX9tX\n" +
-        "zJ51yqSvyYJHWyx4m1MUvJtTRZdaHJ3SAiBErEaj/A0ASZaWeomyXgYb48icBVje\n" +
-        "MSd3xFgBFMMv3A==\n" +
-        "-----END CERTIFICATE-----\n" +
+        "$clientCertificate\n" +
         "</cert>\n" +
         "<key>\n" +
-        "-----BEGIN RSA PRIVATE KEY-----\n" +
-        "MIIEowIBAAKCAQEArXzkpNA7Pz6fvQw28TZ0A5Qw+l92pPIG+NkMUaAd9vnV9n7m\n" +
-        "4D+HhZ+dMuT7+4x42cEWXktZ4Oq6QqfbcnyBI0PtFZ4RKftFRUwnKSeMj5lO+Nhf\n" +
-        "vZ3YWaeyYZEOuc8Ja4DE4r8v93RpJg5Am9HsAjPvxFQJHm6WKaxCcn8OQ9Qd3WDw\n" +
-        "wZS67UdRwdPCxyFQIKQn8ScKLL5WO45Wc1faAn4pN4Fw8YFS/tM6qygJiRpRfuLG\n" +
-        "S37d/R+4hjg1JUU4NKXdVT8lN44rytFIvLQYIBseOVEiucpFReFrvBGGjU/yB9Kn\n" +
-        "juEm8IHfRAkZT2XCrvIngXtLoWymCp/BJ0c55QIDAQABAoIBAFyNm6E9oc38x9Vg\n" +
-        "NdN7nGroXTTFRxN6NzP8/zBwvmurH3Wwf9U0r0UfQQsM1E1/xF1PQHKvulRehV3Y\n" +
-        "FR+/wlkg/NOijz+ZWHw+w0mWWsulG1dwf6s2EVzLNUQN0hBYnormmKLrIljeltYB\n" +
-        "loBKfqEyOgDAYFkG4D99MbnJhL+0AZNrqD206sTS2Uy3aOTfKw+rstN5j7AX/s0o\n" +
-        "iU4aTdWchC1i0RfuJS5BYZmh68oxE+nEKC63WNZ8faJAYDINNeBjS2v4DUyq64rj\n" +
-        "JOlolY4EEnIPvHt9EzHUGfgZ+yFZW9i9Rs+8qYo0IZo/KWczZcst/DIAGWAffPar\n" +
-        "zMy1/uECgYEAxMuG1LyM5/IQlfsFPcaOgSt78XBW0R12nldgxhjNbixsu1OyypYd\n" +
-        "D9FlqPezqhEAEYoe3mnuiyCLJHwZ4pH1Zt3xgU/q+WfAQUt/dVs0fJXbA5SO4Bd3\n" +
-        "Hy4AGTWwG1xAEw3vzfb3e+KCsRCXSyylLiND1H17FNICrByHNjzDv00CgYEA4a5U\n" +
-        "TUlySG2yTJKlkB9RdbfM3fMG3bDObgLNtTVEYvKodHVcoLLsusICgA4IE7qyhJYr\n" +
-        "5qFFwmn3X52e30H5yrF3lKl+Erig5+3AsoIbbYnm1J9AV3LuvKKFQ5YlLcAHPoVA\n" +
-        "r13/2DXpXLyrGkZcWV1iqbzhPTrhXl15EqImyPkCgYEAxDcp+HMHCz0PzHq8fxu6\n" +
-        "epAgxFp+NYJrAvWcR+fy7CbfQufxHI0P7PWbpx1Sxf6tUs+kd56neZC5K2eRZ5ag\n" +
-        "WDBy27wTTRllV7UvIJQPgSjpdmhpDIZY/32eG4SsUptoR5ddwr67g4oVRPaF4y5g\n" +
-        "g+AlgXibf+blQzYumqV7hwECgYB7Z1P5nvu61yDz9gxKLpXghMylYMqUVqXKSgYp\n" +
-        "3CK06HNsmvA3fx8rUAMF+qY4A5KyJVuEFROMJ115DztcYTsxtrDovXWOzx5NNBh2\n" +
-        "g+Zzk0CBa0NHjjU1OLkeJ+/UgHh1m2+vdPr9Qx2D9Dare2XsB8B3iCyxyoyJiRs3\n" +
-        "MSt8IQKBgEmxmK8gSOp5TTMjgFEEAcbVtNGCM4sP0X2S3aS61erwdDrpzYuMuuLP\n" +
-        "+mvstiIwEoozrWCWr0Tlhoe90vDwLS54x9ulXAJsRR/uQ4ltmEGBoOl8UAThRuvC\n" +
-        "yRzMImlF/UZsUBaPd3xrs3UzeXUQF4nCrPw/dD1mTs0ManB0K4bZ\n" +
-        "-----END RSA PRIVATE KEY-----\n" +
+        "$key\n" +
         "</key>"
 }

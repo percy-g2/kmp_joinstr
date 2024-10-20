@@ -50,7 +50,8 @@ class SettingsViewModel : ViewModel() {
                         password = settings?.nodeConfig?.password ?: SettingsStore().nodeConfig.password,
                         port = settings?.nodeConfig?.port?.toString() ?: SettingsStore().nodeConfig.port.toString(),
                         selectedTheme = settings?.selectedTheme ?: Theme.SYSTEM.id,
-                        selectedWallet = settings?.nodeConfig?.selectedWallet ?: ""
+                        selectedWallet = settings?.nodeConfig?.selectedWallet ?: "",
+                        selectedVpnGateway = settings?.vpnGateway
                     ).also { newState ->
                         validateAllFields(newState)
                     }
@@ -140,7 +141,7 @@ class SettingsViewModel : ViewModel() {
                     port = _uiState.value.port.toInt(),
                     selectedWallet = _uiState.value.selectedWallet
                 )
-                SettingsManager.updateNodeConfig(nodeConfig, _uiState.value.nostrRelay)
+                SettingsManager.updateSettings(_uiState.value.selectedVpnGateway, nodeConfig, _uiState.value.nostrRelay)
 
                 if (_uiState.value.selectedWallet.isNotEmpty()) {
                     val loadWalletParams = JsonArray(listOf(JsonPrimitive(_uiState.value.selectedWallet)))

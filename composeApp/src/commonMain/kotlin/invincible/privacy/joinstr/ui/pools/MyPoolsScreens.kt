@@ -246,6 +246,12 @@ fun PoolItem(
                 style = MaterialTheme.typography.labelSmall
             )
 
+            if (poolContent.vpnGateway.isNullOrEmpty().not()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(text = "VPN Gateway: ${poolContent.vpnGateway}", style = MaterialTheme.typography.labelSmall)
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(text = "Peers: ${poolContent.peers}", style = MaterialTheme.typography.labelSmall)

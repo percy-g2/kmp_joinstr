@@ -12,7 +12,9 @@ data class PoolContent(
     val peers: Int,
     val timeout: Long,
     val relay: String,
-    val feeRate: Int
+    val feeRate: Int,
+    val transport: String? = null,
+    val vpnGateway: String? = null
 )
 
 @Serializable
@@ -27,7 +29,9 @@ data class LocalPoolContent(
     val relay: String,
     val feeRate: Int,
     val peersPublicKeys: List<String> = emptyList(),
-    val peersData: List<JoinedPoolContent> = emptyList()
+    val peersData: List<JoinedPoolContent> = emptyList(),
+    val transport: String? = null,
+    val vpnGateway: String? = null
 )
 
 fun copyToLocalPoolContent(poolContent: PoolContent): LocalPoolContent {
@@ -41,6 +45,8 @@ fun copyToLocalPoolContent(poolContent: PoolContent): LocalPoolContent {
         timeout = poolContent.timeout,
         relay = poolContent.relay,
         feeRate = poolContent.feeRate,
-        peersPublicKeys = emptyList()
+        peersPublicKeys = emptyList(),
+        transport = poolContent.transport,
+        vpnGateway = poolContent.vpnGateway
     )
 }

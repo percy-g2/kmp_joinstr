@@ -11,5 +11,7 @@ data class Credentials(
     val timeout: Long,
     val relay: String,
     val privateKey: String,
-    val feeRate: Int
+    val feeRate: Int,
+    val transport: String? = null,
+    val vpnGateway: String? = null
 )

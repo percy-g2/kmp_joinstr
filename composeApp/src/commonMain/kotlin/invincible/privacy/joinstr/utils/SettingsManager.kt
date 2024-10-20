@@ -1,6 +1,7 @@
 package invincible.privacy.joinstr.utils
 
 import invincible.privacy.joinstr.getSettingsStore
+import invincible.privacy.joinstr.model.VpnGateway
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 
@@ -14,17 +15,19 @@ object SettingsManager {
         store.update { it?.copy(selectedTheme = newTheme) ?: SettingsStore(selectedTheme = newTheme, nodeConfig = NodeConfig()) }
     }
 
-    suspend fun updateNodeConfig(
+    suspend fun updateSettings(
+        vpnGateway: VpnGateway?,
         nodeConfig: NodeConfig,
-        nostrRelay: String
+        nostrRelay: String,
     ) {
-        store.set(
-            SettingsStore(
+        store.update {
+            it?.copy(
+                vpnGateway = vpnGateway,
                 selectedTheme = themeState.value,
                 nodeConfig = nodeConfig,
                 nostrRelay = nostrRelay
             )
-        )
+        }
     }
 }
 
@@ -32,12 +35,13 @@ object SettingsManager {
 data class SettingsStore(
     val selectedTheme: Int = Theme.SYSTEM.id,
     val nodeConfig: NodeConfig = NodeConfig(),
-    val nostrRelay: String = "wss://nostr.fmt.wiz.biz"
+    val nostrRelay: String = "wss://nostr.fmt.wiz.biz",
+    val vpnGateway: VpnGateway? = null
 )
 
 @Serializable
 data class NodeConfig(
-    val url: String = "http://192.168.1.9",
+    val url: String = "http://192.168.1.5",
     val userName: String = "user",
     val password: String = "pass",
     val port: Int = 38332,

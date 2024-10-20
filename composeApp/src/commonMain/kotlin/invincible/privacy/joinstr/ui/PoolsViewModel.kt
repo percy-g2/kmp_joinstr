@@ -123,8 +123,10 @@ class PoolsViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 _isLoading.value = true
-                connectVpn()
-                delay(5.seconds.inWholeMilliseconds)
+                if (getPlatform() == Platform.ANDROID) {
+                    connectVpn()
+                    delay(5.seconds.inWholeMilliseconds)
+                }
                 if (vpnStatus.value || getPlatform() != Platform.ANDROID) {
                     SettingsManager.store.get()?.nostrRelay?.let { nostrRelay ->
                         httpClient.fetchHourFee()?.let { hourFee ->
@@ -148,6 +150,10 @@ class PoolsViewModel : ViewModel() {
                                 val poolPrivateKey = generatePrivateKey()
                                 val poolPublicKey = getPublicKey(poolPrivateKey)
 
+                                val vpnGateway = SettingsManager.store.get()?.vpnGateway?.host
+
+                                val transport = if (getPlatform() == Platform.ANDROID) "VPN" else "None"
+
                                 val poolId = generatePoolId()
                                 val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
                                 val poolContent = PoolContent(
@@ -158,7 +164,9 @@ class PoolsViewModel : ViewModel() {
                                     relay = nostrRelay,
                                     feeRate = hourFee,
                                     timeout = timeout,
-                                    publicKey = poolPublicKey.toHexString()
+                                    publicKey = poolPublicKey.toHexString(),
+                                    vpnGateway = vpnGateway,
+                                    transport = transport
                                 )
                                 val content = nostrClient.json.encodeToString(poolContent)
                                 val nostrEvent = createEvent(
@@ -181,7 +189,9 @@ class PoolsViewModel : ViewModel() {
                                                     feeRate = hourFee,
                                                     timeout = timeout,
                                                     publicKey = poolPublicKey.toHexString(),
-                                                    privateKey = poolPrivateKey.toHexString()
+                                                    privateKey = poolPrivateKey.toHexString(),
+                                                    vpnGateway = vpnGateway,
+                                                    transport = transport
                                                 )
                                                 it?.plus(pool) ?: listOf(pool)
                                             }
@@ -313,7 +323,9 @@ class PoolsViewModel : ViewModel() {
                                                 feeRate = credentials.feeRate,
                                                 timeout = credentials.timeout,
                                                 publicKey = credentials.publicKey,
-                                                privateKey = credentials.privateKey
+                                                privateKey = credentials.privateKey,
+                                                transport = credentials.transport,
+                                                vpnGateway = credentials.vpnGateway
                                             )
                                             poolStore.update {
                                                 it?.plus(pool) ?: listOf(pool)

@@ -424,9 +424,23 @@ actual suspend fun connectVpn() {
         extras.putBoolean("de.blinkt.openvpn.api.ALLOW_VPN_BYPASS", true)
 
         val nodeUrl = getSettingsStore().get()?.nodeConfig?.url ?: "192.168.1.0"
-        val vpnConfig = OpenVpnConfig.config(nodeUrl)
+        val vpnHost = getSettingsStore().get()?.vpnGateway?.host?.split(".")?.get(0) ?: ""
+        val vpnIpAddress = getSettingsStore().get()?.vpnGateway?.ipAddress ?: ""
+        val vpnPort = getSettingsStore().get()?.vpnGateway?.port ?: ""
+        val httpClient = invincible.privacy.joinstr.network.HttpClient()
+        val serverCertificate = httpClient.fetchCaCertificate() ?: ""
+        val clientCertificateAndKey = splitKeyAndCertificate(httpClient.fetchClientsPublicCertificateAndKey() ?: "")
+        val vpnConfig = OpenVpnConfig.config(
+            nodeUrl = nodeUrl,
+            serverCertificate = serverCertificate,
+            clientCertificate = clientCertificateAndKey.second,
+            key = clientCertificateAndKey.first,
+            vpnIpAddress = vpnIpAddress,
+            vpnPort = vpnPort,
+            vpnHost = vpnHost
+        )
 
-        val profile = mService?.addNewVPNProfileWithExtras("test", true, vpnConfig, extras)
+        val profile = mService?.addNewVPNProfileWithExtras(vpnHost, false, vpnConfig, extras)
         if (profile != null) {
             Napier.i("VPN profile added: ${profile.mUUID}")
             mService?.startVPNwithExtras(vpnConfig, extras)
@@ -440,3 +454,13 @@ actual suspend fun connectVpn() {
 }
 
 actual fun getPlatform(): Platform = Platform.ANDROID
+
+fun splitKeyAndCertificate(input: String): Pair<String, String> {
+    val keyPattern = Regex("-----BEGIN RSA PRIVATE KEY-----(.*?)-----END RSA PRIVATE KEY-----", RegexOption.DOT_MATCHES_ALL)
+    val certPattern = Regex("-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----", RegexOption.DOT_MATCHES_ALL)
+
+    val privateKey = keyPattern.find(input)?.value ?: throw IllegalArgumentException("Private Key not found")
+    val certificate = certPattern.find(input)?.value ?: throw IllegalArgumentException("Certificate not found")
+
+    return Pair(privateKey.trim(), certificate.trim())
+}

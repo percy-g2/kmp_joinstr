@@ -64,6 +64,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.Platform
+import invincible.privacy.joinstr.getPlatform
 import invincible.privacy.joinstr.model.VpnGateway
 import invincible.privacy.joinstr.ui.components.SnackbarController
 import invincible.privacy.joinstr.utils.Theme
@@ -202,12 +204,14 @@ fun SettingsScreen(
                     viewModel = viewModel
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                if (getPlatform() == Platform.ANDROID) {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                VpnGatewayDropDown(
-                    selectedGateway = uiState.selectedVpnGateway,
-                    viewModel = viewModel
-                )
+                    VpnGatewayDropDown(
+                        selectedGateway = uiState.selectedVpnGateway,
+                        viewModel = viewModel
+                    )
+                }
             }
         }
     }

@@ -9,23 +9,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
@@ -33,17 +40,26 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import invincible.privacy.joinstr.Platform
+import invincible.privacy.joinstr.getPlatform
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
 import invincible.privacy.joinstr.theme.greenDark
 import invincible.privacy.joinstr.theme.redDark
 import invincible.privacy.joinstr.theme.redLight
+import invincible.privacy.joinstr.utils.SettingsManager
+import invincible.privacy.joinstr.vpnConnected
 import joinstr.composeapp.generated.resources.Res
 import joinstr.composeapp.generated.resources.app_name
 import joinstr.composeapp.generated.resources.joinstr_logo
 import joinstr.composeapp.generated.resources.network
 import joinstr.composeapp.generated.resources.node_version
+import joinstr.composeapp.generated.resources.vpn_icon
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -119,8 +135,9 @@ fun HomeScreen(
 fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
     val version = network?.subversion?.let { Regex("\\d+\\.\\d+\\.\\d+").find(network.subversion)?.value } ?: ""
     val textInsideParentheses = network?.subversion?.let { Regex("\\((.*?)\\)").find(network.subversion)?.groupValues?.get(1) } ?: ""
-
+    val vpnStatus = vpnConnected.asStateFlow().collectAsState()
     val chain = blockchain?.chain?.capitalize(Locale.current) ?: ""
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -142,6 +159,34 @@ fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
             value = chain,
             label = stringResource(Res.string.network)
         )
+
+        if (getPlatform() == Platform.ANDROID) {
+            var vpnGateway by remember { mutableStateOf("") }
+
+            LaunchedEffect(Unit) {
+                vpnGateway = coroutineScope.async {
+                    withContext(Dispatchers.Default) {
+                        SettingsManager.store.get()?.vpnGateway?.host
+                    }
+                }.await() ?: ""
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Icon(
+                modifier = Modifier.size(50.dp),
+                painter = painterResource(Res.drawable.vpn_icon),
+                contentDescription = "vpn-logo",
+                tint = if (vpnStatus.value) greenDark else Color.Red
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = if (vpnStatus.value) vpnGateway else "Not connected to VPN",
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
     }
 }
 
