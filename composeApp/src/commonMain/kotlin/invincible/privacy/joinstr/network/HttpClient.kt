@@ -1,5 +1,6 @@
 package invincible.privacy.joinstr.network
 
+import invincible.privacy.joinstr.currentChain
 import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.model.Gateway
 import invincible.privacy.joinstr.model.MempoolFee
@@ -70,8 +71,13 @@ class HttpClient {
     }
 
     suspend fun fetchHourFee(): Int? = runCatching {
+        val url = when(currentChain.value) {
+            "Main" -> "https://mempool.space/api/v1/fees/recommended"
+            "Testnet4" -> "https://mempool.space/testnet4/api/v1/fees/recommended"
+            else -> "https://mempool.space/signet/api/v1/fees/recommended"
+        }
         val response: HttpResponse = createHttpClient().get {
-            url("https://mempool.space/signet/api/v1/fees/recommended")
+            url(url)
         }
         if (response.status == HttpStatusCode.OK) {
             json.decodeFromString<MempoolFee>(response.bodyAsText()).hourFee
@@ -82,8 +88,13 @@ class HttpClient {
     }
 
     suspend fun broadcastRawTx(rawTx: String): String? = runCatching {
+        val url = when(currentChain.value) {
+            "Main" -> "https://mempool.space/api/tx"
+            "Testnet4" -> "https://mempool.space/testnet4/api/tx"
+            else -> "https://mempool.space/signet/api/tx"
+        }
         val response: HttpResponse = createHttpClient().post {
-            url("https://mempool.space/signet/api/tx")
+            url(url)
             setBody(rawTx)
         }
         if (response.status == HttpStatusCode.OK) {

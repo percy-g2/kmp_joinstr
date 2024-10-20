@@ -41,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import invincible.privacy.joinstr.Platform
+import invincible.privacy.joinstr.currentChain
 import invincible.privacy.joinstr.getPlatform
 import invincible.privacy.joinstr.model.BlockchainInfo
 import invincible.privacy.joinstr.model.NetworkInfo
@@ -138,6 +139,10 @@ fun BlockchainInfoDisplay(blockchain: BlockchainInfo?, network: NetworkInfo?) {
     val vpnStatus = vpnConnected.asStateFlow().collectAsState()
     val chain = blockchain?.chain?.capitalize(Locale.current) ?: ""
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        currentChain.value = chain
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),

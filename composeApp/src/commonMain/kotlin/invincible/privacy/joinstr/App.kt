@@ -271,6 +271,8 @@ expect fun getPoolsStore(): KStore<List<LocalPoolContent>>
 expect fun getHistoryStore(): KStore<List<CoinJoinHistory>>
 
 val vpnConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
+val currentChain: MutableStateFlow<String> = MutableStateFlow("Signet")
+
 expect suspend fun connectVpn(
     vpnHost: String,
     vpnIpAddress: String,

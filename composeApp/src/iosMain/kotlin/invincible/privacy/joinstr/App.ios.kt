@@ -234,11 +234,17 @@ actual suspend fun createPsbt(
             signatureScript = listOf()
         )
 
+        val currentChainHash = when(currentChain.value) {
+            "Main" -> Block.LivenetGenesisBlock.hash
+            "Testnet4" -> Block.Testnet4GenesisBlock.hash
+            else -> Block.SignetGenesisBlock.hash
+        }
+
         val outputs = selectedPool.peersData
             .filter { it.type == "output" }
             .sortedWith(compareBy { it.address })
             .mapNotNull { peerData ->
-                Bitcoin.addressToPublicKeyScript(Block.SignetGenesisBlock.hash, peerData.address ?: "").fold(
+                Bitcoin.addressToPublicKeyScript(currentChainHash, peerData.address ?: "").fold(
                     { error ->
                         Napier.e("Error creating output script for address ${peerData.address}: ${error.message}")
                         null
@@ -337,7 +343,12 @@ fun joinUniqueOutputs(vararg psbts: Psbt): Either<UpdateFailure, Psbt> {
 
 
 fun extractAddressFromPublicKeyScript(publicKeyScript: ByteVector): String {
-    return Bitcoin.addressFromPublicKeyScript(Block.SignetGenesisBlock.hash, publicKeyScript.toByteArray()).right!!
+    val currentChainHash = when(currentChain.value) {
+        "Main" -> Block.LivenetGenesisBlock.hash
+        "Testnet4" -> Block.Testnet4GenesisBlock.hash
+        else -> Block.SignetGenesisBlock.hash
+    }
+    return Bitcoin.addressFromPublicKeyScript(currentChainHash, publicKeyScript.toByteArray()).right!!
 }
 
 @OptIn(ExperimentalEncodingApi::class)
