@@ -14,23 +14,18 @@ android {
         buildConfig = true
     }
     namespace = "de.blinkt.openvpn"
-    compileSdk = 35
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
 
-    // Also update runcoverity.sh
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
         minSdk = 21
-        targetSdk = 35
-        externalNativeBuild {
-            cmake {
-                //arguments+= "-DCMAKE_VERBOSE_MAKEFILE=1"
-            }
-        }
+        targetSdk = libs.versions.android.targetSdk.get().toInt()
     }
 
     externalNativeBuild {
         cmake {
+            version = "3.22.1"
             path = File("${projectDir}/src/main/cpp/CMakeLists.txt")
         }
     }
@@ -86,39 +81,19 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = true
-            isJniDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
 
 dependencies {
-    // https://maven.google.com/web/index.html
     implementation(libs.androidx.annotation)
-    implementation(libs.androidx.core.ktx)
-
     implementation(libs.android.view.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.cardview)
-    implementation(libs.androidx.viewpager2)
-    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.fragment.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.preference.ktx)
-    implementation(libs.androidx.recyclerview)
-    implementation(libs.androidx.security.crypto)
-    implementation(libs.androidx.webkit)
     implementation(libs.kotlin)
-    implementation(libs.mpandroidchart)
     implementation(libs.square.okhttp)
-
-    testImplementation(libs.androidx.test.core)
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlin)
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.robolectric)
 }

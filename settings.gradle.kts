@@ -1,5 +1,3 @@
-import java.net.URI
-
 rootProject.name = "Joinstr"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
@@ -27,7 +25,6 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
-        maven { url = URI("https://jitpack.io") }
     }
     versionCatalogs {
         create("cryptographyLibs") {

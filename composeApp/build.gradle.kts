@@ -216,7 +216,7 @@ android {
     }
     dependencies {
         implementation(fileTree("dir" to "libs", "include" to listOf("*.jar")))
-
+        implementation(project(":openvpn"))
         debugImplementation(compose.uiTooling)
     }
 
@@ -236,9 +236,6 @@ android {
                 output.outputFileName = outputFileName
             }
     }
-}
-dependencies {
-    implementation(project(":openvpn"))
 }
 
 compose.desktop {
