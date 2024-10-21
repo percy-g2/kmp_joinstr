@@ -18,10 +18,9 @@
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
--dontwarn org.slf4j.impl.StaticLoggerBinder
+#-renamesourcefileattribute SourceFile
 
-# If you're using a specific Secp256k1 library,
--keep class fr.acinq.secp256k1.** { *; }
+# Untested but reported to work (https://github.com/schwabe/ics-openvpn/issues/1755#issuecomment-2325652081)
 # Keep OpenVPN API classes
 -keep class de.blinkt.openvpn.api.** { *; }
 -keep interface de.blinkt.openvpn.api.** { *; }
