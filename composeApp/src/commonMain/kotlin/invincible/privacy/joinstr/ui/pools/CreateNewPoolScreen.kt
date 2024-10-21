@@ -56,7 +56,12 @@ import joinstr.composeapp.generated.resources.denomination_support_txt
 import joinstr.composeapp.generated.resources.invalid_denomination
 import joinstr.composeapp.generated.resources.pool_details
 import joinstr.composeapp.generated.resources.waiting_for_outputs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -251,6 +256,13 @@ fun CreateNewPoolScreen(
                     peers = ""
                     showWaitingDialog.value = true
                     focusManager.clearFocus()
+
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(10.minutes.inWholeMilliseconds)
+                        if (showWaitingDialog.value) {
+                            showWaitingDialog.value = false
+                        }
+                    }
                 }
             }
         ) {
