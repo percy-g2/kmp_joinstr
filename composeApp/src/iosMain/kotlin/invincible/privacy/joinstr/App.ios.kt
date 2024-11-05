@@ -38,7 +38,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
-import okio.Path.Companion.toPath
+import kotlinx.io.files.Path
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarUnitDay
@@ -78,7 +78,7 @@ import kotlin.time.Duration.Companion.seconds
 actual fun getSettingsStore(): KStore<SettingsStore> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
     return storeOf<SettingsStore>(
-        file = "${paths.firstOrNull() as? String}/settings.json".toPath(),
+        file = Path("${paths.firstOrNull() as? String}/settings.json"),
         default = SettingsStore(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig()
@@ -89,7 +89,7 @@ actual fun getSettingsStore(): KStore<SettingsStore> {
 actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
     return storeOf<List<LocalPoolContent>>(
-        file = "${paths.firstOrNull() as? String}/pools.json".toPath(),
+        file = Path("${paths.firstOrNull() as? String}/pools.json"),
         default = emptyList()
     )
 }
@@ -97,7 +97,7 @@ actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
 actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
     return storeOf<List<CoinJoinHistory>>(
-        file = "${paths.firstOrNull() as? String}/coin_join_history.json".toPath(),
+        file = Path("${paths.firstOrNull() as? String}/coin_join_history.json"),
         default = emptyList()
     )
 }

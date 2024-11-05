@@ -205,19 +205,28 @@ open class NostrClient {
                                                 val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
                                                 val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
                                                 val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
-                                                val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
-                                                if (registeredAddress.type == "input") {
-                                                    registeredAddressList += registeredAddress
-                                                    if (registeredAddressList.filter { it.type == "input" }.distinctBy { it.hex }.size ==
-                                                        totalPeers) {
-                                                        onSuccess(registeredAddressList.toList())
-                                                        closeSession()
+
+                                                // Handle the JoinedPoolContent decoding with its own runCatching block
+                                                runCatching {
+                                                    val registeredAddress = json.decodeFromString<JoinedPoolContent>(decryptedContent)
+                                                    if (registeredAddress.type == "input") {
+                                                        registeredAddressList += registeredAddress
+                                                        if (registeredAddressList.filter { it.type == "input" }.distinctBy { it.hex }.size == totalPeers) {
+                                                            onSuccess(registeredAddressList.toList())
+                                                            closeSession()
+                                                        }
                                                     }
+                                                }.onFailure { decodingError ->
+                                                    // Log the error but continue processing
+                                                    println("Failed to decode JoinedPoolContent: ${decodingError.message}")
+                                                    decodingError.printStackTrace()
+                                                    // Continue with the next frame
+                                                    return@runCatching
                                                 }
-                                                // this@withContext.cancel()
                                             }
-                                        }.getOrElse {
-                                            it.printStackTrace()
+                                        }.getOrElse { outerError ->
+                                            // Handle any other errors in the outer block
+                                            outerError.printStackTrace()
                                         }
                                     } else {
                                         Napier.v("waiting for response from server")

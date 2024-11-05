@@ -36,8 +36,8 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.datetime.Clock
+import kotlinx.io.files.Path
 import net.harawata.appdirs.AppDirsFactory
-import okio.Path.Companion.toPath
 import java.awt.Desktop
 import java.awt.SystemTray
 import java.awt.Toolkit
@@ -82,7 +82,7 @@ actual fun getSettingsStore(): KStore<SettingsStore> {
         File(directory).mkdirs()
     }
     return storeOf<SettingsStore>(
-        file = "${directory}/settings.json".toPath(),
+        file = Path("${directory}/settings.json"),
         default = SettingsStore(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig(),
@@ -98,7 +98,7 @@ actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
         File(directory).mkdirs()
     }
     return storeOf<List<LocalPoolContent>>(
-        file = "${directory}/pools.json".toPath(),
+        file = Path("${directory}/pools.json"),
         default = emptyList()
     )
 }
@@ -110,7 +110,7 @@ actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
         File(directory).mkdirs()
     }
     return storeOf<List<CoinJoinHistory>>(
-        file = "${directory}/coin_join_history.json".toPath(),
+        file = Path("${directory}/coin_join_history.json"),
         default = emptyList()
     )
 }
@@ -157,8 +157,7 @@ actual suspend fun createPsbt(
         ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
         ?.sortedByDescending { it.timeout }
 
-    val selectedPool = activePools?.find { it.id == poolId }
-        ?: throw IllegalStateException("Selected pool not found")
+    val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
 
     val poolAmount = selectedPool.denomination
     val selectedTxAmount = unspentItem.amount

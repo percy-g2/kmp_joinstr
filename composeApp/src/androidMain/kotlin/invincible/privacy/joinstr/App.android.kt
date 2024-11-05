@@ -40,9 +40,9 @@ import invincible.privacy.joinstr.model.CoinJoinHistory
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.utils.NodeConfig
-import invincible.privacy.joinstr.utils.OpenVpnConfig
 import invincible.privacy.joinstr.utils.SettingsStore
 import invincible.privacy.joinstr.utils.Theme
+import invincible.privacy.joinstr.vpn.config
 import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
@@ -55,7 +55,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import okio.Path.Companion.toPath
+import kotlinx.io.files.Path
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
@@ -63,7 +63,7 @@ import kotlin.time.Duration.Companion.seconds
 actual fun getSettingsStore(): KStore<SettingsStore> {
     val context = ContextProvider.getContext()
     return storeOf<SettingsStore>(
-        file = "${context.cacheDir?.absolutePath}/settings.json".toPath(),
+        file = Path("${context.cacheDir?.absolutePath}/settings.json"),
         default = SettingsStore(
             selectedTheme = Theme.SYSTEM.id,
             nodeConfig = NodeConfig()
@@ -80,8 +80,8 @@ actual object LocalNotification {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Default Channel"
-            val descriptionText = "Default notification channel"
+            val name = "Joinstr Channel"
+            val descriptionText = "Default Joinstr notification channel"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(channelId, name, importance).apply {
                 description = descriptionText
@@ -124,7 +124,7 @@ actual object LocalNotification {
 actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
     val context = ContextProvider.getContext()
     return storeOf<List<LocalPoolContent>>(
-        file = "${context.cacheDir?.absolutePath}/pools.json".toPath(),
+        file = Path("${context.cacheDir?.absolutePath}/pools.json"),
         default = emptyList()
     )
 }
@@ -132,7 +132,7 @@ actual fun getPoolsStore(): KStore<List<LocalPoolContent>> {
 actual fun getHistoryStore(): KStore<List<CoinJoinHistory>> {
     val context = ContextProvider.getContext()
     return storeOf<List<CoinJoinHistory>>(
-        file = "${context.cacheDir?.absolutePath}/coin_join_history.json".toPath(),
+        file = Path("${context.cacheDir?.absolutePath}/coin_join_history.json"),
         default = emptyList()
     )
 }
@@ -443,7 +443,7 @@ actual suspend fun connectVpn(
         val httpClient = invincible.privacy.joinstr.network.HttpClient()
         val serverCertificate = httpClient.fetchCaCertificate() ?: ""
         val clientCertificateAndKey = splitKeyAndCertificate(httpClient.fetchClientsPublicCertificateAndKey() ?: "")
-        val vpnConfig = OpenVpnConfig.config(
+        val vpnConfig = config(
             nodeUrl = nodeUrl,
             serverCertificate = serverCertificate,
             clientCertificate = clientCertificateAndKey.second,
