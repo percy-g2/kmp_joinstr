@@ -5,6 +5,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,10 +40,12 @@ import androidx.compose.material3.MenuAnchorType.Companion.PrimaryNotEditable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -204,13 +207,23 @@ fun SettingsScreen(
                     viewModel = viewModel
                 )
 
-                if (getPlatform() == Platform.ANDROID) {
+                if (getPlatform() != Platform.WASM_JS) {
+                    val isTorSelected = remember { mutableStateOf(true) }
+
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    VpnGatewayDropDown(
-                        selectedGateway = uiState.selectedVpnGateway,
-                        viewModel = viewModel
-                    )
+                    PoolTransportSwitch(isTorSelected)
+
+                    if (getPlatform() == Platform.ANDROID && isTorSelected.value.not()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        VpnGatewayDropDown(
+                            selectedGateway = uiState.selectedVpnGateway,
+                            viewModel = viewModel
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(64.dp))
+                    }
                 }
             }
         }
@@ -264,6 +277,32 @@ fun VpnGatewayDropDown(
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun PoolTransportSwitch(isTorSelected: MutableState<Boolean>) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .clickable { isTorSelected.value = !isTorSelected.value },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = if (isTorSelected.value) "Tor" else "VPN", style = MaterialTheme.typography.bodyLarge)
+
+            Switch(
+                checked = isTorSelected.value,
+                onCheckedChange = { isTorSelected.value = it }
+            )
         }
     }
 }

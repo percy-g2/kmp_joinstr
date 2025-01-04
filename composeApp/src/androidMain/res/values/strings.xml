@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Joinstr</string>
+    <string name="tor_notification_channel">Joinstr Tor</string>
+    <string name="tor_notification_channel_description">Tor service</string>
 </resources>

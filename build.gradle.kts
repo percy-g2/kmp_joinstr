@@ -7,4 +7,5 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinx.serialization) apply false
+    id("io.matthewnelson.kmp.tor.resource-frameworks") version("408.13.0")
 }

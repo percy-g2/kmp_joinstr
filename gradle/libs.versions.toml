@@ -25,6 +25,8 @@ secp256k1Kmp = "0.15.0"
 slf4jApi = "2.0.16"
 startupRuntime = "1.2.0"
 testing = "6.9.6"
+kmp-tor-resource = "408.13.0"
+kmp-tor-runtime = "2.0.0-alpha02"
 
 androidx-activity = "1.9.3"
 androidx-annotation = "1.9.1"
@@ -80,6 +82,15 @@ secp256k1-kmp-jni-jvm = { module = "fr.acinq.secp256k1:secp256k1-kmp-jni-jvm", v
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 testing = { group = "org.testng", name = "testng", version.ref = "testing" }
+
+# Tor resources. Alternatively, could use the -gpl variants if you have a GPL'd app.
+kmp-tor-resource-exec-tor = { module = "io.matthewnelson.kmp-tor:resource-exec-tor", version.ref = "kmp-tor-resource" }
+kmp-tor-resource-noexec-tor = { module = "io.matthewnelson.kmp-tor:resource-noexec-tor", version.ref = "kmp-tor-resource" }
+
+# Tor runtime (and service feature for android)
+kmp-tor-runtime = { module = "io.matthewnelson.kmp-tor:runtime", version.ref = "kmp-tor-runtime" }
+kmp-tor-runtime-serviceui = { module = "io.matthewnelson.kmp-tor:runtime-service-ui", version.ref = "kmp-tor-runtime" }
+
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -67,6 +67,8 @@ kotlin {
             implementation(libs.logback.classic)
 
             implementation(libs.bitcoin.kmp)
+
+            implementation("io.matthewnelson.kmp-tor:runtime:2.0.0-alpha02")
         }
 
         androidMain.dependencies {
@@ -91,6 +93,8 @@ kotlin {
             implementation(libs.logback.android)
 
             implementation(libs.bitcoin.kmp)
+
+            implementation(libs.kmp.tor.runtime.serviceui)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -130,6 +134,19 @@ kotlin {
             implementation(libs.bignum)
 
             implementation(libs.napier)
+
+            // TorRuntime
+            implementation(libs.kmp.tor.runtime)
+
+            // Pre-compiled tor binary resources to provide to TorRuntime.Environment.Build
+            //
+            // Could express them individually per target for whatever implementation type
+            // you wish to use for that platform, but being lazy here and just including both
+            // in commonMain as publications have all targets defined but only implement their
+            // respective `getOrCreate` functionality for the supported platforms (e.g. no
+            // implementation of Exec for iOS, no implementation of NoExec for Node.js).
+            implementation(libs.kmp.tor.resource.exec.tor)
+            implementation(libs.kmp.tor.resource.noexec.tor)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs) {
@@ -153,6 +170,8 @@ kotlin {
             implementation(libs.logback.classic)
 
             implementation(libs.bitcoin.kmp)
+
+            implementation("io.matthewnelson.kmp-tor:runtime:2.0.0-alpha02")
         }
 
         wasmJsMain.dependencies {

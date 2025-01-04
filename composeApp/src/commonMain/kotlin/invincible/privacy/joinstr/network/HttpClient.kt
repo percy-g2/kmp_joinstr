@@ -12,6 +12,7 @@ import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
@@ -27,27 +28,32 @@ class HttpClient {
     val getNodeConfig: suspend () -> NodeConfig
         get() = suspend { SettingsManager.store.get()?.nodeConfig ?: NodeConfig() }
 
-    fun createHttpClient(timeout: Int = 5): HttpClient =  HttpClient {
-            install(HttpTimeout) {
-                requestTimeoutMillis = timeout.seconds.inWholeMilliseconds
-                connectTimeoutMillis = timeout.seconds.inWholeMilliseconds
-                socketTimeoutMillis = timeout.seconds.inWholeMilliseconds
+    fun createHttpClient(timeout: Int = 5, socksPort: Int? = null): HttpClient = HttpClient {
+        if (socksPort != null) {
+            engine {
+                proxy = ProxyBuilder.socks("127.0.0.1", socksPort)
             }
-            install(Logging) {
-                logger = Logger.SIMPLE
-                level = LogLevel.NONE
-            }
-            install(ContentNegotiation) {
-                json(json)
-            }
-            defaultRequest {
-                contentType(ContentType.Application.Json)
-            }
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = timeout.seconds.inWholeMilliseconds
+            connectTimeoutMillis = timeout.seconds.inWholeMilliseconds
+            socketTimeoutMillis = timeout.seconds.inWholeMilliseconds
+        }
+        install(Logging) {
+            logger = Logger.SIMPLE
+            level = LogLevel.NONE
+        }
+        install(ContentNegotiation) {
+            json(json)
+        }
+        defaultRequest {
+            contentType(ContentType.Application.Json)
+        }
     }
 
     suspend inline fun <reified T> fetchNodeData(
         body: RpcRequestBody,
-        wallet: Wallet? = null
+        wallet: Wallet? = null,
     ): T? = runCatching {
         val nodeConfig = getNodeConfig()
         if (nodeConfig.url.isValidHttpUrl() && nodeConfig.userName.isNotBlank()
@@ -70,8 +76,19 @@ class HttpClient {
         null
     }
 
+    suspend fun ipAddress(socksPort: Int? = null): String? = runCatching {
+        val response: HttpResponse = createHttpClient(socksPort = socksPort).get {
+            url("https://api.ipify.org/?format=json")
+        }
+        response.bodyAsText()
+    }.getOrElse {
+        println(it.printStackTrace())
+        Napier.e("ipAddress", it)
+        null
+    }
+
     suspend fun fetchHourFee(): Int? = runCatching {
-        val url = when(currentChain.value) {
+        val url = when (currentChain.value) {
             "Main" -> "https://mempool.space/api/v1/fees/recommended"
             "Testnet4" -> "https://mempool.space/testnet4/api/v1/fees/recommended"
             else -> "https://mempool.space/signet/api/v1/fees/recommended"
@@ -88,7 +105,7 @@ class HttpClient {
     }
 
     suspend fun broadcastRawTx(rawTx: String): String? = runCatching {
-        val url = when(currentChain.value) {
+        val url = when (currentChain.value) {
             "Main" -> "https://mempool.space/api/tx"
             "Testnet4" -> "https://mempool.space/testnet4/api/tx"
             else -> "https://mempool.space/signet/api/tx"
