@@ -35,17 +35,17 @@ object SettingsManager {
 data class SettingsStore(
     val selectedTheme: Int = Theme.SYSTEM.id,
     val nodeConfig: NodeConfig = NodeConfig(),
-    val nostrRelay: String = "wss://nostr.fmt.wiz.biz",
+    val nostrRelay: String? = null,
     val vpnGateway: VpnGateway? = null
 )
 
 @Serializable
 data class NodeConfig(
-    val url: String = "",
-    val userName: String = "",
-    val password: String = "",
-    val port: Int = 0,
-    val selectedWallet: String = ""
+    val url: String? = null,
+    val userName: String? = null,
+    val password: String? = null,
+    val port: Int? = null,
+    val selectedWallet: String? = null
 )
 
 enum class Theme(val id: Int, val title: String, val description: String? = null) {

@@ -24,7 +24,7 @@ import io.matthewnelson.kmp.tor.runtime.service.TorServiceUI
 import io.matthewnelson.kmp.tor.runtime.service.ui.KmpTorServiceUI
 import kotlin.random.Random
 
-actual fun  runtimeEnvironment(): TorRuntime.Environment = AndroidEnvironment
+actual fun  runtimeEnvironment(): TorRuntime.Environment? = AndroidEnvironment
 
 // Read documentation for further configuration
 private val AndroidEnvironment: TorRuntime.Environment by lazy {

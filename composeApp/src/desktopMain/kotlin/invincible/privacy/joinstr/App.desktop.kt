@@ -35,6 +35,10 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import io.matthewnelson.kmp.file.SysTempDir
+import io.matthewnelson.kmp.file.toFile
+import io.matthewnelson.kmp.tor.resource.exec.tor.ResourceLoaderTorExec
+import io.matthewnelson.kmp.tor.runtime.TorRuntime
 import kotlinx.datetime.Clock
 import kotlinx.io.files.Path
 import net.harawata.appdirs.AppDirsFactory
@@ -405,6 +409,32 @@ actual fun openLink(link: String) {
 }
 
 actual fun getPlatform(): Platform = Platform.DESKTOP
+
+actual fun runtimeEnvironment(): TorRuntime.Environment? = JvmEnvironment
+
+// Read documentation for further options
+private val JvmEnvironment: TorRuntime.Environment by lazy {
+    val rootDir = System.getProperty("user.home")
+        ?.ifBlank { null }
+        ?.toFile()
+        ?: SysTempDir
+
+    val appDir = rootDir.resolve("kmp_tor_samples").resolve("compose")
+
+    TorRuntime.Environment.Builder(
+        workDirectory = appDir.resolve("kmptor"),
+        cacheDirectory = appDir.resolve("cache").resolve("kmptor"),
+        loader = ResourceLoaderTorExec::getOrCreate,
+
+        // Can also utilize the NoExec JNI implementation if you don't want to do
+        // process execution. Downside is that you are unable to instantiate
+        // multiple instances of TorRuntime to run multiple instances of tor.
+//        loader = ResourceLoaderTorNoExec::getOrCreate,
+    ) {
+
+        // Configure further...
+    }
+}
 
 actual suspend fun connectVpn(
     vpnHost: String,

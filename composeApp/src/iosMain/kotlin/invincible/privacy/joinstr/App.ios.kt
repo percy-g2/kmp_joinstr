@@ -36,6 +36,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
+import io.matthewnelson.kmp.tor.runtime.TorRuntime
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
 import kotlinx.io.files.Path
@@ -484,6 +485,8 @@ actual fun openLink(link: String) {
 }
 
 actual fun getPlatform(): Platform = Platform.IOS
+
+actual fun  runtimeEnvironment(): TorRuntime.Environment? = null
 
 actual suspend fun connectVpn(
     vpnHost: String,

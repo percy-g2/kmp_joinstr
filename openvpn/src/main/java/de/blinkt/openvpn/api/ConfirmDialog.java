@@ -90,52 +90,26 @@ public class ConfirmDialog extends Activity implements
         }
 
         try {
-            View view = View.inflate(this, R.layout.api_confirm, null);
-            CharSequence appString;
-            if (mPackage.equals(ANONYMOUS_PACKAGE)) {
-                appString = getString(R.string.all_app_prompt, getString(R.string.app));
+            PackageManager pm = getPackageManager();
+            ApplicationInfo app = pm.getApplicationInfo(mPackage, 0);
+
+            // Perform the positive logic directly
+            if (mService != null) {
+                mService.addAllowedExternalApp(mPackage);
+                setResult(RESULT_OK);
             } else {
-                PackageManager pm = getPackageManager();
-                ApplicationInfo app = pm.getApplicationInfo(mPackage, 0);
-                appString = getString(R.string.prompt, app.loadLabel(pm), getString(R.string.app));
-                ((ImageView) view.findViewById(R.id.icon)).setImageDrawable(app.loadIcon(pm));
+                Log.e(TAG, "Service not connected");
+                setResult(RESULT_CANCELED);
             }
 
-
-            ((TextView) view.findViewById(R.id.prompt)).setText(appString);
-            ((CompoundButton) view.findViewById(R.id.check)).setOnCheckedChangeListener(this);
-
-
-            Builder builder = new AlertDialog.Builder(this);
-
-            builder.setView(view);
-
-            builder.setIconAttribute(android.R.attr.alertDialogIcon);
-            builder.setTitle(android.R.string.dialog_alert_title);
-            builder.setPositiveButton(android.R.string.ok, this);
-            builder.setNegativeButton(android.R.string.cancel, this);
-
-            mAlert = builder.create();
-            mAlert.setCanceledOnTouchOutside(false);
-
-            mAlert.setOnShowListener(new OnShowListener() {
-                @Override
-                public void onShow(DialogInterface dialog) {
-                    mButton = mAlert.getButton(DialogInterface.BUTTON_POSITIVE);
-                    mButton.setEnabled(false);
-
-                }
-            });
-
-            //setCloseOnTouchOutside(false);
-
-            mAlert.show();
-
         } catch (Exception e) {
-            Log.e(TAG, "onResume", e);
-            finish();
+            Log.e(TAG, "Error in onResume", e);
+            setResult(RESULT_CANCELED);
         }
+
+        finish(); // End the activity after processing
     }
+
 
     @Override
     public void onBackPressed() {

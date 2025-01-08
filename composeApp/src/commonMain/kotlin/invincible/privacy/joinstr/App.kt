@@ -364,7 +364,7 @@ expect object LocalNotification {
 
 expect fun openLink(link: String)
 
-expect fun runtimeEnvironment(): TorRuntime.Environment
+expect fun runtimeEnvironment(): TorRuntime.Environment?
 
 private val ThrowOnFailure = OnFailure { throw it }
 
