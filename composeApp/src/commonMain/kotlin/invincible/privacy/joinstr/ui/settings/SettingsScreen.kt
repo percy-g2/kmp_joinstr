@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -26,14 +25,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -157,20 +153,6 @@ fun SettingsScreen(
                 uiState.password.isNotBlank() && 
                 uiState.nodeUrl.isNotBlank() && 
                 uiState.port.isNotBlank()
-            val isEnabled = saveOperation !is SaveOperation.InProgress && 
-                allFieldsValid && hasRequiredFields
-
-            val containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-            }
-
-            val contentColor = if (isEnabled) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            }
             ExtendedFloatingActionButton(
                 text = {  
                     Text(
@@ -189,8 +171,6 @@ fun SettingsScreen(
                     )
                 },
                 expanded = listState.isScrollingUp(),
-                containerColor = containerColor,
-                contentColor = contentColor,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
                 onClick = {
                     viewModel.saveSettings()
@@ -257,10 +237,36 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                WalletDropdown(
-                    selectedWallet = uiState.selectedWallet,
-                    viewModel = viewModel
+                // Relay URL Field
+                ValidatedTextField(
+                    value = uiState.nostrRelay,
+                    onValueChange = viewModel::updateNostrRelay,
+                    label = "Relay URL",
+                    placeholder = "Enter WebSocket URL (ws:// or wss://) or leave blank for your nostr relay url",
+                    helperText = "WebSocket URL for Nostr relay connection (optional)",
+                    leadingIcon = Icons.Filled.Wifi,
+                    isValid = uiState.isNostrRelayValid,
+                    errorMessage = "Invalid WebSocket URL (must start with ws:// or wss://)"
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Only show wallet selection if node configuration is correctly saved
+                val isNodeConfigValid = uiState.isNodeUrlValid && 
+                    uiState.isPortValid && 
+                    uiState.isUsernameValid && 
+                    uiState.isPasswordValid &&
+                    uiState.nodeUrl.isNotBlank() && 
+                    uiState.port.isNotBlank() && 
+                    uiState.username.isNotBlank() && 
+                    uiState.password.isNotBlank()
+                
+                if (isNodeConfigValid) {
+                    WalletDropdown(
+                        selectedWallet = uiState.selectedWallet,
+                        viewModel = viewModel
+                    )
+                }
 
                 if (getPlatform() == Platform.ANDROID) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -391,339 +397,6 @@ fun ThemeOptions(selectedTheme: Int, onThemeSelected: (Int) -> Unit) {
             index = index,
             isSelected = selectedTheme == index,
             onOptionSelected = { onThemeSelected(index) }
-        )
-    }
-}
-
-@Composable
-fun NodeConfigurationWizard(
-    uiState: SettingsUiState,
-    currentStep: Int,
-    onStepChange: (Int) -> Unit,
-    onDismiss: () -> Unit,
-    onNostrRelayChange: (String) -> Unit,
-    onNodeUrlChange: (String) -> Unit,
-    onUsernameChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onPortChange: (String) -> Unit,
-    onSave: () -> Unit,
-    saveOperation: SaveOperation
-) {
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val totalSteps = 5
-    
-    val stepTitles = listOf(
-        "Nostr Relay",
-        "Node URL",
-        "Port",
-        "Username",
-        "Password"
-    )
-    
-    val stepDescriptions = listOf(
-        "WebSocket URL for Nostr relay connection",
-        "HTTP URL of your node",
-        "RPC port number",
-        "RPC authentication username",
-        "RPC authentication password"
-    )
-    
-    LaunchedEffect(currentStep) {
-        focusRequester.requestFocus()
-    }
-    
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp)
-        ) {
-            // Dialog Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Node Configuration",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Step ${currentStep + 1} of $totalSteps",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Close dialog"
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Step Title
-            Text(
-                text = stepTitles[currentStep],
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            // Step Description
-            Text(
-                text = stepDescriptions[currentStep],
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Current Step Field
-            when (currentStep) {
-                0 -> {
-                    ValidatedTextField(
-                        value = uiState.nostrRelay,
-                        onValueChange = onNostrRelayChange,
-                        label = "Nostr Relay",
-                        placeholder = "Enter WebSocket URL (ws:// or wss://)",
-                        helperText = "",
-                        leadingIcon = Icons.Filled.Wifi,
-                        isValid = uiState.isNostrRelayValid,
-                        errorMessage = "Invalid WebSocket URL (must start with ws:// or wss://)",
-                        onNext = { if (uiState.isNostrRelayValid) onStepChange(1) },
-                        focusRequester = focusRequester
-                    )
-                }
-                1 -> {
-                    ValidatedTextField(
-                        value = uiState.nodeUrl,
-                        onValueChange = onNodeUrlChange,
-                        label = "Node URL",
-                        placeholder = "Enter HTTP URL of your node (e.g., http://localhost)",
-                        helperText = "",
-                        leadingIcon = Icons.Filled.Storage,
-                        isValid = uiState.isNodeUrlValid,
-                        errorMessage = if (uiState.nodeUrl.isBlank()) "Node URL is required" else "Invalid HTTP URL",
-                        onNext = { if (uiState.isNodeUrlValid) onStepChange(2) },
-                        focusRequester = focusRequester
-                    )
-                }
-                2 -> {
-                    ValidatedTextField(
-                        value = uiState.port,
-                        onValueChange = onPortChange,
-                        label = "Port",
-                        placeholder = "Enter RPC port (1-65535)",
-                        helperText = "",
-                        isValid = uiState.isPortValid,
-                        errorMessage = if (uiState.port.isBlank() && uiState.nodeUrl.isNotBlank()) "Port is required" else "Invalid port (1-65535)",
-                        keyboardType = KeyboardType.Number,
-                        onNext = { if (uiState.isPortValid) onStepChange(3) },
-                        focusRequester = focusRequester
-                    )
-                }
-                3 -> {
-                    ValidatedTextField(
-                        value = uiState.username,
-                        onValueChange = onUsernameChange,
-                        label = "RPC Username",
-                        placeholder = "Enter RPC authentication username",
-                        helperText = "",
-                        leadingIcon = Icons.Filled.Person,
-                        isValid = uiState.isUsernameValid,
-                        errorMessage = if (uiState.username.isBlank()) "Username is required" else "Username cannot be empty",
-                        onNext = { if (uiState.isUsernameValid) onStepChange(4) },
-                        focusRequester = focusRequester
-                    )
-                }
-                4 -> {
-                    ValidatedTextField(
-                        value = uiState.password,
-                        onValueChange = onPasswordChange,
-                        label = "RPC Password",
-                        placeholder = "Enter RPC authentication password",
-                        helperText = "",
-                        leadingIcon = Icons.Filled.Lock,
-                        isValid = uiState.isPasswordValid,
-                        errorMessage = if (uiState.password.isBlank()) "Password is required" else "Password cannot be empty",
-                        visualTransformation = PasswordVisualTransformation(),
-                        onNext = { 
-                            keyboardController?.hide()
-                        },
-                        focusRequester = focusRequester
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Navigation Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = { 
-                        if (currentStep > 0) {
-                            onStepChange(currentStep - 1)
-                        } else {
-                            onDismiss()
-                        }
-                    },
-                    enabled = currentStep > 0 || saveOperation !is SaveOperation.InProgress
-                ) {
-                    if (currentStep > 0) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                        Text("Previous")
-                    } else {
-                        Text("Cancel")
-                    }
-                }
-                
-                if (currentStep < totalSteps - 1) {
-                    Button(
-                        onClick = { onStepChange(currentStep + 1) },
-                        enabled = when (currentStep) {
-                            0 -> uiState.isNostrRelayValid
-                            1 -> uiState.isNodeUrlValid
-                            2 -> uiState.isPortValid
-                            3 -> uiState.isUsernameValid
-                            else -> true
-                        }
-                    ) {
-                        Text("Next")
-                        Icon(
-                            imageVector = Icons.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
-                } else {
-                    val allFieldsValid = uiState.isNostrRelayValid && uiState.isNodeUrlValid &&
-                        uiState.isUsernameValid && uiState.isPasswordValid && uiState.isPortValid
-                    val hasRequiredFields = uiState.username.isNotBlank() && 
-                        uiState.password.isNotBlank() && 
-                        uiState.nodeUrl.isNotBlank() && 
-                        uiState.port.isNotBlank()
-                    val isEnabled = saveOperation !is SaveOperation.InProgress && 
-                        allFieldsValid && hasRequiredFields
-                    
-                    Button(
-                        onClick = onSave,
-                        enabled = isEnabled
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Save,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                        Text(
-                            when {
-                                saveOperation is SaveOperation.InProgress -> "Saving..."
-                                !hasRequiredFields -> "Fill Required"
-                                !allFieldsValid -> "Fix Errors"
-                                else -> "Save"
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ConfigurationFields(
-    uiState: SettingsUiState,
-    onNostrRelayChange: (String) -> Unit,
-    onNodeUrlChange: (String) -> Unit,
-    onUsernameChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onPortChange: (String) -> Unit,
-) {
-    // Nostr Relay
-    ValidatedTextField(
-        value = uiState.nostrRelay,
-        onValueChange = onNostrRelayChange,
-        label = "Nostr Relay",
-        placeholder = "wss://nostr.fmt.wiz.biz",
-        helperText = "WebSocket URL for Nostr relay connection",
-        leadingIcon = Icons.Filled.Wifi,
-        isValid = uiState.isNostrRelayValid,
-        errorMessage = "Invalid WebSocket URL (must start with ws:// or wss://)"
-    )
-    Spacer(modifier = Modifier.height(12.dp))
-    
-    // Node URL and Port grouped together
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        ValidatedTextField(
-            value = uiState.nodeUrl,
-            onValueChange = onNodeUrlChange,
-            label = "Node URL",
-            placeholder = "http://localhost",
-            helperText = "HTTP URL of your node",
-            leadingIcon = Icons.Filled.Storage,
-            isValid = uiState.isNodeUrlValid,
-            errorMessage = if (uiState.nodeUrl.isBlank()) "Node URL is required" else "Invalid HTTP URL",
-            modifier = Modifier.weight(2f)
-        )
-        ValidatedTextField(
-            value = uiState.port,
-            onValueChange = onPortChange,
-            label = "Port",
-            placeholder = "8332",
-            helperText = "RPC port",
-            isValid = uiState.isPortValid,
-            errorMessage = if (uiState.port.isBlank() && uiState.nodeUrl.isNotBlank()) "Port is required" else "Invalid port (1-65535)",
-            keyboardType = KeyboardType.Number,
-            modifier = Modifier.weight(1f)
-        )
-    }
-    Spacer(modifier = Modifier.height(12.dp))
-    
-    // Username and Password grouped together
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        ValidatedTextField(
-            value = uiState.username,
-            onValueChange = onUsernameChange,
-            label = "RPC Username",
-            placeholder = "rpcuser",
-            helperText = "RPC authentication username",
-            leadingIcon = Icons.Filled.Person,
-            isValid = uiState.isUsernameValid,
-            errorMessage = if (uiState.username.isBlank()) "Username is required" else "Username cannot be empty",
-            modifier = Modifier.weight(1f)
-        )
-        ValidatedTextField(
-            value = uiState.password,
-            onValueChange = onPasswordChange,
-            label = "RPC Password",
-            placeholder = "••••••••",
-            helperText = "RPC authentication password",
-            leadingIcon = Icons.Filled.Lock,
-            isValid = uiState.isPasswordValid,
-            errorMessage = if (uiState.password.isBlank()) "Password is required" else "Password cannot be empty",
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.weight(1f)
         )
     }
 }
