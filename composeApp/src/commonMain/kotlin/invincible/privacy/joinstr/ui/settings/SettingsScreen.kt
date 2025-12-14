@@ -5,6 +5,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,12 +21,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType.Companion.PrimaryEditable
+import androidx.compose.material3.ExposedDropdownMenuAnchorType.Companion.PrimaryNotEditable
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -34,8 +43,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType.Companion.PrimaryEditable
-import androidx.compose.material3.MenuAnchorType.Companion.PrimaryNotEditable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -61,6 +68,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -190,14 +198,36 @@ fun SettingsScreen(
 
             // Configuration section
             SettingsSection(title = "Configuration") {
-                ConfigurationFields(
-                    uiState = uiState,
-                    onNostrRelayChange = viewModel::updateNostrRelay,
-                    onNodeUrlChange = viewModel::updateNodeUrl,
-                    onUsernameChange = viewModel::updateUsername,
-                    onPasswordChange = viewModel::updatePassword,
-                    onPortChange = viewModel::updatePort
-                )
+                // Node Configuration Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Node Configuration",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        
+                        ConfigurationFields(
+                            uiState = uiState,
+                            onNostrRelayChange = viewModel::updateNostrRelay,
+                            onNodeUrlChange = viewModel::updateNodeUrl,
+                            onUsernameChange = viewModel::updateUsername,
+                            onPasswordChange = viewModel::updatePassword,
+                            onPortChange = viewModel::updatePort
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 WalletDropdown(
                     selectedWallet = uiState.selectedWallet,
@@ -346,47 +376,78 @@ fun ConfigurationFields(
     onPasswordChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
 ) {
+    // Nostr Relay
     ValidatedTextField(
         value = uiState.nostrRelay,
         onValueChange = onNostrRelayChange,
         label = "Nostr Relay",
+        placeholder = "wss://nostr.fmt.wiz.biz",
+        helperText = "WebSocket URL for Nostr relay connection",
+        leadingIcon = Icons.Filled.Wifi,
         isValid = uiState.isNostrRelayValid,
-        errorMessage = "Invalid WebSocket URL"
+        errorMessage = "Invalid WebSocket URL (must start with ws:// or wss://)"
     )
-    Spacer(modifier = Modifier.height(8.dp))
-    ValidatedTextField(
-        value = uiState.nodeUrl,
-        onValueChange = onNodeUrlChange,
-        label = "Node URL",
-        isValid = uiState.isNodeUrlValid,
-        errorMessage = "Invalid HTTP URL"
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    ValidatedTextField(
-        value = uiState.username,
-        onValueChange = onUsernameChange,
-        label = "RPC Username",
-        isValid = uiState.isUsernameValid,
-        errorMessage = "Username cannot be empty"
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    ValidatedTextField(
-        value = uiState.password,
-        onValueChange = onPasswordChange,
-        label = "RPC Password",
-        isValid = uiState.isPasswordValid,
-        errorMessage = "Password cannot be empty",
-        visualTransformation = PasswordVisualTransformation()
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    ValidatedTextField(
-        value = uiState.port,
-        onValueChange = onPortChange,
-        label = "RPC Port",
-        isValid = uiState.isPortValid,
-        errorMessage = "Invalid port number"
-    )
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(12.dp))
+    
+    // Node URL and Port grouped together
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        ValidatedTextField(
+            value = uiState.nodeUrl,
+            onValueChange = onNodeUrlChange,
+            label = "Node URL",
+            placeholder = "http://localhost",
+            helperText = "HTTP URL of your node",
+            leadingIcon = Icons.Filled.Storage,
+            isValid = uiState.isNodeUrlValid,
+            errorMessage = "Invalid HTTP URL",
+            modifier = Modifier.weight(2f)
+        )
+        ValidatedTextField(
+            value = uiState.port,
+            onValueChange = onPortChange,
+            label = "Port",
+            placeholder = "8332",
+            helperText = "RPC port",
+            isValid = uiState.isPortValid,
+            errorMessage = "Invalid port (1-65535)",
+            keyboardType = KeyboardType.Number,
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    
+    // Username and Password grouped together
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        ValidatedTextField(
+            value = uiState.username,
+            onValueChange = onUsernameChange,
+            label = "RPC Username",
+            placeholder = "rpcuser",
+            helperText = "RPC authentication username",
+            leadingIcon = Icons.Filled.Person,
+            isValid = uiState.isUsernameValid,
+            errorMessage = "Username cannot be empty",
+            modifier = Modifier.weight(1f)
+        )
+        ValidatedTextField(
+            value = uiState.password,
+            onValueChange = onPasswordChange,
+            label = "RPC Password",
+            placeholder = "••••••••",
+            helperText = "RPC authentication password",
+            leadingIcon = Icons.Filled.Lock,
+            isValid = uiState.isPasswordValid,
+            errorMessage = "Password cannot be empty",
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.weight(1f)
+        )
+    }
 }
 
 @Composable
@@ -394,9 +455,14 @@ fun ValidatedTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
+    placeholder: String = "",
+    helperText: String = "",
+    leadingIcon: ImageVector? = null,
     isValid: Boolean,
     errorMessage: String,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    modifier: Modifier = Modifier,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     val isPassword = visualTransformation == PasswordVisualTransformation()
@@ -405,17 +471,32 @@ fun ValidatedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        modifier = Modifier.fillMaxWidth(),
-        isError = !isValid,
+        placeholder = if (placeholder.isNotEmpty()) { { Text(placeholder) } } else null,
+        modifier = modifier.fillMaxWidth(),
+        isError = !isValid && value.isNotEmpty(),
         maxLines = 1,
         singleLine = true,
         visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
-        keyboardOptions = if (isPassword) {
-            KeyboardOptions(
+        keyboardOptions = when {
+            isPassword -> KeyboardOptions(
                 keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
+                imeAction = ImeAction.Next
             )
-        } else KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardType == KeyboardType.Number -> KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            )
+            else -> KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
+        },
+        leadingIcon = leadingIcon?.let {
+            {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
         trailingIcon = {
             if (value.isNotEmpty()) {
                 Row {
@@ -438,11 +519,19 @@ fun ValidatedTextField(
             }
         },
         supportingText = {
-            if (!isValid) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error
-                )
+            when {
+                !isValid && value.isNotEmpty() -> {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                helperText.isNotEmpty() && (isValid || value.isEmpty()) -> {
+                    Text(
+                        text = helperText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
     )

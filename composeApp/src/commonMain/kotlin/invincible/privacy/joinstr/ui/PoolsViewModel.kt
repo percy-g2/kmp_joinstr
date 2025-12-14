@@ -44,13 +44,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 @OptIn(DelicateCoroutinesApi::class)
 class PoolsViewModel : ViewModel() {
@@ -89,11 +89,12 @@ class PoolsViewModel : ViewModel() {
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     private suspend fun checkForReadyActivePools() = withContext(Dispatchers.Default) {
         while (isActive) {
             val activePools = getPoolsStore().get()
                 ?.sortedByDescending { it.timeout }
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
                 ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
             _activePoolReady.value = activePools?.find { it.peersData.size == it.peers }?.id?.let { Pair(true, it) } ?: Pair(false, "")
             // Delay for 30 seconds
@@ -107,15 +108,17 @@ class PoolsViewModel : ViewModel() {
         _activePoolReady.value = false to ""
     }
 
+    @OptIn(ExperimentalTime::class)
     private fun generatePoolId(): String {
         val letters = ('a'..'z').toList()
         val randomString = (1..10)
             .map { letters.random() }
             .joinToString("")
-        val timestamp = Clock.System.now().toEpochMilliseconds() / 1000
+        val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000
         return randomString + timestamp.toString()
     }
 
+    @OptIn(ExperimentalTime::class)
     fun createPool(
         denomination: String,
         peers: String,
@@ -173,7 +176,7 @@ class PoolsViewModel : ViewModel() {
                                 val transport = if (getPlatform() == Platform.ANDROID) "VPN" else "None"
 
                                 val poolId = generatePoolId()
-                                val timeout = (Clock.System.now().toEpochMilliseconds() / 1000) + 600
+                                val timeout = (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) + 600
                                 val poolContent = PoolContent(
                                     id = poolId,
                                     type = "new_pool",

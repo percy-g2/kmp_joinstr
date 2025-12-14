@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 class MyPoolsViewModel : ViewModel() {
 
@@ -21,13 +21,14 @@ class MyPoolsViewModel : ViewModel() {
     private val _localPools = MutableStateFlow<List<LocalPoolContent>?>(null)
     val localPools: StateFlow<List<LocalPoolContent>?> = _localPools.asStateFlow()
 
+    @OptIn(ExperimentalTime::class)
     fun fetchLocalPools() {
         viewModelScope.launch {
             _isLoading.value = true
             delay(2.seconds)
             _localPools.value = getPoolsStore().get()
                 ?.sortedByDescending { it.timeout }
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
                 ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
             _isLoading.value = false
         }

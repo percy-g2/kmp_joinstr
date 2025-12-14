@@ -43,12 +43,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.time.ExperimentalTime
 
 class RegisterInputViewModel : ViewModel() {
     private val httpClient = HttpClient()
@@ -125,6 +125,7 @@ class RegisterInputViewModel : ViewModel() {
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     fun registerInput(
         poolId: String,
         onSuccess: (Item) -> Unit,
@@ -132,7 +133,7 @@ class RegisterInputViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             val activePools = getPoolsStore().get()
-                ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
                 ?.sortedByDescending { it.timeout }
             val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
 
@@ -170,7 +171,7 @@ class RegisterInputViewModel : ViewModel() {
                             )?.result?.unlockedUntil
 
                             if (unlockedUntil != null) {
-                                if (unlockedUntil == 0 || unlockedUntil < (Clock.System.now().toEpochMilliseconds() / 1000)) {
+                                if (unlockedUntil == 0 || unlockedUntil < (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000)) {
                                     _showPassphraseDialog.value = true
                                     return@launch
                                 }
@@ -261,6 +262,7 @@ class RegisterInputViewModel : ViewModel() {
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     fun checkRegisteredInputs(
         selectedPool: LocalPoolContent,
         onSuccess: (Item) -> Unit
@@ -307,7 +309,7 @@ class RegisterInputViewModel : ViewModel() {
                                                 amount = selectedPool.denomination,
                                                 psbt = psbt,
                                                 tx = txId,
-                                                timestamp = Clock.System.now().toEpochMilliseconds()
+                                                timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
                                             )
                                             it?.plus(transaction) ?: listOf(transaction)
                                         }

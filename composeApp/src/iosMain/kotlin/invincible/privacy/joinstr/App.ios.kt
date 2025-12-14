@@ -37,7 +37,6 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.datetime.Clock
 import kotlinx.io.files.Path
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSCalendar
@@ -74,6 +73,7 @@ import kotlin.coroutines.resume
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 actual fun getSettingsStore(): KStore<SettingsStore> {
     val paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)
@@ -208,14 +208,14 @@ actual suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshR
 actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
     pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
 
-@OptIn(ExperimentalEncodingApi::class)
+@OptIn(ExperimentalEncodingApi::class, ExperimentalTime::class)
 actual suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
 ): String? {
     runCatching {
         val activePools = getPoolsStore().get()
-            ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+            ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
             ?.sortedByDescending { it.timeout }
 
         val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
