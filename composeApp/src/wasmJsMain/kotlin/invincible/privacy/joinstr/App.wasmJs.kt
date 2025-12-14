@@ -16,7 +16,6 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.browser.window
 import kotlinx.coroutines.await
-import kotlinx.datetime.Clock
 import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
 import org.khronos.webgl.set
@@ -248,7 +247,7 @@ actual suspend fun createPsbt(
     unspentItem: ListUnspentResponseItem
 ): String? {
     val activePools = getPoolsStore().get()
-        ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+        ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
         ?.sortedByDescending { it.timeout }
 
     val selectedPool = activePools?.find { it.id == poolId }
