@@ -21,9 +21,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wifi
@@ -418,7 +421,7 @@ fun ValidatedTextField(
     val isPassword = visualTransformation == PasswordVisualTransformation()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    OutlinedTextField(
+        OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
