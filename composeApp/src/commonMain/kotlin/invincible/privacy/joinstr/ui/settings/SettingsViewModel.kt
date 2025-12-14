@@ -83,16 +83,16 @@ class SettingsViewModel : ViewModel() {
             )
             val fetchedWallets = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
                 ?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
-            
+
             _walletList.value = fetchedWallets
-            
+
             // Auto-select first wallet if:
             // 1. We should auto-select (after save) OR wallet list was empty before
             // 2. Current selected wallet is empty
             // 3. We have wallets available
             val currentState = _uiState.value
-            if ((shouldAutoSelectFirst || (wasEmpty && wasWalletListEmpty)) && 
-                currentState.selectedWallet.isEmpty() && 
+            if ((shouldAutoSelectFirst || (wasEmpty && wasWalletListEmpty)) &&
+                currentState.selectedWallet.isEmpty() &&
                 fetchedWallets.isNotEmpty()) {
                 val firstWallet = fetchedWallets.first()
                 _uiState.update { it.copy(selectedWallet = firstWallet) }
@@ -110,7 +110,7 @@ class SettingsViewModel : ViewModel() {
                     currentState.nostrRelay
                 )
             }
-            
+
             // Update the flag: if we got wallets, mark that list is no longer empty
             // If we didn't get wallets, keep the flag as true (still empty)
             wasWalletListEmpty = fetchedWallets.isEmpty()
@@ -118,15 +118,15 @@ class SettingsViewModel : ViewModel() {
     }
 
     private fun checkAndFetchWalletList(state: SettingsUiState) {
-        val isNodeConfigValid = state.isNodeUrlValid && 
-            state.isPortValid && 
-            state.isUsernameValid && 
+        val isNodeConfigValid = state.isNodeUrlValid &&
+            state.isPortValid &&
+            state.isUsernameValid &&
             state.isPasswordValid &&
-            state.nodeUrl.isNotBlank() && 
-            state.port.isNotBlank() && 
-            state.username.isNotBlank() && 
+            state.nodeUrl.isNotBlank() &&
+            state.port.isNotBlank() &&
+            state.username.isNotBlank() &&
             state.password.isNotBlank()
-        
+
         if (isNodeConfigValid && !hasValidNodeConfig) {
             hasValidNodeConfig = true
             fetchWalletList()
@@ -220,11 +220,11 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch {
             // Mark that save has been attempted to show validation errors
             _uiState.update { it.copy(hasAttemptedSave = true) }
-            
+
             // Validate all fields before saving
             val validatedState = validateAllFields(_uiState.value.copy(hasAttemptedSave = true))
             _uiState.value = validatedState
-            
+
             // Check if all required fields are valid
             if (!validatedState.isNostrRelayValid || !validatedState.isNodeUrlValid ||
                 !validatedState.isUsernameValid || !validatedState.isPasswordValid || !validatedState.isPortValid) {
@@ -247,7 +247,7 @@ class SettingsViewModel : ViewModel() {
                 if (validatedState.nodeUrl.isNotBlank() && validatedState.port.isBlank()) {
                     errors.add("Port is required when Node URL is provided")
                 }
-                
+
                 val errorMessage = if (errors.isEmpty()) {
                     "Please fill in all required fields"
                 } else {
@@ -256,7 +256,7 @@ class SettingsViewModel : ViewModel() {
                 _saveOperation.value = SaveOperation.Error(errorMessage)
                 return@launch
             }
-            
+
             _saveOperation.value = SaveOperation.InProgress
             delay(500)
             try {
@@ -265,7 +265,7 @@ class SettingsViewModel : ViewModel() {
                     _saveOperation.value = SaveOperation.Error("Invalid port number (must be 1-65535)")
                     return@launch
                 }
-                
+
                 val nodeConfig = NodeConfig(
                     url = validatedState.nodeUrl,
                     userName = validatedState.username,
@@ -277,9 +277,9 @@ class SettingsViewModel : ViewModel() {
 
                 // Always fetch wallet list after successful save to refresh the list
                 // Pass shouldAutoSelectFirst=true to auto-select first wallet if none selected
-                if (validatedState.isNodeUrlValid && validatedState.isPortValid && 
+                if (validatedState.isNodeUrlValid && validatedState.isPortValid &&
                     validatedState.isUsernameValid && validatedState.isPasswordValid &&
-                    validatedState.nodeUrl.isNotBlank() && validatedState.port.isNotBlank() && 
+                    validatedState.nodeUrl.isNotBlank() && validatedState.port.isNotBlank() &&
                     validatedState.username.isNotBlank() && validatedState.password.isNotBlank()) {
                     hasValidNodeConfig = true
                     fetchWalletList(shouldAutoSelectFirst = true)
@@ -320,7 +320,7 @@ class SettingsViewModel : ViewModel() {
         } else {
             state.port.isBlank() || isValidPort(state.port)
         }
-        
+
         return state.copy(
             isNostrRelayValid = state.nostrRelay.isBlank() || isValidWebSocketUrl(state.nostrRelay),
             isNodeUrlValid = state.nodeUrl.isBlank() || state.nodeUrl.isValidHttpUrl(),
