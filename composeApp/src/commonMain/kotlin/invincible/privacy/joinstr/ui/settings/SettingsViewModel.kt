@@ -39,11 +39,14 @@ class SettingsViewModel : ViewModel() {
     private val _vpnGatewayList = MutableStateFlow(emptyList<VpnGateway>())
     val vpnGatewayList: StateFlow<List<VpnGateway>> = _vpnGatewayList.asStateFlow()
 
+    private var hasValidNodeConfig = false
+    private var wasWalletListEmpty = true
+
     init {
         viewModelScope.launch {
             SettingsManager.store.updates.collect { settings ->
                 _uiState.update { currentState ->
-                    currentState.copy(
+                    val newState = currentState.copy(
                         nostrRelay = settings?.nostrRelay ?: SettingsStore().nostrRelay,
                         nodeUrl = settings?.nodeConfig?.url ?: SettingsStore().nodeConfig.url,
                         username = settings?.nodeConfig?.userName ?: SettingsStore().nodeConfig.userName,
@@ -52,13 +55,13 @@ class SettingsViewModel : ViewModel() {
                         selectedTheme = settings?.selectedTheme ?: Theme.SYSTEM.id,
                         selectedWallet = settings?.nodeConfig?.selectedWallet ?: "",
                         selectedVpnGateway = settings?.vpnGateway
-                    ).also { newState ->
-                        validateAllFields(newState)
-                    }
+                    )
+                    val validatedState = validateAllFields(newState)
+                    checkAndFetchWalletList(validatedState)
+                    validatedState
                 }
             }
         }
-        fetchWalletList()
         fetchVpnGatewayList()
     }
 
@@ -72,13 +75,65 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    private fun fetchWalletList() {
+    private fun fetchWalletList(shouldAutoSelectFirst: Boolean = false) {
         viewModelScope.launch {
+            val wasEmpty = _walletList.value.isEmpty()
             val walletListBody = RpcRequestBody(
                 method = Methods.LIST_WALLETS.value
             )
-            _walletList.value = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
+            val fetchedWallets = httpClient.fetchNodeData<RpcResponse<WalletResult>>(walletListBody)
                 ?.result?.wallets?.map { it.name }?.sorted() ?: emptyList()
+            
+            _walletList.value = fetchedWallets
+            
+            // Auto-select first wallet if:
+            // 1. We should auto-select (after save) OR wallet list was empty before
+            // 2. Current selected wallet is empty
+            // 3. We have wallets available
+            val currentState = _uiState.value
+            if ((shouldAutoSelectFirst || (wasEmpty && wasWalletListEmpty)) && 
+                currentState.selectedWallet.isEmpty() && 
+                fetchedWallets.isNotEmpty()) {
+                val firstWallet = fetchedWallets.first()
+                _uiState.update { it.copy(selectedWallet = firstWallet) }
+                // Update settings store with the auto-selected wallet
+                val nodeConfig = NodeConfig(
+                    url = currentState.nodeUrl,
+                    userName = currentState.username,
+                    password = currentState.password,
+                    port = currentState.port.toIntOrNull() ?: 0,
+                    selectedWallet = firstWallet
+                )
+                SettingsManager.updateSettings(
+                    currentState.selectedVpnGateway,
+                    nodeConfig,
+                    currentState.nostrRelay
+                )
+            }
+            
+            // Update the flag: if we got wallets, mark that list is no longer empty
+            // If we didn't get wallets, keep the flag as true (still empty)
+            wasWalletListEmpty = fetchedWallets.isEmpty()
+        }
+    }
+
+    private fun checkAndFetchWalletList(state: SettingsUiState) {
+        val isNodeConfigValid = state.isNodeUrlValid && 
+            state.isPortValid && 
+            state.isUsernameValid && 
+            state.isPasswordValid &&
+            state.nodeUrl.isNotBlank() && 
+            state.port.isNotBlank() && 
+            state.username.isNotBlank() && 
+            state.password.isNotBlank()
+        
+        if (isNodeConfigValid && !hasValidNodeConfig) {
+            hasValidNodeConfig = true
+            fetchWalletList()
+        } else if (!isNodeConfigValid && hasValidNodeConfig) {
+            hasValidNodeConfig = false
+            _walletList.value = emptyList()
+            wasWalletListEmpty = true
         }
     }
 
@@ -102,7 +157,10 @@ class SettingsViewModel : ViewModel() {
             } else {
                 newState.port.isBlank() || isValidPort(newState.port)
             }
-            newState.copy(isPortValid = portValid)
+            val updatedState = newState.copy(isPortValid = portValid)
+            val validatedState = validateAllFields(updatedState)
+            checkAndFetchWalletList(validatedState)
+            validatedState
         }
     }
 
@@ -110,10 +168,13 @@ class SettingsViewModel : ViewModel() {
         _uiState.update {
             // Show error only if save was attempted and field is empty
             val isValid = username.isNotBlank() || !it.hasAttemptedSave
-            it.copy(
+            val updatedState = it.copy(
                 username = username,
                 isUsernameValid = isValid
             )
+            val validatedState = validateAllFields(updatedState)
+            checkAndFetchWalletList(validatedState)
+            validatedState
         }
     }
 
@@ -121,10 +182,13 @@ class SettingsViewModel : ViewModel() {
         _uiState.update {
             // Show error only if save was attempted and field is empty
             val isValid = password.isNotBlank() || !it.hasAttemptedSave
-            it.copy(
+            val updatedState = it.copy(
                 password = password,
                 isPasswordValid = isValid
             )
+            val validatedState = validateAllFields(updatedState)
+            checkAndFetchWalletList(validatedState)
+            validatedState
         }
     }
 
@@ -136,10 +200,13 @@ class SettingsViewModel : ViewModel() {
             } else {
                 port.isBlank() || isValidPort(port)
             }
-            it.copy(
+            val updatedState = it.copy(
                 port = port,
                 isPortValid = isValid
             )
+            val validatedState = validateAllFields(updatedState)
+            checkAndFetchWalletList(validatedState)
+            validatedState
         }
     }
 
@@ -207,6 +274,16 @@ class SettingsViewModel : ViewModel() {
                     selectedWallet = validatedState.selectedWallet
                 )
                 SettingsManager.updateSettings(validatedState.selectedVpnGateway, nodeConfig, validatedState.nostrRelay)
+
+                // Always fetch wallet list after successful save to refresh the list
+                // Pass shouldAutoSelectFirst=true to auto-select first wallet if none selected
+                if (validatedState.isNodeUrlValid && validatedState.isPortValid && 
+                    validatedState.isUsernameValid && validatedState.isPasswordValid &&
+                    validatedState.nodeUrl.isNotBlank() && validatedState.port.isNotBlank() && 
+                    validatedState.username.isNotBlank() && validatedState.password.isNotBlank()) {
+                    hasValidNodeConfig = true
+                    fetchWalletList(shouldAutoSelectFirst = true)
+                }
 
                 if (validatedState.selectedWallet.isNotEmpty()) {
                     val loadWalletParams = JsonArray(listOf(JsonPrimitive(validatedState.selectedWallet)))

@@ -255,10 +255,22 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                WalletDropdown(
-                    selectedWallet = uiState.selectedWallet,
-                    viewModel = viewModel
-                )
+                // Only show wallet selection if node configuration is correctly saved
+                val isNodeConfigValid = uiState.isNodeUrlValid && 
+                    uiState.isPortValid && 
+                    uiState.isUsernameValid && 
+                    uiState.isPasswordValid &&
+                    uiState.nodeUrl.isNotBlank() && 
+                    uiState.port.isNotBlank() && 
+                    uiState.username.isNotBlank() && 
+                    uiState.password.isNotBlank()
+                
+                if (isNodeConfigValid) {
+                    WalletDropdown(
+                        selectedWallet = uiState.selectedWallet,
+                        viewModel = viewModel
+                    )
+                }
 
                 if (getPlatform() == Platform.ANDROID) {
                     Spacer(modifier = Modifier.height(16.dp))
