@@ -75,9 +75,9 @@ import joinstr.composeapp.generated.resources.join
 import joinstr.composeapp.generated.resources.no_active_pools
 import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -296,16 +296,17 @@ fun PoolItem(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
-    val currentTime = remember { mutableStateOf(Clock.System.now().epochSeconds) }
+    val currentTime = remember { mutableStateOf(kotlin.time.Clock.System.now().epochSeconds) }
     val remainingTime = remember { mutableStateOf(targetTime - currentTime.value) }
     val progress = remember { Animatable(1f) }
     val totalDuration = 600f // 10 minutes in seconds
 
     LaunchedEffect(Unit) {
         while (remainingTime.value > 0) {
-            currentTime.value = Clock.System.now().epochSeconds
+            currentTime.value = kotlin.time.Clock.System.now().epochSeconds
             remainingTime.value = (targetTime - currentTime.value).coerceAtLeast(0)
             if (remainingTime.value == 0L) {
                 onTimeout()
@@ -322,7 +323,7 @@ fun CountdownTimer(targetTime: Long, onTimeout: () -> Unit) {
         )
     }
 
-    val selectedTheme = SettingsManager.themeState.value
+    val selectedTheme = SettingsManager.themeState.collectAsState().value
     val isDark = selectedTheme == Theme.DARK.id || (selectedTheme == Theme.SYSTEM.id && isSystemInDarkTheme())
 
     val progressColors = object {

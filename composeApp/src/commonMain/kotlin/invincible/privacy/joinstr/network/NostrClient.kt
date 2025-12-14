@@ -25,7 +25,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -33,6 +32,7 @@ import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.time.ExperimentalTime
 
 open class NostrClient {
     private val nostrRelay
@@ -167,6 +167,7 @@ open class NostrClient {
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     suspend fun checkRegisteredInputs(
         publicKey: ByteArray,
         privateKey: ByteArray,
@@ -201,7 +202,7 @@ open class NostrClient {
                                             if (elem[0].jsonPrimitive.content == "EVENT") {
                                                 val activePools = getPoolsStore().get()
                                                     ?.sortedByDescending { it.timeout }
-                                                    ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                                                    ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
                                                 val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
                                                 val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
                                                 val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
@@ -251,6 +252,7 @@ open class NostrClient {
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     suspend fun checkRegisteredOutputs(
         publicKey: ByteArray,
         privateKey: ByteArray,
@@ -285,7 +287,7 @@ open class NostrClient {
                                             if (elem[0].jsonPrimitive.content == "EVENT") {
                                                 val activePools = getPoolsStore().get()
                                                     ?.sortedByDescending { it.timeout }
-                                                    ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                                                    ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
                                                 val totalPeers = activePools?.find { it.publicKey == poolPublicKey }?.peers ?: 0
                                                 val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
                                                 val decryptedContent = decrypt(nostrEvent.content, sharedSecret)
@@ -384,6 +386,7 @@ open class NostrClient {
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     suspend fun activePoolsCredentialsSender() {
         runCatching {
             if (wsActivePoolsCredentialsSender?.isActive != true) {
@@ -395,7 +398,7 @@ open class NostrClient {
                     while (isActive) {
                         var registeredAddressList: MutableList<JoinedPoolContent> = mutableListOf()
                         val activePools = getPoolsStore().get()?.sortedByDescending { it.timeout }
-                            ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+                            ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
                             ?.filter { it.peersData.size != it.peers }
                             ?.filter { getHistoryStore().get()?.map { it.privateKey }?.contains(it.privateKey)?.not() == true }
                         val activePoolsPublicKeys = activePools?.map { it.publicKey } ?: emptyList()

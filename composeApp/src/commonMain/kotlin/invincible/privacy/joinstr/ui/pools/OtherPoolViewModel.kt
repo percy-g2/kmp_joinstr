@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlin.time.ExperimentalTime
 
 class OtherPoolViewModel : ViewModel() {
 
@@ -21,6 +21,7 @@ class OtherPoolViewModel : ViewModel() {
     private val _otherPoolEvents = MutableStateFlow<List<PoolContent>?>(null)
     val otherPoolEvents: StateFlow<List<PoolContent>?> = _otherPoolEvents.asStateFlow()
 
+    @OptIn(ExperimentalTime::class)
     fun fetchOtherPools() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -28,7 +29,7 @@ class OtherPoolViewModel : ViewModel() {
             NostrClient().fetchOtherPools(
                 onSuccess = { nostrEvents ->
                     viewModelScope.launch {
-                        val currentTime = (Clock.System.now().toEpochMilliseconds() / 1000)
+                        val currentTime = (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000)
                         val pools = getPoolsStore().get()
                         _otherPoolEvents.value = nostrEvents
                             .sortedByDescending { it.timeout }

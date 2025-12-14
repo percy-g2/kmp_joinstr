@@ -11,7 +11,6 @@ import invincible.privacy.joinstr.network.json
 import invincible.privacy.joinstr.pubkeyCreate
 import invincible.privacy.joinstr.signSchnorr
 import io.ktor.utils.io.core.*
-import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.add
@@ -19,6 +18,7 @@ import kotlinx.serialization.json.buildJsonArray
 import okio.ByteString.Companion.encodeUtf8
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.time.ExperimentalTime
 
 object NostrCryptoUtils {
     // CryptoUtils functions
@@ -86,6 +86,7 @@ object NostrCryptoUtils {
     }
 
     // NostrUtil functions
+    @OptIn(ExperimentalTime::class)
     suspend fun createEvent(
         content: String,
         event: Event,
@@ -93,7 +94,7 @@ object NostrCryptoUtils {
         publicKey: ByteArray,
         tagPubKey: String? = null
     ): NostrEvent {
-        val createdAt = Clock.System.now().epochSeconds
+        val createdAt = kotlin.time.Clock.System.now().epochSeconds
 
         val eventData = buildJsonArray {
             add(0)

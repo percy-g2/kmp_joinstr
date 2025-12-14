@@ -64,9 +64,10 @@ class SettingsViewModel : ViewModel() {
 
     fun updateNostrRelay(relay: String) {
         _uiState.update {
+            val isValid = relay.isBlank() || isValidWebSocketUrl(relay)
             it.copy(
                 nostrRelay = relay,
-                isNostrRelayValid = isValidWebSocketUrl(relay)
+                isNostrRelayValid = isValid
             )
         }
     }
@@ -89,36 +90,55 @@ class SettingsViewModel : ViewModel() {
 
     fun updateNodeUrl(nodeUrl: String) {
         _uiState.update {
-            it.copy(
+            // Allow empty, but validate format when not empty
+            val isValid = nodeUrl.isBlank() || nodeUrl.isValidHttpUrl()
+            val newState = it.copy(
                 nodeUrl = nodeUrl,
-                isNodeUrlValid = nodeUrl.isValidHttpUrl()
+                isNodeUrlValid = isValid
             )
+            // Revalidate port when node URL changes (port becomes required if URL is provided)
+            val portValid = if (nodeUrl.isNotBlank()) {
+                newState.port.isNotBlank() && isValidPort(newState.port)
+            } else {
+                newState.port.isBlank() || isValidPort(newState.port)
+            }
+            newState.copy(isPortValid = portValid)
         }
     }
 
     fun updateUsername(username: String) {
         _uiState.update {
+            // Show error only if save was attempted and field is empty
+            val isValid = username.isNotBlank() || !it.hasAttemptedSave
             it.copy(
                 username = username,
-                isUsernameValid = username.isNotBlank()
+                isUsernameValid = isValid
             )
         }
     }
 
     fun updatePassword(password: String) {
         _uiState.update {
+            // Show error only if save was attempted and field is empty
+            val isValid = password.isNotBlank() || !it.hasAttemptedSave
             it.copy(
                 password = password,
-                isPasswordValid = password.isNotBlank()
+                isPasswordValid = isValid
             )
         }
     }
 
     fun updatePort(port: String) {
         _uiState.update {
+            // Port is required if node URL is provided
+            val isValid = if (it.nodeUrl.isNotBlank()) {
+                port.isNotBlank() && isValidPort(port)
+            } else {
+                port.isBlank() || isValidPort(port)
+            }
             it.copy(
                 port = port,
-                isPortValid = isValidPort(port)
+                isPortValid = isValid
             )
         }
     }
@@ -131,20 +151,65 @@ class SettingsViewModel : ViewModel() {
 
     fun saveSettings() {
         viewModelScope.launch {
+            // Mark that save has been attempted to show validation errors
+            _uiState.update { it.copy(hasAttemptedSave = true) }
+            
+            // Validate all fields before saving
+            val validatedState = validateAllFields(_uiState.value.copy(hasAttemptedSave = true))
+            _uiState.value = validatedState
+            
+            // Check if all required fields are valid
+            if (!validatedState.isNostrRelayValid || !validatedState.isNodeUrlValid ||
+                !validatedState.isUsernameValid || !validatedState.isPasswordValid || !validatedState.isPortValid) {
+                val errors = mutableListOf<String>()
+                if (!validatedState.isNostrRelayValid && validatedState.nostrRelay.isNotBlank()) {
+                    errors.add("Invalid Nostr Relay URL")
+                }
+                if (!validatedState.isNodeUrlValid && validatedState.nodeUrl.isNotBlank()) {
+                    errors.add("Invalid Node URL")
+                }
+                if (!validatedState.isUsernameValid) {
+                    errors.add("Username is required")
+                }
+                if (!validatedState.isPasswordValid) {
+                    errors.add("Password is required")
+                }
+                if (!validatedState.isPortValid && validatedState.port.isNotBlank()) {
+                    errors.add("Invalid port number")
+                }
+                if (validatedState.nodeUrl.isNotBlank() && validatedState.port.isBlank()) {
+                    errors.add("Port is required when Node URL is provided")
+                }
+                
+                val errorMessage = if (errors.isEmpty()) {
+                    "Please fill in all required fields"
+                } else {
+                    errors.joinToString(", ")
+                }
+                _saveOperation.value = SaveOperation.Error(errorMessage)
+                return@launch
+            }
+            
             _saveOperation.value = SaveOperation.InProgress
             delay(500)
             try {
+                val portValue = validatedState.port.toIntOrNull()
+                if (portValue == null || portValue !in 1..65535) {
+                    _saveOperation.value = SaveOperation.Error("Invalid port number (must be 1-65535)")
+                    return@launch
+                }
+                
                 val nodeConfig = NodeConfig(
-                    url = _uiState.value.nodeUrl,
-                    userName = _uiState.value.username,
-                    password = _uiState.value.password,
-                    port = _uiState.value.port.toInt(),
-                    selectedWallet = _uiState.value.selectedWallet
+                    url = validatedState.nodeUrl,
+                    userName = validatedState.username,
+                    password = validatedState.password,
+                    port = portValue,
+                    selectedWallet = validatedState.selectedWallet
                 )
-                SettingsManager.updateSettings(_uiState.value.selectedVpnGateway, nodeConfig, _uiState.value.nostrRelay)
+                SettingsManager.updateSettings(validatedState.selectedVpnGateway, nodeConfig, validatedState.nostrRelay)
 
-                if (_uiState.value.selectedWallet.isNotEmpty()) {
-                    val loadWalletParams = JsonArray(listOf(JsonPrimitive(_uiState.value.selectedWallet)))
+                if (validatedState.selectedWallet.isNotEmpty()) {
+                    val loadWalletParams = JsonArray(listOf(JsonPrimitive(validatedState.selectedWallet)))
                     val loadWalletBody = RpcRequestBody(
                         method = Methods.LOAD_WALLET.value,
                         params = loadWalletParams
@@ -152,9 +217,11 @@ class SettingsViewModel : ViewModel() {
                     val loadWallet = httpClient.fetchNodeData<RpcResponse<Wallet>>(loadWalletBody)
                     if (loadWallet?.error != null) {
                         Napier.e(loadWallet.error.message)
-                    } else Napier.i("Wallet ${_uiState.value.selectedWallet} loaded successfully")
+                    } else Napier.i("Wallet ${validatedState.selectedWallet} loaded successfully")
                 }
                 _saveOperation.value = SaveOperation.Success
+                // Reset save attempt flag on success
+                _uiState.update { it.copy(hasAttemptedSave = false) }
             } catch (e: Exception) {
                 _saveOperation.value = SaveOperation.Error(e.message ?: "An error occurred")
             }
@@ -170,12 +237,19 @@ class SettingsViewModel : ViewModel() {
     }
 
     private fun validateAllFields(state: SettingsUiState): SettingsUiState {
+        // Port is required if node URL is provided
+        val portValid = if (state.nodeUrl.isNotBlank()) {
+            state.port.isNotBlank() && isValidPort(state.port)
+        } else {
+            state.port.isBlank() || isValidPort(state.port)
+        }
+        
         return state.copy(
-            isNostrRelayValid = isValidWebSocketUrl(state.nostrRelay),
-            isNodeUrlValid = state.nodeUrl.isValidHttpUrl(),
-            isUsernameValid = state.username.isNotBlank(),
-            isPasswordValid = state.password.isNotBlank(),
-            isPortValid = isValidPort(state.port)
+            isNostrRelayValid = state.nostrRelay.isBlank() || isValidWebSocketUrl(state.nostrRelay),
+            isNodeUrlValid = state.nodeUrl.isBlank() || state.nodeUrl.isValidHttpUrl(),
+            isUsernameValid = state.username.isNotBlank() || !state.hasAttemptedSave,
+            isPasswordValid = state.password.isNotBlank() || !state.hasAttemptedSave,
+            isPortValid = portValid
         )
     }
 
@@ -202,7 +276,8 @@ data class SettingsUiState(
     val isNodeUrlValid: Boolean = true,
     val isUsernameValid: Boolean = true,
     val isPasswordValid: Boolean = true,
-    val isPortValid: Boolean = true
+    val isPortValid: Boolean = true,
+    val hasAttemptedSave: Boolean = false
 )
 
 sealed class SaveOperation {

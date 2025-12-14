@@ -1,6 +1,8 @@
 package invincible.privacy.joinstr.network
 
+import invincible.privacy.joinstr.Platform
 import invincible.privacy.joinstr.currentChain
+import invincible.privacy.joinstr.getPlatform
 import invincible.privacy.joinstr.ktx.isValidHttpUrl
 import invincible.privacy.joinstr.model.Gateway
 import invincible.privacy.joinstr.model.MempoolFee
@@ -12,13 +14,25 @@ import invincible.privacy.joinstr.utils.NodeConfig
 import invincible.privacy.joinstr.utils.SettingsManager
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.logging.SIMPLE
+import io.ktor.client.request.basicAuth
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.seconds
 
@@ -53,10 +67,13 @@ class HttpClient {
         if (nodeConfig.url.isValidHttpUrl() && nodeConfig.userName.isNotBlank()
             && nodeConfig.password.isNotBlank() && nodeConfig.port in 1..65535
         ) {
+            // Normalize URL for platform-specific localhost handling
+            val normalizedUrl = normalizeUrlForPlatform(nodeConfig.url)
+            
             val response: HttpResponse = createHttpClient().post {
                 if (wallet != null && wallet.name.isEmpty().not()) {
-                    url("${nodeConfig.url}:${nodeConfig.port}/wallet/${wallet.name}")
-                } else url("${nodeConfig.url}:${nodeConfig.port}/")
+                    url("${normalizedUrl}:${nodeConfig.port}/wallet/${wallet.name}")
+                } else url("${normalizedUrl}:${nodeConfig.port}/")
                 basicAuth(
                     username = nodeConfig.userName,
                     password = nodeConfig.password
@@ -168,6 +185,41 @@ class HttpClient {
                 location = gateway.location
             )
         }
+    }
+    
+    /**
+     * Normalizes URLs for platform-specific localhost handling.
+     * On Android, converts 127.0.0.1/localhost to 10.0.2.2 (emulator host alias).
+     * On other platforms, returns the URL as-is.
+     * Note: Port is handled separately, so this only normalizes the host part.
+     */
+    public fun normalizeUrlForPlatform(url: String): String {
+        if (getPlatform() != Platform.ANDROID) {
+            return url
+        }
+        
+        // Extract protocol if present
+        val hasHttps = url.startsWith("https://")
+        val hasHttp = url.startsWith("http://")
+        val protocolPrefix = when {
+            hasHttps -> "https://"
+            hasHttp -> "http://"
+            else -> ""
+        }
+        
+        // Remove protocol prefix to get the host part
+        val host = url.removePrefix(protocolPrefix).split("/").first()
+        
+        // Check if it's exactly localhost or 127.0.0.1 (not a substring)
+        val isLocalhost = host == "localhost" || host == "127.0.0.1"
+        
+        if (isLocalhost) {
+            // Replace with Android emulator host alias
+            val replacement = "10.0.2.2"
+            return "$protocolPrefix$replacement"
+        }
+        
+        return url
     }
 }
 

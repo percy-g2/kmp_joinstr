@@ -39,6 +39,11 @@ sealed class NavItem {
         path = InputRegistration(),
         title = "Input Registration"
     )
+
+    object NodeConfigScreen : Item<NodeConfig>(
+        path = NodeConfig,
+        title = "Node Configuration"
+    )
 }
 
 @Serializable
@@ -49,6 +54,9 @@ object Pools
 
 @Serializable
 object Settings
+
+@Serializable
+object NodeConfig
 
 @Serializable
 data class InputRegistration(val id: String = "")

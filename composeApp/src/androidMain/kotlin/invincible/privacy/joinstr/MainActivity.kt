@@ -45,10 +45,10 @@ import invincible.privacy.joinstr.ui.pools.HistoryItem
 import invincible.privacy.joinstr.utils.SettingsManager
 import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
-import kotlinx.datetime.Clock
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.net.UnknownHostException
+import kotlin.time.ExperimentalTime
 
 
 class MainActivity : ComponentActivity(), Handler.Callback {
@@ -294,6 +294,7 @@ fun AppAndroidPreview() {
     App()
 }
 
+@OptIn(ExperimentalTime::class)
 @Preview(
     showBackground = true,
     showSystemUi = true
@@ -307,7 +308,7 @@ fun CoinjoinHistoryItemPreview() {
         amount = 0.99956,
         psbt = "cHNidP8BAHECAAAAAeX8EYwAAAAAAAAAA/////w8AAAAAAAAAIgAgihVeUpqt5eSA7gWtv7UNObRTkNISXiAVyXNkFsKPf7pAAAAAAABAP0BAAAAAQAAAAABAAAAAAAAgAEAAAABAAAAAQEfAqACAAAAAQAAAAAAAQERKhYAAAAAABYAFKlUwqDXAsFWKvKdl3wtrki1pS8BAgAAAAEAAAAAAAAAIgAg+2M/VTeckRCOuy0y0mK6zCz/CT8J0FQjjDleqUV1zYEAAAAA\n",
         tx = "a40ae97da65ed66f279cc04c54ed5040e94cde39d11b6f2d1ea151855b49c931",
-        timestamp = Clock.System.now().toEpochMilliseconds()
+        timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
     )
     HistoryItem(coinJoinHistory)
 }

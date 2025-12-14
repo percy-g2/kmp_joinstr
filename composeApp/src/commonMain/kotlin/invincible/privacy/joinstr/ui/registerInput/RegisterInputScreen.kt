@@ -93,11 +93,11 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
+import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalTime::class)
 @Composable
 fun RegisterInputScreen(
     poolId: String,
@@ -116,7 +116,7 @@ fun RegisterInputScreen(
     LaunchedEffect(Unit) {
          val activePools = getPoolsStore().get()
              ?.sortedByDescending { it.timeout }
-             ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+             ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
          showRegisterInputTimeLine.value = activePools?.find { it.peersData.filter { it.type == "input" }.size == it.peers }?.id?.let { true } ?: false
 
          if (showRegisterInputTimeLine.value) {

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTime::class)
+
 package invincible.privacy.joinstr
 
 import android.Manifest
@@ -46,19 +48,22 @@ import invincible.privacy.joinstr.vpn.config
 import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.plugins.websocket.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.logging.DEFAULT
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.websocket.WebSockets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.io.files.Path
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 actual fun getSettingsStore(): KStore<SettingsStore> {
     val context = ContextProvider.getContext()
@@ -108,7 +113,7 @@ actual object LocalNotification {
                     requestPermission()
                 }
             }
-            notify(Clock.System.now().toEpochMilliseconds().toInt(), builder.build())
+            notify(kotlin.time.Clock.System.now().toEpochMilliseconds().toInt(), builder.build())
         }
     }
 
@@ -175,7 +180,7 @@ actual suspend fun createPsbt(
     unspentItem: ListUnspentResponseItem,
 ): String? {
     val activePools = getPoolsStore().get()
-        ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+        ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
         ?.sortedByDescending { it.timeout }
 
     val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")

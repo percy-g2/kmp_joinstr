@@ -5,7 +5,9 @@ import androidx.compose.ui.text.intl.Locale
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 fun Long.displayDateTime(): String {
     val instant = Instant.fromEpochMilliseconds(this * 1000)
     val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())

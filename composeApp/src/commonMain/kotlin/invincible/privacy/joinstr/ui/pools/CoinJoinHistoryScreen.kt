@@ -71,6 +71,7 @@ import joinstr.composeapp.generated.resources.something_went_wrong
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -271,6 +272,7 @@ private fun InfoRow(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 private fun formatTimestamp(timestamp: Long): String {
     val instant = Instant.fromEpochMilliseconds(timestamp)
     val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
