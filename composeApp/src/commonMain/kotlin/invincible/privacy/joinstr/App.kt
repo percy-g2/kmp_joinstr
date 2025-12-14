@@ -51,6 +51,7 @@ import invincible.privacy.joinstr.model.InputRegistration
 import invincible.privacy.joinstr.model.ListUnspentResponseItem
 import invincible.privacy.joinstr.model.LocalPoolContent
 import invincible.privacy.joinstr.model.NavItem
+import invincible.privacy.joinstr.model.NodeConfig
 import invincible.privacy.joinstr.model.Pools
 import invincible.privacy.joinstr.model.Settings
 import invincible.privacy.joinstr.theme.DarkColorScheme
@@ -60,6 +61,8 @@ import invincible.privacy.joinstr.ui.PoolsViewModel
 import invincible.privacy.joinstr.ui.components.CustomStackedSnackbar
 import invincible.privacy.joinstr.ui.components.SnackbarControllerProvider
 import invincible.privacy.joinstr.ui.home.HomeScreen
+import invincible.privacy.joinstr.ui.nodeconfig.NodeConfigScreen
+import invincible.privacy.joinstr.ui.nodeconfig.NodeConfigViewModel
 import invincible.privacy.joinstr.ui.pools.PoolScreen
 import invincible.privacy.joinstr.ui.registerInput.RegisterInputScreen
 import invincible.privacy.joinstr.ui.settings.SettingsScreen
@@ -219,9 +222,22 @@ fun App(
                     }
 
                     animatedComposable<Settings> {
-                        SettingsScreen {
+                        SettingsScreen(
+                            onNavigateToNodeConfig = {
+                                navController.navigate(NavItem.NodeConfigScreen.path)
+                            }
+                        ) {
                             navController.popBackStack()
                         }
+                    }
+
+                    animatedComposable<NodeConfig> {
+                        NodeConfigScreen(
+                            viewModel = viewModel { NodeConfigViewModel() },
+                            onBackPress = {
+                                navController.popBackStack()
+                            }
+                        )
                     }
                 }
 
