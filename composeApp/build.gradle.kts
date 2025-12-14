@@ -102,6 +102,7 @@ kotlin {
 
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
 
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.logging)
@@ -131,9 +132,7 @@ kotlin {
             implementation(libs.napier)
         }
         desktopMain.dependencies {
-            implementation(compose.desktop.currentOs) {
-                exclude("org.jetbrains.compose.material")
-            }
+            implementation(compose.desktop.currentOs)
 
             implementation(libs.ktor.client.cio)
 

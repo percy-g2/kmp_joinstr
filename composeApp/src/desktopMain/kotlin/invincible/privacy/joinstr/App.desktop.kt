@@ -30,12 +30,14 @@ import invincible.privacy.joinstr.utils.Theme
 import io.github.aakira.napier.Napier
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.plugins.websocket.*
-import kotlinx.datetime.Clock
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.logging.SIMPLE
+import io.ktor.client.plugins.websocket.WebSockets
 import kotlinx.io.files.Path
 import net.harawata.appdirs.AppDirsFactory
 import java.awt.Desktop
@@ -48,6 +50,7 @@ import javax.swing.JOptionPane
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 actual object LocalNotification {
 
@@ -148,13 +151,13 @@ actual fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray 
     pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
 
 // desktop
-@OptIn(ExperimentalEncodingApi::class)
+@OptIn(ExperimentalEncodingApi::class, ExperimentalTime::class)
 actual suspend fun createPsbt(
     poolId: String,
     unspentItem: ListUnspentResponseItem
 ): String? {
     val activePools = getPoolsStore().get()
-        ?.filter { it.timeout > (Clock.System.now().toEpochMilliseconds() / 1000) }
+        ?.filter { it.timeout > (kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000) }
         ?.sortedByDescending { it.timeout }
 
     val selectedPool = activePools?.find { it.id == poolId } ?: throw IllegalStateException("Selected pool not found")
