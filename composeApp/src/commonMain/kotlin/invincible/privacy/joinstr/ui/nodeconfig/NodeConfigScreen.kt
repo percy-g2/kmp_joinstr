@@ -134,21 +134,6 @@ fun NodeConfigScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    // Relay URL Field
-                    RelayUrlField(
-                        value = uiState.relayUrl,
-                        onValueChange = { viewModel.handleIntent(NodeConfigIntent.RelayChanged(it)) },
-                        isValid = uiState.error !is ErrorType.ValidationError || 
-                                  (uiState.error as? ErrorType.ValidationError)?.field != "relayUrl",
-                        errorMessage = if (uiState.error is ErrorType.ValidationError && 
-                                          (uiState.error as ErrorType.ValidationError).field == "relayUrl") {
-                            (uiState.error as ErrorType.ValidationError).message
-                        } else null,
-                        onNext = { focusManager.moveFocus(FocusDirection.Next) }
-                    )
-                }
-                
-                item {
                     // Node URL Field
                     NodeUrlField(
                         value = uiState.nodeUrl,
@@ -223,41 +208,6 @@ fun NodeConfigScreen(
             }
         }
     }
-}
-
-@Composable
-private fun RelayUrlField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    isValid: Boolean,
-    errorMessage: String?,
-    onNext: () -> Unit
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text("Relay URL") },
-        placeholder = { Text("Enter WebSocket URL \n(ws:// or wss://) or leave blank \nfor your nostr relay url") },
-        leadingIcon = {
-            Icon(Icons.Filled.Wifi, contentDescription = null)
-        },
-        isError = !isValid && errorMessage != null,
-        supportingText = {
-            if (errorMessage != null && !isValid) {
-                Text(errorMessage, color = MaterialTheme.colorScheme.error)
-            } else {
-                Text("WebSocket URL for Nostr relay connection (optional)")
-            }
-        },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Next
-        ),
-        keyboardActions = KeyboardActions(
-            onNext = { onNext() }
-        )
-    )
 }
 
 @Composable

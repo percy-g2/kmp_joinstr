@@ -241,6 +241,20 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Relay URL Field
+                ValidatedTextField(
+                    value = uiState.nostrRelay,
+                    onValueChange = viewModel::updateNostrRelay,
+                    label = "Relay URL",
+                    placeholder = "Enter WebSocket URL (ws:// or wss://) or leave blank for your nostr relay url",
+                    helperText = "WebSocket URL for Nostr relay connection (optional)",
+                    leadingIcon = Icons.Filled.Wifi,
+                    isValid = uiState.isNostrRelayValid,
+                    errorMessage = "Invalid WebSocket URL (must start with ws:// or wss://)"
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 WalletDropdown(
                     selectedWallet = uiState.selectedWallet,
                     viewModel = viewModel

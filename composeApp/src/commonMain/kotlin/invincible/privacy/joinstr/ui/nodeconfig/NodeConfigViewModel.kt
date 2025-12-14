@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
  * Intent-based API for Node Configuration
  */
 sealed interface NodeConfigIntent {
-    data class RelayChanged(val value: String) : NodeConfigIntent
     data class NodeUrlChanged(val value: String) : NodeConfigIntent
     data class PortChanged(val value: String) : NodeConfigIntent
     data class UsernameChanged(val value: String) : NodeConfigIntent
@@ -114,27 +113,12 @@ class NodeConfigViewModel : ViewModel() {
     
     fun handleIntent(intent: NodeConfigIntent) {
         when (intent) {
-            is NodeConfigIntent.RelayChanged -> handleRelayChanged(intent.value)
             is NodeConfigIntent.NodeUrlChanged -> handleNodeUrlChanged(intent.value)
             is NodeConfigIntent.PortChanged -> handlePortChanged(intent.value)
             is NodeConfigIntent.UsernameChanged -> handleUsernameChanged(intent.value)
             is NodeConfigIntent.PasswordChanged -> handlePasswordChanged(intent.value)
             is NodeConfigIntent.TestConnection -> handleTestConnection()
             is NodeConfigIntent.Save -> handleSave()
-        }
-    }
-    
-    private fun handleRelayChanged(value: String) {
-        _uiState.update { state ->
-            val isValid = value.isBlank() || isValidWebSocketUrl(value)
-            state.copy(
-                relayUrl = value,
-                status = Status.Editing,
-                error = if (isValid) null else ErrorType.ValidationError(
-                    field = "relayUrl",
-                    message = "Invalid WebSocket URL (must start with ws:// or wss://)"
-                )
-            )
         }
     }
     
@@ -367,10 +351,7 @@ class NodeConfigViewModel : ViewModel() {
     private fun validateFields(state: NodeConfigUiState): List<ErrorType> {
         val errors = mutableListOf<ErrorType>()
         
-        // Relay URL validation (optional but must be valid if provided)
-        if (state.relayUrl.isNotBlank() && !isValidWebSocketUrl(state.relayUrl)) {
-            errors.add(ErrorType.ValidationError("relayUrl", "Invalid WebSocket URL"))
-        }
+        // Relay URL is managed in Settings screen, so no validation needed here
         
         // Node URL validation (required)
         if (state.nodeUrl.isBlank()) {
