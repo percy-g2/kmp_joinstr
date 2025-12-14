@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
@@ -70,15 +71,41 @@ open class NostrClient {
                         val elem = json.parseToJsonElement(frame.readText()).jsonArray
                         if (elem[0].jsonPrimitive.content == "EVENT") {
                             runCatching {
-                                val nostrEventContent = json.decodeFromJsonElement<NostrEvent>(elem[2]).content
+                                val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                val nostrEventContent = nostrEvent.content
+                                
+                                // Skip if content is empty or blank
+                                if (nostrEventContent.isBlank()) {
+                                    Napier.w("NostrClient\$fetchOtherPools - Skipping event with empty content (id: ${nostrEvent.id})")
+                                    return@runCatching
+                                }
+                                
+                                // Validate JSON structure before deserializing
+                                if (!isValidPoolContentJson(nostrEventContent)) {
+                                    Napier.w("NostrClient\$fetchOtherPools - Skipping event with invalid/missing required fields (id: ${nostrEvent.id})")
+                                    Napier.v("NostrClient\$fetchOtherPools - Content: $nostrEventContent")
+                                    return@runCatching
+                                }
+                                
+                                Napier.v("NostrClient\$fetchOtherPools - Received content: $nostrEventContent")
+                                
                                 val event = json.decodeFromString<PoolContent>(nostrEventContent)
                                 events = listOf(event) + events
-                            }.getOrElse {
-                                Napier.e("NostrClient\$fetchOtherPools - Error", it)
+                                Napier.v("NostrClient\$fetchOtherPools - Successfully parsed pool: ${event.id}")
+                            }.getOrElse { error ->
+                                Napier.e("NostrClient\$fetchOtherPools - Error deserializing PoolContent", error)
+                                // Log the actual content for debugging
+                                runCatching {
+                                    val nostrEvent = json.decodeFromJsonElement<NostrEvent>(elem[2])
+                                    Napier.e("NostrClient\$fetchOtherPools - Failed content (event id: ${nostrEvent.id}): ${nostrEvent.content}")
+                                }.getOrElse {
+                                    Napier.e("NostrClient\$fetchOtherPools - Failed to extract content from event", it)
+                                }
                                 // Continue processing other events instead of closing session
                             }
                         }
                         if (elem[0].jsonPrimitive.content == "EOSE") {
+                            Napier.v("NostrClient\$fetchOtherPools - Received EOSE, returning ${events.size} events")
                             onSuccess(events)
                             closeSession()
                             break
@@ -534,5 +561,21 @@ open class NostrClient {
                 tag.size == 2 && tag[0] == "p" && tag[1] == publicKey
             }
         }
+    }
+
+    /**
+     * Validates that the JSON string contains all required fields for PoolContent
+     */
+    private fun isValidPoolContentJson(jsonString: String): Boolean {
+        return runCatching {
+            val jsonElement = json.parseToJsonElement(jsonString)
+            if (jsonElement !is JsonObject) {
+                return false
+            }
+            val requiredFields = listOf("type", "id", "publicKey", "denomination", "peers", "timeout", "relay", "feeRate")
+            requiredFields.all { field ->
+                jsonElement.containsKey(field) && jsonElement[field] != null
+            }
+        }.getOrElse { false }
     }
 }
