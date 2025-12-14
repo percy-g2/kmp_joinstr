@@ -157,20 +157,6 @@ fun SettingsScreen(
                 uiState.password.isNotBlank() && 
                 uiState.nodeUrl.isNotBlank() && 
                 uiState.port.isNotBlank()
-            val isEnabled = saveOperation !is SaveOperation.InProgress && 
-                allFieldsValid && hasRequiredFields
-
-            val containerColor = if (isEnabled) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-            }
-
-            val contentColor = if (isEnabled) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            }
             ExtendedFloatingActionButton(
                 text = {  
                     Text(
@@ -189,8 +175,6 @@ fun SettingsScreen(
                     )
                 },
                 expanded = listState.isScrollingUp(),
-                containerColor = containerColor,
-                contentColor = contentColor,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
                 onClick = {
                     viewModel.saveSettings()
@@ -748,7 +732,7 @@ fun ValidatedTextField(
     val isPassword = visualTransformation == PasswordVisualTransformation()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-        OutlinedTextField(
+    OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },

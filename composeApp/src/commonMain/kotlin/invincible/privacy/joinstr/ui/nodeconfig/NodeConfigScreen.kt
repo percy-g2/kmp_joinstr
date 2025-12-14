@@ -237,7 +237,7 @@ private fun RelayUrlField(
         value = value,
         onValueChange = onValueChange,
         label = { Text("Relay URL") },
-        placeholder = { Text("wss://nostr.fmt.wiz.biz") },
+        placeholder = { Text("Enter WebSocket URL \n(ws:// or wss://) or leave blank \nfor your nostr relay url") },
         leadingIcon = {
             Icon(Icons.Filled.Wifi, contentDescription = null)
         },

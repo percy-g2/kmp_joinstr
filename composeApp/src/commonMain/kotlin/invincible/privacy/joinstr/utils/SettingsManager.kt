@@ -35,7 +35,7 @@ object SettingsManager {
 data class SettingsStore(
     val selectedTheme: Int = Theme.SYSTEM.id,
     val nodeConfig: NodeConfig = NodeConfig(),
-    val nostrRelay: String = "wss://nostr.fmt.wiz.biz",
+    val nostrRelay: String = "",
     val vpnGateway: VpnGateway? = null
 )
 
