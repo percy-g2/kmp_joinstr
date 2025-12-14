@@ -1,6 +1,20 @@
-# Git Workflow Agents (OPTIMIZED)
+# Git Workflow Agents
+
+> **⚠️ NOTE: This directory contains legacy shell script agents. The project now uses Cursor AI agents defined in `AGENT_RULES.md`.**
+> 
+> **For new development, use the Cursor AI agents:**
+> - See [`../docs/CURSOR_AGENTS_GUIDE.md`](../docs/CURSOR_AGENTS_GUIDE.md) for quick reference
+> - See [`../AGENT_RULES.md`](../AGENT_RULES.md) for complete specifications
+> 
+> The shell scripts below are kept for reference but are deprecated in favor of Cursor AI agents.
+
+---
+
+## Legacy Shell Script Agents (DEPRECATED)
 
 Independent, role-isolated agents for safe Bitcoin CoinJoin development workflow.
+
+**These shell scripts are deprecated. Use Cursor AI agents instead.**
 
 ## 🚀 Performance Optimizations
 
@@ -308,6 +322,42 @@ Each agent operates **independently** and does not assume other agents' conclusi
 - PR review comments (Agent 3)
 - QA findings (Agent 5)
 - Merge summary (Agent 4)
+
+---
+
+## Migration to Cursor AI Agents
+
+The project has migrated from shell script agents to Cursor AI agents. The new system provides:
+
+- ✅ **Better integration** with Cursor IDE
+- ✅ **Natural language commands** - just tell Cursor what you want
+- ✅ **Automatic branch protection** - never pushes to protected branches
+- ✅ **Comprehensive code review** with automatic approval/comments
+- ✅ **Security-focused reviews** for Bitcoin/CoinJoin code
+
+### Quick Start with Cursor AI Agents
+
+**Commit changes:**
+```
+Use Git Commit & Push Agent to commit and push my changes
+```
+
+**Create PR:**
+```
+Use GitHub PR Creation Agent to create a pull request
+```
+
+**Review PR:**
+```
+Use GitHub PR Review Agent to review PR #42
+```
+
+**Merge PR:**
+```
+Use GitHub PR Merge Agent to merge PR #42
+```
+
+See [`../docs/CURSOR_AGENTS_GUIDE.md`](../docs/CURSOR_AGENTS_GUIDE.md) for complete guide.
 
 ---
 

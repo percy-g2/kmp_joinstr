@@ -74,8 +74,8 @@ open class NostrClient {
                                 val event = json.decodeFromString<PoolContent>(nostrEventContent)
                                 events = listOf(event) + events
                             }.getOrElse {
-                                Napier.e("Error", it)
-                                closeSession()
+                                Napier.e("NostrClient\$fetchOtherPools - Error", it)
+                                // Continue processing other events instead of closing session
                             }
                         }
                         if (elem[0].jsonPrimitive.content == "EOSE") {
