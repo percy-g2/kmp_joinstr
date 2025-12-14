@@ -325,8 +325,6 @@ Each agent operates **independently** and does not assume other agents' conclusi
 
 ---
 
----
-
 ## Migration to Cursor AI Agents
 
 The project has migrated from shell script agents to Cursor AI agents. The new system provides:
