@@ -242,12 +242,15 @@ vim composeApp/src/commonMain/kotlin/...
 ### Required Tools
 
 1. **Git** (obviously)
-2. **GitHub CLI** (for GitHub repos):
+2. **Bash** (version 3.2+)
+   - Scripts are compatible with Bash 3.2+ (including macOS default Bash)
+   - No Bash 4+ features are used (associative arrays replaced with Bash 3.2 compatible alternatives)
+3. **GitHub CLI** (for GitHub repos):
    ```bash
    brew install gh
    gh auth login
    ```
-3. **GitLab CLI** (for GitLab repos):
+4. **GitLab CLI** (for GitLab repos):
    ```bash
    brew install glab
    glab auth login

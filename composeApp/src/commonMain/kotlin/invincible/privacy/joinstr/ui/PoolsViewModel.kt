@@ -110,6 +110,11 @@ class PoolsViewModel : ViewModel() {
 
     @OptIn(ExperimentalTime::class)
     private fun generatePoolId(): String {
+        // NOTE: This function generates a pool ID for UI display purposes only.
+        // The randomness here is NOT security-critical - it's just for generating
+        // a human-readable pool identifier. For security-critical operations
+        // (e.g., cryptographic keys, nonces), use CryptographyRandom from
+        // dev.whyoleg.cryptography.random.CryptographyRandom (see NostrCryptoUtils.kt).
         val letters = ('a'..'z').toList()
         val randomString = (1..10)
             .map { letters.random() }

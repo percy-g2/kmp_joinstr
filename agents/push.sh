@@ -52,7 +52,7 @@ if is_protected_branch "$CURRENT_BRANCH"; then
     echo "Creating branch: $NEW_BRANCH"
     git checkout -b "$NEW_BRANCH" 2>/dev/null || error_exit "Failed to create branch"
     CURRENT_BRANCH="$NEW_BRANCH"
-    GIT_CACHE[current_branch]="$NEW_BRANCH"  # Update cache
+    GIT_CACHE_current_branch="$NEW_BRANCH"  # Update cache
 else
     echo "Using existing branch: $CURRENT_BRANCH"
     if is_protected_branch "$CURRENT_BRANCH"; then
