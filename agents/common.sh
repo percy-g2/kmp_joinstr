@@ -12,15 +12,15 @@ readonly NC='\033[0m'
 # Protected branches
 readonly PROTECTED_BRANCHES=("main" "dev" "develop" "prod")
 
-# Cache for git operations
-declare -A GIT_CACHE
+# Cache for git operations (Bash 3.2 compatible - using separate variables instead of associative arrays)
+# Cache variables: GIT_CACHE_current_branch, GIT_CACHE_remote_url, GIT_CACHE_repo_*
 
 # Get current branch (cached)
 get_current_branch() {
-    if [ -z "${GIT_CACHE[current_branch]:-}" ]; then
-        GIT_CACHE[current_branch]=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [ -z "${GIT_CACHE_current_branch:-}" ]; then
+        GIT_CACHE_current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
     fi
-    echo "${GIT_CACHE[current_branch]}"
+    echo "$GIT_CACHE_current_branch"
 }
 
 # Check if branch is protected
@@ -31,10 +31,10 @@ is_protected_branch() {
 
 # Get remote URL (cached)
 get_remote_url() {
-    if [ -z "${GIT_CACHE[remote_url]:-}" ]; then
-        GIT_CACHE[remote_url]=$(git config --get remote.origin.url 2>/dev/null || echo "")
+    if [ -z "${GIT_CACHE_remote_url:-}" ]; then
+        GIT_CACHE_remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
     fi
-    echo "${GIT_CACHE[remote_url]}"
+    echo "$GIT_CACHE_remote_url"
 }
 
 # Detect git platform
@@ -52,9 +52,15 @@ detect_platform() {
 # Parse repo owner/name (cached)
 parse_repo_info() {
     local url="${1:-$(get_remote_url)}"
-    local cache_key="repo_${url//[^a-zA-Z0-9]/_}"
-    
-    if [ -z "${GIT_CACHE[$cache_key]:-}" ]; then
+    # Sanitize URL for use as variable name (Bash 3.2 compatible)
+    local cache_key="repo_$(echo "$url" | sed 's/[^a-zA-Z0-9]/_/g')"
+    local cache_var="GIT_CACHE_${cache_key}"
+
+    # Use eval to access dynamic variable name (Bash 3.2 compatible)
+    local cached_value
+    eval "cached_value=\${${cache_var}:-}"
+
+    if [ -z "$cached_value" ]; then
         local owner name
         if [[ "$url" =~ git@github\.com:([^/]+)/([^/]+)\.git ]] || \
            [[ "$url" =~ https://github\.com/([^/]+)/([^/]+)\.git ]]; then
@@ -65,10 +71,12 @@ parse_repo_info() {
             owner="${BASH_REMATCH[1]}"
             name="${BASH_REMATCH[2]}"
         fi
-        GIT_CACHE[$cache_key]="${owner}|${name}"
+        cached_value="${owner}|${name}"
+        # Store in cache variable
+        eval "${cache_var}=\"${cached_value}\""
     fi
     
-    IFS='|' read -r owner name <<< "${GIT_CACHE[$cache_key]}"
+    IFS='|' read -r owner name <<< "$cached_value"
     echo "$owner|$name"
 }
 
@@ -136,8 +144,8 @@ check_merge_conflicts() {
         return 1
     fi
     
-    # Check for conflict markers in tracked files
-    if git grep -n "<<<<<<< HEAD" 2>/dev/null | grep -q .; then
+    # Check for conflict markers in tracked files (exclude agents directory to avoid false positives)
+    if git grep -n "<<<<<<< HEAD" 2>/dev/null | grep -v "^agents/" | grep -q .; then
         return 1
     fi
     
