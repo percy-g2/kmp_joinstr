@@ -60,6 +60,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
+import java.security.cert.X509Certificate
+import javax.net.ssl.X509TrustManager
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration.Companion.seconds
@@ -156,6 +158,18 @@ actual suspend fun signSchnorr(content: ByteArray, privateKey: ByteArray, freshR
 
 actual fun getWebSocketClient(): HttpClient {
     return HttpClient(CIO) {
+        engine {
+            https {
+                trustManager = object: X509TrustManager {
+                    override fun checkClientTrusted(p0: Array<out X509Certificate>?, p1: String?) { }
+
+                    override fun checkServerTrusted(p0: Array<out X509Certificate>?, p1: String?) { }
+
+                    override fun getAcceptedIssuers(): Array<X509Certificate>? = null
+                }
+            }
+        }
+
         install(WebSockets)
 
         install(HttpTimeout) {
