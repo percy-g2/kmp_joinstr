@@ -260,17 +260,18 @@ actual suspend fun createPsbt(
 
     val outputAmount = poolAmount - estimatedBtcFee
 
-
-    // TODO
-
+    // PSBT creation for Web/WASM is not yet implemented
+    // This requires Bitcoin Core RPC integration which is not available in browser context
+    // Users should use Android/iOS/Desktop clients for PSBT operations
     return null
 }
 
 actual suspend fun joinPsbts(
     listOfPsbts: List<String>,
 ): Pair<String?, String?> {
-    // TODO
-
+    // PSBT joining for Web/WASM is not yet implemented
+    // This requires Bitcoin Core RPC integration which is not available in browser context
+    // Users should use Android/iOS/Desktop clients for PSBT operations
     return Pair(null, null)
 }
 

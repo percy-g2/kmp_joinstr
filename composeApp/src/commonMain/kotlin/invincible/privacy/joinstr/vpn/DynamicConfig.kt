@@ -1,7 +1,11 @@
 package invincible.privacy.joinstr.vpn
 
-
-// TODO make it full dynamic
+/**
+ * Generates OpenVPN configuration dynamically based on provided parameters.
+ * 
+ * Note: Currently uses a template-based approach. Future enhancement could
+ * make this fully dynamic with additional configuration options.
+ */
 fun config(
     nodeUrl: String,
     serverCertificate: String,

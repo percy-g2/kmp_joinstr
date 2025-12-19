@@ -37,7 +37,13 @@ kotlin {
         }
     }
     
-    jvm("desktop")
+    jvm("desktop") {
+        compilations.all {
+            compilerOptions.configure {
+                jvmTarget.set(JvmTarget.JVM_21)
+            }
+        }
+    }
     
     listOf(
         iosX64(),
@@ -191,6 +197,9 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
     buildTypes {
